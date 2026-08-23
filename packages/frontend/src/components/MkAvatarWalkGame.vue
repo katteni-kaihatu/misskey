@@ -763,14 +763,17 @@ function drawRemotePlayer(
 function drawRemoteNameBadge(context: CanvasRenderingContext2D, badge: RemoteNameBadge, zoom: number): void {
 	const screenX = Math.round(badge.x * zoom);
 	const labelY = Math.round(badge.y * zoom);
-	context.font = 'bold 12px sans-serif';
+	const fontSize = 12 * zoom;
+	const labelHeight = 17 * zoom;
+	const horizontalPadding = 12 * zoom;
+	context.font = `bold ${fontSize}px sans-serif`;
 	context.textAlign = 'center';
 	context.textBaseline = 'middle';
-	const labelWidth = Math.min(150, context.measureText(badge.label).width + 12);
+	const labelWidth = Math.min(150 * zoom, context.measureText(badge.label).width + horizontalPadding);
 	context.fillStyle = 'rgba(23, 33, 58, 0.72)';
-	context.fillRect(Math.round(screenX - labelWidth / 2), labelY, labelWidth, 17);
+	context.fillRect(Math.round(screenX - labelWidth / 2), labelY, labelWidth, labelHeight);
 	context.fillStyle = '#ffffff';
-	context.fillText(badge.label, screenX, labelY + 9, labelWidth - 8);
+	context.fillText(badge.label, screenX, labelY + labelHeight / 2, labelWidth - 8 * zoom);
 }
 
 function getRemoteAtlasImage(player: RemoteRenderPlayer): HTMLImageElement | null {
