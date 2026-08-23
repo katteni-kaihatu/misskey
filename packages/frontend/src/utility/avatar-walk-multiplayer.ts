@@ -18,6 +18,7 @@ export const avatarWalkLocalPlayer = reactive({
 	y: 600,
 	direction: 0,
 	moving: false,
+	action: null as Misskey.AvatarWalkAction | null,
 });
 
 export const avatarWalkRemotePlayers = shallowReactive(new Map<string, Misskey.AvatarWalkPlayer>());
@@ -97,6 +98,7 @@ function onSnapshot(payload: { players: Misskey.AvatarWalkPlayer[] }): void {
 			avatarWalkLocalPlayer.y = player.y;
 			avatarWalkLocalPlayer.direction = player.direction;
 			avatarWalkLocalPlayer.moving = false;
+			avatarWalkLocalPlayer.action = player.action;
 		} else {
 			avatarWalkRemotePlayers.set(player.user.id, player);
 		}
@@ -155,6 +157,7 @@ function sendLocalState(): void {
 		y: avatarWalkLocalPlayer.y,
 		direction: avatarWalkLocalPlayer.direction,
 		moving: avatarWalkLocalPlayer.moving,
+		action: avatarWalkLocalPlayer.action,
 	});
 	lastSentState = state;
 	lastSentAt = now;

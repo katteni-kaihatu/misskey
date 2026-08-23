@@ -103,6 +103,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 
+		<div v-if="!compact" :class="$style.motionHotbar" role="toolbar" :aria-label="i18n.ts._avatarWalk.motions">
+			<button
+				v-for="(motion, index) in motionItems"
+				:key="motion.type"
+				type="button"
+				class="_button"
+				:class="[$style.motionSlot, { [$style.active]: avatarWalkLocalPlayer.action?.type === motion.type }]"
+				:aria-label="motion.label"
+				:aria-pressed="avatarWalkLocalPlayer.action?.type === motion.type"
+				:title="motion.label"
+				@click="playAction(motion.type)"
+			>
+				<span :class="$style.motionNumber">{{ index + 1 }}</span>
+				<i :class="motion.icon"></i>
+				<span :class="$style.motionLabel">{{ motion.label }}</span>
+			</button>
+		</div>
+
 		<div :class="$style.toolbar">
 			<MkButton small inline :disabled="operationLocked" @click="chooseVrm">
 				<i class="ti ti-refresh"></i> {{ i18n.ts._avatarWalk.replaceAvatar }}
@@ -139,6 +157,7 @@ import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
 import {
 	AVATAR_WALK_ATLAS_UPDATED_EVENT,
+	AVATAR_WALK_ACTIONS,
 	avatarWalkOperationLocked as operationLocked,
 	generateAvatarWalkAtlas,
 	InvalidVrmError,
@@ -179,12 +198,26 @@ const PLAYER_RADIUS = 18;
 const SPRITE_WIDTH = 92;
 const SPRITE_HEIGHT = 138;
 const SPRITE_FRAME_MS = 1000 / 6;
+const MOTION_FRAME_MS = 180;
+
+const MOTION_DURATIONS: Record<Misskey.AvatarWalkActionType, number | null> = {
+	sit: null,
+	wave: 1800,
+	bow: 1200,
+	cheer: 1800,
+};
 
 type WorldTree = {
 	x: number;
 	y: number;
 	radius: number;
 	scale: number;
+};
+
+type MotionHotbarItem = {
+	type: Misskey.AvatarWalkActionType;
+	label: string;
+	icon: string;
 };
 
 const trees: WorldTree[] = [
@@ -250,6 +283,12 @@ const zoomPercent = computed(() => Math.round(cameraZoom.value * 100));
 const zoomOutLabel = computed(() => `${zoomPercent.value}% · ${avatarWalkLocaleString('zoomOut', `− ${i18n.ts._avatarWalk.gameCanvasLabel}`)}`);
 const zoomInLabel = computed(() => `${zoomPercent.value}% · ${avatarWalkLocaleString('zoomIn', `+ ${i18n.ts._avatarWalk.gameCanvasLabel}`)}`);
 const resetZoomLabel = computed(() => `${zoomPercent.value}% · ${avatarWalkLocaleString('resetZoom', i18n.ts.reset)}`);
+const motionItems = computed<MotionHotbarItem[]>(() => [
+	{ type: 'sit', label: i18n.ts._avatarWalk.motionSit, icon: 'ti ti-armchair' },
+	{ type: 'wave', label: i18n.ts._avatarWalk.motionWave, icon: 'ti ti-hand-stop' },
+	{ type: 'bow', label: i18n.ts._avatarWalk.motionBow, icon: 'ti ti-pray' },
+	{ type: 'cheer', label: i18n.ts._avatarWalk.motionCheer, icon: 'ti ti-mood-happy' },
+]);
 const multiplayerStatusLabel = computed(() => {
 	if (avatarWalkConnectionStatus.value === 'unavailable') return i18n.ts.signinRequired;
 	if (avatarWalkConnectionStatus.value !== 'connected') return i18n.ts.loading;
@@ -407,6 +446,16 @@ function resetZoom(): void {
 	setCameraZoom(DEFAULT_CAMERA_ZOOM);
 }
 
+function playAction(type: Misskey.AvatarWalkActionType): void {
+	pressedKeys.clear();
+	avatarWalkLocalPlayer.moving = false;
+	if (type === 'sit' && avatarWalkLocalPlayer.action?.type === 'sit') {
+		avatarWalkLocalPlayer.action = null;
+		return;
+	}
+	avatarWalkLocalPlayer.action = { type, startedAt: Date.now() };
+}
+
 function setCameraZoom(value: number): void {
 	cameraZoom.value = clamp(Math.round(value * 100) / 100, MIN_CAMERA_ZOOM, MAX_CAMERA_ZOOM);
 }
@@ -472,6 +521,8 @@ function updateAnimationState(): void {
 }
 
 function updatePlayer(delta: number): void {
+	const action = getVisibleAction(avatarWalkLocalPlayer.action);
+	if (avatarWalkLocalPlayer.action != null && action == null) avatarWalkLocalPlayer.action = null;
 	if (!focused.value) return;
 	let x = 0;
 	let y = 0;
@@ -481,6 +532,7 @@ function updatePlayer(delta: number): void {
 	if (pressedKeys.has('KeyS') || pressedKeys.has('ArrowDown')) y++;
 	avatarWalkLocalPlayer.moving = x !== 0 || y !== 0;
 	if (!avatarWalkLocalPlayer.moving) return;
+	avatarWalkLocalPlayer.action = null;
 
 	const length = Math.hypot(x, y);
 	x /= length;
@@ -628,23 +680,7 @@ function drawLocalPlayer(
 	context.ellipse(screenX, screenY + 2, 30, 10, 0, 0, Math.PI * 2);
 	context.fill();
 
-	const frame = avatarWalkLocalPlayer.moving
-		? storedAtlas.idleFrameCount + Math.floor(time / SPRITE_FRAME_MS) % storedAtlas.walkFrameCount
-		: Math.floor(time / SPRITE_FRAME_MS) % storedAtlas.idleFrameCount;
-	const previousImageSmoothing = context.imageSmoothingEnabled;
-	context.imageSmoothingEnabled = storedAtlas.version >= 2;
-	context.drawImage(
-		image,
-		avatarWalkLocalPlayer.direction * storedAtlas.cellWidth,
-		frame * storedAtlas.cellHeight,
-		storedAtlas.cellWidth,
-		storedAtlas.cellHeight,
-		Math.round(screenX - SPRITE_WIDTH / 2),
-		Math.round(screenY - SPRITE_HEIGHT + 8),
-		SPRITE_WIDTH,
-		SPRITE_HEIGHT,
-	);
-	context.imageSmoothingEnabled = previousImageSmoothing;
+	drawAtlasPlayerSprite(context, image, storedAtlas, avatarWalkLocalPlayer.direction, avatarWalkLocalPlayer.moving, avatarWalkLocalPlayer.action, time, screenX, screenY, storedAtlas.version >= 2);
 }
 
 function updateRemoteRenderPlayers(time: number): RemoteRenderPlayer[] {
@@ -671,6 +707,7 @@ function updateRemoteRenderPlayers(time: number): RemoteRenderPlayer[] {
 		existing.y = player.y;
 		existing.direction = player.direction;
 		existing.moving = player.moving;
+		existing.action = player.action;
 		existing.updatedAt = player.updatedAt;
 		existing.user = player.user;
 		existing.atlas = player.atlas;
@@ -705,23 +742,7 @@ function drawRemotePlayer(
 	const sharedImage = getRemoteAtlasImage(player);
 	let labelY: number;
 	if (player.atlas != null && sharedImage != null) {
-		const frame = player.moving
-			? player.atlas.idleFrameCount + Math.floor(time / SPRITE_FRAME_MS) % player.atlas.walkFrameCount
-			: Math.floor(time / SPRITE_FRAME_MS) % player.atlas.idleFrameCount;
-		const previousImageSmoothing = context.imageSmoothingEnabled;
-		context.imageSmoothingEnabled = true;
-		context.drawImage(
-			sharedImage,
-			player.direction * player.atlas.cellWidth,
-			frame * player.atlas.cellHeight,
-			player.atlas.cellWidth,
-			player.atlas.cellHeight,
-			Math.round(screenX - SPRITE_WIDTH / 2),
-			Math.round(screenY - SPRITE_HEIGHT + 8),
-			SPRITE_WIDTH,
-			SPRITE_HEIGHT,
-		);
-		context.imageSmoothingEnabled = previousImageSmoothing;
+		drawAtlasPlayerSprite(context, sharedImage, player.atlas, player.direction, player.moving, player.action, time, screenX, screenY, true);
 		labelY = Math.round(screenY - SPRITE_HEIGHT - 12);
 	} else {
 		const bob = player.moving ? Math.round(Math.sin(time / 90) * 3) : 0;
@@ -760,6 +781,79 @@ function drawRemotePlayer(
 		x: screenX,
 		y: labelY,
 	};
+}
+
+type RenderAtlas = Pick<StoredAvatarWalkAtlas, 'cellWidth' | 'cellHeight' | 'idleFrameCount' | 'walkFrameCount' | 'motionCount' | 'motionFrameCount'>;
+
+function drawAtlasPlayerSprite(
+	context: CanvasRenderingContext2D,
+	image: HTMLImageElement,
+	atlas: RenderAtlas,
+	direction: number,
+	moving: boolean,
+	action: Misskey.AvatarWalkAction | null,
+	time: number,
+	screenX: number,
+	screenY: number,
+	smoothing: boolean,
+): void {
+	const visibleAction = moving ? null : getVisibleAction(action);
+	const motionFrame = visibleAction == null ? null : getMotionFrame(atlas, visibleAction);
+	const frame = motionFrame ?? (moving
+		? atlas.idleFrameCount + Math.floor(time / SPRITE_FRAME_MS) % atlas.walkFrameCount
+		: Math.floor(time / SPRITE_FRAME_MS) % atlas.idleFrameCount);
+	const previousImageSmoothing = context.imageSmoothingEnabled;
+	context.save();
+	if (visibleAction != null && motionFrame == null) applyFallbackActionTransform(context, visibleAction, screenX, screenY);
+	context.imageSmoothingEnabled = smoothing;
+	context.drawImage(
+		image,
+		direction * atlas.cellWidth,
+		frame * atlas.cellHeight,
+		atlas.cellWidth,
+		atlas.cellHeight,
+		Math.round(screenX - SPRITE_WIDTH / 2),
+		Math.round(screenY - SPRITE_HEIGHT + 8),
+		SPRITE_WIDTH,
+		SPRITE_HEIGHT,
+	);
+	context.restore();
+	context.imageSmoothingEnabled = previousImageSmoothing;
+}
+
+function getMotionFrame(atlas: RenderAtlas, action: Misskey.AvatarWalkAction): number | null {
+	const motionIndex = AVATAR_WALK_ACTIONS.indexOf(action.type);
+	const frameCount = atlas.motionFrameCount ?? 0;
+	if (motionIndex < 0 || motionIndex >= (atlas.motionCount ?? 0) || frameCount === 0) return null;
+	const elapsed = Math.max(0, Date.now() - action.startedAt);
+	const actionFrame = action.type === 'sit'
+		? Math.min(frameCount - 1, Math.floor(elapsed / MOTION_FRAME_MS))
+		: Math.floor(elapsed / MOTION_FRAME_MS) % frameCount;
+	return atlas.idleFrameCount + atlas.walkFrameCount + motionIndex * frameCount + actionFrame;
+}
+
+function getVisibleAction(action: Misskey.AvatarWalkAction | null): Misskey.AvatarWalkAction | null {
+	if (action == null) return null;
+	const duration = MOTION_DURATIONS[action.type];
+	return duration == null || Date.now() - action.startedAt < duration ? action : null;
+}
+
+function applyFallbackActionTransform(context: CanvasRenderingContext2D, action: Misskey.AvatarWalkAction, screenX: number, screenY: number): void {
+	const elapsed = Math.max(0, Date.now() - action.startedAt);
+	context.translate(screenX, screenY);
+	if (action.type === 'sit') {
+		const amount = Math.min(1, elapsed / 500);
+		context.translate(0, 22 * amount);
+		context.scale(1, 1 - 0.24 * amount);
+	} else if (action.type === 'wave') {
+		context.rotate(Math.sin(elapsed / 120) * 0.045);
+	} else if (action.type === 'bow') {
+		const amount = Math.sin(Math.min(1, elapsed / (MOTION_DURATIONS.bow ?? 1)) * Math.PI);
+		context.rotate(amount * 0.16);
+	} else {
+		context.translate(0, -Math.abs(Math.sin(elapsed / 150)) * 10);
+	}
+	context.translate(-screenX, -screenY);
 }
 
 function drawRemoteNameBadge(context: CanvasRenderingContext2D, badge: RemoteNameBadge, zoom: number): void {
@@ -1092,6 +1186,63 @@ onUnmounted(() => {
 	padding: 0 5px;
 	font-size: 0.75em;
 	font-variant-numeric: tabular-nums;
+}
+
+.motionHotbar {
+	display: flex;
+	justify-content: center;
+	gap: 6px;
+	padding: 8px 10px;
+	border-top: 1px solid var(--MI_THEME-divider);
+	border-bottom: 1px solid var(--MI_THEME-divider);
+	background: color-mix(in srgb, var(--MI_THEME-bg) 72%, var(--MI_THEME-panel));
+}
+
+.motionSlot {
+	position: relative;
+	display: grid;
+	grid-template-rows: 1fr auto;
+	width: 58px;
+	height: 52px;
+	place-items: center;
+	border: 1px solid var(--MI_THEME-divider);
+	border-radius: calc(var(--MI-radius) - 2px);
+	background: var(--MI_THEME-panel);
+	color: var(--MI_THEME-fg);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--MI_THEME-fg) 5%, transparent);
+
+	> i {
+		align-self: end;
+		font-size: 20px;
+	}
+
+	&:hover,
+	&:focus-visible {
+		border-color: var(--MI_THEME-accent);
+		background: var(--MI_THEME-buttonHoverBg);
+	}
+
+	&.active {
+		border-color: var(--MI_THEME-accent);
+		background: var(--MI_THEME-accentedBg);
+		color: var(--MI_THEME-accent);
+		box-shadow: inset 0 0 0 1px var(--MI_THEME-accent);
+	}
+}
+
+.motionNumber {
+	position: absolute;
+	top: 3px;
+	left: 5px;
+	color: var(--MI_THEME-fgHighlighted);
+	font-size: 9px;
+	font-variant-numeric: tabular-nums;
+}
+
+.motionLabel {
+	align-self: start;
+	font-size: 9px;
+	line-height: 1.2;
 }
 
 .toolbar {

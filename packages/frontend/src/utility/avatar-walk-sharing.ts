@@ -180,6 +180,8 @@ async function publishSharedAvatar(atlas: StoredAvatarWalkAtlas, ownerUserId: st
 		directionCount: sharedImage.directionCount,
 		idleFrameCount: sharedImage.idleFrameCount,
 		walkFrameCount: sharedImage.walkFrameCount,
+		motionCount: sharedImage.motionCount,
+		motionFrameCount: sharedImage.motionFrameCount,
 	};
 	if (!isCurrentShare(generation, shareKey)) {
 		await deleteOrRememberCanceledUpload(ownerUserId, driveFile.id);
@@ -314,5 +316,7 @@ function toSharedAtlasInput(shared: StoredSharedAvatarWalkAtlasActive): Misskey.
 		directionCount: shared.directionCount,
 		idleFrameCount: shared.idleFrameCount,
 		walkFrameCount: shared.walkFrameCount,
+		motionCount: shared.motionCount,
+		motionFrameCount: shared.motionFrameCount,
 	};
 }

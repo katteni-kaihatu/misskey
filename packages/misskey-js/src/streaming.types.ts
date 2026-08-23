@@ -290,7 +290,7 @@ export type Channels = {
 			left: (payload: { userId: User['id']; }) => void;
 		};
 		receives: {
-			move: Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving'>;
+			move: Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'action'>;
 			setAtlas: AvatarWalkSharedAtlasInput | null;
 		};
 	};
@@ -350,11 +350,19 @@ export type AvatarWalkPlayer = {
 	y: number;
 	direction: number;
 	moving: boolean;
+	action: AvatarWalkAction | null;
 	updatedAt: number;
 	atlas: AvatarWalkSharedAtlas | null;
 };
 
-export type AvatarWalkMovement = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'updatedAt'> & {
+export type AvatarWalkActionType = 'sit' | 'wave' | 'bow' | 'cheer';
+
+export type AvatarWalkAction = {
+	type: AvatarWalkActionType;
+	startedAt: number;
+};
+
+export type AvatarWalkMovement = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'action' | 'updatedAt'> & {
 	userId: User['id'];
 };
 
@@ -366,6 +374,8 @@ export type AvatarWalkSharedAtlas = {
 	directionCount: number;
 	idleFrameCount: number;
 	walkFrameCount: number;
+	motionCount?: number;
+	motionFrameCount?: number;
 };
 
 export type AvatarWalkSharedAtlasInput = Omit<AvatarWalkSharedAtlas, 'url'> & {

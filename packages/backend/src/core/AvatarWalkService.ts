@@ -16,6 +16,7 @@ import type { DriveFilesRepository } from '@/models/_.js';
 
 export const AVATAR_WALK_WORLD_WIDTH = 1600;
 export const AVATAR_WALK_WORLD_HEIGHT = 1200;
+export const AVATAR_WALK_ACTIONS = ['sit', 'wave', 'bow', 'cheer'] as const;
 
 const PLAYER_RADIUS = 18;
 const MAX_PLAYER_SPEED = 260;
@@ -31,6 +32,8 @@ export type AvatarWalkSharedAtlas = {
 	directionCount: number;
 	idleFrameCount: number;
 	walkFrameCount: number;
+	motionCount?: number;
+	motionFrameCount?: number;
 };
 
 export type AvatarWalkSharedAtlasInput = Omit<AvatarWalkSharedAtlas, 'url'> & {
@@ -43,15 +46,25 @@ export type AvatarWalkPlayer = {
 	y: number;
 	direction: number;
 	moving: boolean;
+	action: AvatarWalkAction | null;
 	updatedAt: number;
 	atlas: AvatarWalkSharedAtlas | null;
 };
 
-export type AvatarWalkMovement = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'updatedAt'> & {
+export type AvatarWalkActionType = typeof AVATAR_WALK_ACTIONS[number];
+
+export type AvatarWalkAction = {
+	type: AvatarWalkActionType;
+	startedAt: number;
+};
+
+export type AvatarWalkMovement = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'action' | 'updatedAt'> & {
 	userId: MiUser['id'];
 };
 
-export type AvatarWalkMoveInput = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving'>;
+export type AvatarWalkMoveInput = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving'> & {
+	action?: AvatarWalkAction | null;
+};
 
 const SPAWN_POINTS = [
 	{ x: 800, y: 600 },
@@ -90,6 +103,7 @@ export class AvatarWalkService {
 			y: previous?.y ?? spawn.y,
 			direction: previous?.direction ?? 0,
 			moving: false,
+			action: null,
 			updatedAt: now,
 			atlas: previous?.atlas ?? null,
 		};
@@ -146,6 +160,7 @@ export class AvatarWalkService {
 			y: player.y,
 			direction: player.direction,
 			moving: player.moving,
+			action: player.action,
 			updatedAt: player.updatedAt,
 		};
 		this.globalEventService.publishAvatarWalkRoomStream(roomId, 'moved', movement);
@@ -176,6 +191,8 @@ export class AvatarWalkService {
 				directionCount: input.directionCount,
 				idleFrameCount: input.idleFrameCount,
 				walkFrameCount: input.walkFrameCount,
+				motionCount: input.motionCount,
+				motionFrameCount: input.motionFrameCount,
 			};
 		}
 
@@ -243,7 +260,9 @@ export class AvatarWalkService {
 			const player = JSON.parse(value) as AvatarWalkPlayer;
 			if (!isFiniteNumber(player.x) || !isFiniteNumber(player.y) || !Number.isInteger(player.direction) || typeof player.moving !== 'boolean') return null;
 			if (typeof player.user.id !== 'string') return null;
+			if (player.action !== undefined && player.action !== null && !isAvatarWalkAction(player.action)) return null;
 			if (player.atlas !== undefined && player.atlas !== null && !isAvatarWalkSharedAtlas(player.atlas)) return null;
+			player.action ??= null;
 			player.atlas ??= null;
 			return player;
 		} catch {
@@ -276,7 +295,8 @@ export function isAvatarWalkMoveInput(value: unknown): value is AvatarWalkMoveIn
 	const direction = input.direction;
 	return isFiniteNumber(input.x) && isFiniteNumber(input.y) &&
 		isFiniteNumber(direction) && Number.isInteger(direction) && direction >= 0 && direction <= 7 &&
-		typeof input.moving === 'boolean';
+		typeof input.moving === 'boolean' &&
+		(input.action === undefined || input.action === null || isAvatarWalkAction(input.action));
 }
 
 export function isAvatarWalkSharedAtlasInput(value: unknown): value is AvatarWalkSharedAtlasInput {
@@ -299,12 +319,27 @@ export function normalizeAvatarWalkMove(previous: AvatarWalkPlayer, input: Avata
 		y: previous.y + (requestedY - previous.y) * ratio,
 		direction: input.direction,
 		moving: input.moving && distance > 0,
+		action: input.moving ? null : normalizeAvatarWalkAction(input.action, now),
 		updatedAt: now,
 	};
 }
 
 function isFiniteNumber(value: unknown): value is number {
 	return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isAvatarWalkAction(value: unknown): value is AvatarWalkAction {
+	if (value == null || typeof value !== 'object') return false;
+	const action = value as Partial<AvatarWalkAction>;
+	return typeof action.type === 'string' && AVATAR_WALK_ACTIONS.includes(action.type as AvatarWalkActionType) &&
+		isFiniteNumber(action.startedAt) && Number.isInteger(action.startedAt);
+}
+
+function normalizeAvatarWalkAction(action: AvatarWalkAction | null | undefined, now: number): AvatarWalkAction | null {
+	return action == null ? null : {
+		type: action.type,
+		startedAt: Math.round(clamp(action.startedAt, now - 10_000, now + 1000)),
+	};
 }
 
 function isAvatarWalkSharedAtlas(value: unknown): value is AvatarWalkSharedAtlas {
@@ -326,7 +361,10 @@ function isAvatarWalkAtlasMetadata(value: Partial<AvatarWalkSharedAtlasInput | A
 		Number.isInteger(value.cellHeight) && (value.cellHeight ?? 0) >= 48 && (value.cellHeight ?? 0) <= 768 &&
 		value.directionCount === 8 &&
 		Number.isInteger(value.idleFrameCount) && (value.idleFrameCount ?? 0) >= 1 && (value.idleFrameCount ?? 0) <= 16 &&
-		Number.isInteger(value.walkFrameCount) && (value.walkFrameCount ?? 0) >= 1 && (value.walkFrameCount ?? 0) <= 16;
+		Number.isInteger(value.walkFrameCount) && (value.walkFrameCount ?? 0) >= 1 && (value.walkFrameCount ?? 0) <= 16 &&
+		((value.motionCount === undefined && value.motionFrameCount === undefined) ||
+			(Number.isInteger(value.motionCount) && (value.motionCount ?? 0) >= 1 && (value.motionCount ?? 0) <= 8 &&
+				Number.isInteger(value.motionFrameCount) && (value.motionFrameCount ?? 0) >= 1 && (value.motionFrameCount ?? 0) <= 16));
 }
 
 function clamp(value: number, min: number, max: number): number {

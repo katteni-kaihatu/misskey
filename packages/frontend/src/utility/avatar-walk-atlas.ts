@@ -13,13 +13,15 @@ import type { VRM, VRMMeta, VRMPose } from '@pixiv/three-vrm';
 const STORAGE_KEY = 'avatarWalkGame::atlas';
 const SHARED_STORAGE_KEY = 'avatarWalkGame::sharedAtlas';
 const ATLAS_STORE = createStore('MisskeyAvatarWalk', 'atlas');
-const ATLAS_VERSION = 4;
+const ATLAS_VERSION = 5;
 const CELL_WIDTH = 256;
 const CELL_HEIGHT = 384;
 const DIRECTION_COUNT = 8;
 const IDLE_FRAME_COUNT = 4;
 const WALK_FRAME_COUNT = 6;
-const FRAME_COUNT = IDLE_FRAME_COUNT + WALK_FRAME_COUNT;
+const MOTION_FRAME_COUNT = 4;
+export const AVATAR_WALK_ACTIONS = ['sit', 'wave', 'bow', 'cheer'] as const;
+const FRAME_COUNT = IDLE_FRAME_COUNT + WALK_FRAME_COUNT + AVATAR_WALK_ACTIONS.length * MOTION_FRAME_COUNT;
 const SHARED_ATLAS_SCALE = 0.5;
 
 export const AVATAR_WALK_ATLAS_UPDATED_EVENT = 'misskey:avatarWalkAtlasUpdated';
@@ -32,13 +34,15 @@ export type AvatarWalkAtlasProgress = {
 };
 
 export type StoredAvatarWalkAtlas = {
-	version: 1 | 2 | 3 | typeof ATLAS_VERSION;
+	version: 1 | 2 | 3 | 4 | typeof ATLAS_VERSION;
 	image: Blob;
 	cellWidth: number;
 	cellHeight: number;
 	directionCount: number;
 	idleFrameCount: number;
 	walkFrameCount: number;
+	motionCount?: number;
+	motionFrameCount?: number;
 	createdAt: number;
 	model: {
 		name?: string;
@@ -56,6 +60,8 @@ export type StoredSharedAvatarWalkAtlasActive = {
 	directionCount: number;
 	idleFrameCount: number;
 	walkFrameCount: number;
+	motionCount?: number;
+	motionFrameCount?: number;
 };
 
 export type StoredSharedAvatarWalkAtlas = {
@@ -79,7 +85,7 @@ export async function loadAvatarWalkAtlas(): Promise<StoredAvatarWalkAtlas | nul
 			await del(STORAGE_KEY);
 		}
 	}
-	if ((atlas?.version !== 1 && atlas?.version !== 2 && atlas?.version !== 3 && atlas?.version !== ATLAS_VERSION) || !(atlas.image instanceof Blob)) return null;
+	if ((atlas?.version !== 1 && atlas?.version !== 2 && atlas?.version !== 3 && atlas?.version !== 4 && atlas?.version !== ATLAS_VERSION) || !(atlas.image instanceof Blob)) return null;
 	return atlas;
 }
 
@@ -125,7 +131,7 @@ export async function createSharedAvatarWalkAtlasImage(atlas: StoredAvatarWalkAt
 	const bitmap = await createImageBitmap(atlas.image);
 	const canvas = window.document.createElement('canvas');
 	canvas.width = cellWidth * atlas.directionCount;
-	canvas.height = cellHeight * (atlas.idleFrameCount + atlas.walkFrameCount);
+	canvas.height = cellHeight * getAtlasFrameCount(atlas);
 	const context = canvas.getContext('2d');
 	if (context == null) {
 		bitmap.close();
@@ -145,6 +151,8 @@ export async function createSharedAvatarWalkAtlasImage(atlas: StoredAvatarWalkAt
 			directionCount: atlas.directionCount,
 			idleFrameCount: atlas.idleFrameCount,
 			walkFrameCount: atlas.walkFrameCount,
+			motionCount: atlas.motionCount,
+			motionFrameCount: atlas.motionFrameCount,
 		};
 	} finally {
 		bitmap.close();
@@ -167,9 +175,15 @@ function normalizeSharedAtlasActive(value: unknown): StoredSharedAvatarWalkAtlas
 		typeof active.cellHeight !== 'number' ||
 		typeof active.directionCount !== 'number' ||
 		typeof active.idleFrameCount !== 'number' ||
-		typeof active.walkFrameCount !== 'number'
+		typeof active.walkFrameCount !== 'number' ||
+		(active.motionCount !== undefined && typeof active.motionCount !== 'number') ||
+		(active.motionFrameCount !== undefined && typeof active.motionFrameCount !== 'number')
 	) return null;
 	return active as StoredSharedAvatarWalkAtlasActive;
+}
+
+function getAtlasFrameCount(atlas: Pick<StoredAvatarWalkAtlas, 'idleFrameCount' | 'walkFrameCount' | 'motionCount' | 'motionFrameCount'>): number {
+	return atlas.idleFrameCount + atlas.walkFrameCount + (atlas.motionCount ?? 0) * (atlas.motionFrameCount ?? 0);
 }
 
 export async function generateAvatarWalkAtlas(
@@ -270,9 +284,7 @@ export async function generateAvatarWalkAtlas(
 			avatarRoot.rotation.y = direction * Math.PI / 4;
 			for (let frame = 0; frame < FRAME_COUNT; frame++) {
 				vrm.humanoid.resetNormalizedPose();
-				vrm.humanoid.setNormalizedPose(frame < IDLE_FRAME_COUNT
-					? createIdlePose(frame)
-					: createWalkPose(frame - IDLE_FRAME_COUNT));
+				vrm.humanoid.setNormalizedPose(createAtlasPose(frame));
 				vrm.springBoneManager?.reset();
 				vrm.update(1 / 60);
 				avatarRoot.updateWorldMatrix(true, true);
@@ -295,6 +307,8 @@ export async function generateAvatarWalkAtlas(
 			directionCount: DIRECTION_COUNT,
 			idleFrameCount: IDLE_FRAME_COUNT,
 			walkFrameCount: WALK_FRAME_COUNT,
+			motionCount: AVATAR_WALK_ACTIONS.length,
+			motionFrameCount: MOTION_FRAME_COUNT,
 			createdAt: Date.now(),
 			model: getModelMetadata(vrm.meta),
 		};
@@ -377,6 +391,62 @@ function createIdlePose(frame: number): VRMPose {
 		leftLowerArm: { rotation: quaternion(0, 0.05, -0.18) },
 		rightLowerArm: { rotation: quaternion(0, -0.05, 0.18) },
 	};
+}
+
+function createAtlasPose(frame: number): VRMPose {
+	if (frame < IDLE_FRAME_COUNT) return createIdlePose(frame);
+	if (frame < IDLE_FRAME_COUNT + WALK_FRAME_COUNT) return createWalkPose(frame - IDLE_FRAME_COUNT);
+	const motionFrame = frame - IDLE_FRAME_COUNT - WALK_FRAME_COUNT;
+	const action = AVATAR_WALK_ACTIONS[Math.floor(motionFrame / MOTION_FRAME_COUNT)] ?? AVATAR_WALK_ACTIONS[0];
+	return createActionPose(action, motionFrame % MOTION_FRAME_COUNT);
+}
+
+function createActionPose(action: typeof AVATAR_WALK_ACTIONS[number], frame: number): VRMPose {
+	const phase = frame / MOTION_FRAME_COUNT * Math.PI * 2;
+	if (action === 'sit') {
+		const amount = easeOut(Math.min(1, frame / (MOTION_FRAME_COUNT - 1)));
+		return {
+			hips: { position: [0, -0.34 * amount, 0.04 * amount], rotation: quaternion(-0.08 * amount, 0, 0) },
+			spine: { rotation: quaternion(0.12 * amount, 0, 0) },
+			leftUpperLeg: { rotation: quaternion(-1.18 * amount, 0, 0) },
+			rightUpperLeg: { rotation: quaternion(-1.18 * amount, 0, 0) },
+			leftLowerLeg: { rotation: quaternion(1.42 * amount, 0, 0) },
+			rightLowerLeg: { rotation: quaternion(1.42 * amount, 0, 0) },
+			leftUpperArm: { rotation: quaternion(0.16, 0, -1.1) },
+			rightUpperArm: { rotation: quaternion(0.16, 0, 1.1) },
+		};
+	}
+	if (action === 'wave') {
+		return {
+			spine: { rotation: quaternion(-0.04, 0, -0.04) },
+			leftUpperArm: { rotation: quaternion(0.04, 0, -1.18) },
+			rightUpperArm: { rotation: quaternion(-0.18, 0, 2.35) },
+			rightLowerArm: { rotation: quaternion(0, Math.sin(phase) * 0.35, 0.72 + Math.sin(phase) * 0.28) },
+		};
+	}
+	if (action === 'bow') {
+		const amount = [0, 0.65, 1, 0.35][frame] ?? 0;
+		return {
+			hips: { rotation: quaternion(0.22 * amount, 0, 0) },
+			spine: { rotation: quaternion(0.72 * amount, 0, 0) },
+			chest: { rotation: quaternion(0.28 * amount, 0, 0) },
+			leftUpperArm: { rotation: quaternion(0.12, 0, -1.08) },
+			rightUpperArm: { rotation: quaternion(0.12, 0, 1.08) },
+		};
+	}
+	const bob = Math.abs(Math.sin(phase)) * 0.07;
+	return {
+		hips: { position: [0, bob, 0] },
+		spine: { rotation: quaternion(-0.08, 0, Math.sin(phase) * 0.04) },
+		leftUpperArm: { rotation: quaternion(-0.18, 0, -2.35) },
+		rightUpperArm: { rotation: quaternion(-0.18, 0, 2.35) },
+		leftLowerArm: { rotation: quaternion(0, 0, -0.35) },
+		rightLowerArm: { rotation: quaternion(0, 0, 0.35) },
+	};
+}
+
+function easeOut(value: number): number {
+	return 1 - (1 - value) ** 3;
 }
 
 function createWalkPose(frame: number): VRMPose {

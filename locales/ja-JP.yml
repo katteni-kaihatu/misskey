@@ -1673,6 +1673,11 @@ _avatarWalk:
   generationFailed: "アバター画像の生成に失敗しました。別のVRMで試してください。"
   storageFailed: "このブラウザのローカルストレージを利用できませんでした。"
   sharedFileDeleteFailed: "共有用のアバター画像をDriveから削除できませんでした。次回起動時にもう一度削除します。"
+  motions: "モーション"
+  motionSit: "座る"
+  motionWave: "手を振る"
+  motionBow: "おじぎ"
+  motionCheer: "喜ぶ"
 
 _announcement:
   forExistingUsers: "既存ユーザーのみ"

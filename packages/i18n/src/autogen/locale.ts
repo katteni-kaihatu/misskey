@@ -6604,6 +6604,26 @@ export interface Locale extends ILocale {
          * 共有用のアバター画像をDriveから削除できませんでした。次回起動時にもう一度削除します。
          */
         "sharedFileDeleteFailed": string;
+        /**
+         * モーション
+         */
+        "motions": string;
+        /**
+         * 座る
+         */
+        "motionSit": string;
+        /**
+         * 手を振る
+         */
+        "motionWave": string;
+        /**
+         * おじぎ
+         */
+        "motionBow": string;
+        /**
+         * 喜ぶ
+         */
+        "motionCheer": string;
     };
     "_announcement": {
         /**
