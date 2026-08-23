@@ -8,8 +8,9 @@ import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { VRM, VRMHumanBoneName } from '@pixiv/three-vrm';
 
-const KAYKIT_MOTIONS_URL = '/static-assets/avatar-walk/kaykit-medium-simulation.glb';
-const CMU_BOW_MOTION_URL = '/static-assets/avatar-walk/cmu-113-02-bow.bvh';
+const MOTION_ASSET_VERSION = 1;
+const KAYKIT_MOTIONS_URL = `/static-assets/avatar-walk/kaykit-medium-simulation.glb?v=${MOTION_ASSET_VERSION}`;
+const CMU_BOW_MOTION_URL = `/static-assets/avatar-walk/cmu-113-02-bow.bvh?v=${MOTION_ASSET_VERSION}`;
 
 const KAYKIT_CLIP_NAMES = {
 	sit: 'Rig_Medium|Sit_Chair_Down',

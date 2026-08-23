@@ -103,7 +103,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 
-		<div v-if="!compact" :class="$style.motionHotbar" role="toolbar" :aria-label="i18n.ts._avatarWalk.motions">
+		<div v-if="!compact" :class="$style.motionHotbar" role="toolbar" :aria-label="motionToolbarLabel">
 			<button
 				v-for="(motion, index) in motionItems"
 				:key="motion.type"
@@ -285,11 +285,12 @@ const zoomPercent = computed(() => Math.round(cameraZoom.value * 100));
 const zoomOutLabel = computed(() => `${zoomPercent.value}% · ${avatarWalkLocaleString('zoomOut', `− ${i18n.ts._avatarWalk.gameCanvasLabel}`)}`);
 const zoomInLabel = computed(() => `${zoomPercent.value}% · ${avatarWalkLocaleString('zoomIn', `+ ${i18n.ts._avatarWalk.gameCanvasLabel}`)}`);
 const resetZoomLabel = computed(() => `${zoomPercent.value}% · ${avatarWalkLocaleString('resetZoom', i18n.ts.reset)}`);
+const motionToolbarLabel = computed(() => avatarWalkLocaleString('motions', i18n.ts.operations));
 const motionItems = computed<MotionHotbarItem[]>(() => [
-	{ type: 'sit', label: i18n.ts._avatarWalk.motionSit, icon: 'ti ti-armchair' },
-	{ type: 'wave', label: i18n.ts._avatarWalk.motionWave, icon: 'ti ti-hand-stop' },
-	{ type: 'bow', label: i18n.ts._avatarWalk.motionBow, icon: 'ti ti-pray' },
-	{ type: 'cheer', label: i18n.ts._avatarWalk.motionCheer, icon: 'ti ti-mood-happy' },
+	{ type: 'sit', label: avatarWalkLocaleString('motionSit', `${i18n.ts.operations} 1`), icon: 'ti ti-armchair' },
+	{ type: 'wave', label: avatarWalkLocaleString('motionWave', `${i18n.ts.operations} 2`), icon: 'ti ti-hand-stop' },
+	{ type: 'bow', label: avatarWalkLocaleString('motionBow', `${i18n.ts.operations} 3`), icon: 'ti ti-pray' },
+	{ type: 'cheer', label: avatarWalkLocaleString('motionCheer', `${i18n.ts.operations} 4`), icon: 'ti ti-mood-happy' },
 ]);
 const multiplayerStatusLabel = computed(() => {
 	if (avatarWalkConnectionStatus.value === 'unavailable') return i18n.ts.signinRequired;

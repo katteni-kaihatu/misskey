@@ -15,7 +15,7 @@ import type { AvatarWalkMotionClips, AvatarWalkMotionType } from '@/utility/avat
 const STORAGE_KEY = 'avatarWalkGame::atlas';
 const SHARED_STORAGE_KEY = 'avatarWalkGame::sharedAtlas';
 const ATLAS_STORE = createStore('MisskeyAvatarWalk', 'atlas');
-const ATLAS_VERSION = 6;
+const ATLAS_VERSION = 7;
 const CELL_WIDTH = 256;
 const CELL_HEIGHT = 384;
 const DIRECTION_COUNT = 8;
