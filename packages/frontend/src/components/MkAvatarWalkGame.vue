@@ -158,6 +158,7 @@ import * as os from '@/os.js';
 import {
 	AVATAR_WALK_ATLAS_UPDATED_EVENT,
 	AVATAR_WALK_ACTIONS,
+	AVATAR_WALK_MOTION_FRAME_COUNT,
 	avatarWalkOperationLocked as operationLocked,
 	generateAvatarWalkAtlas,
 	InvalidVrmError,
@@ -198,13 +199,14 @@ const PLAYER_RADIUS = 18;
 const SPRITE_WIDTH = 92;
 const SPRITE_HEIGHT = 138;
 const SPRITE_FRAME_MS = 1000 / 6;
-const MOTION_FRAME_MS = 180;
+const MOTION_FRAME_MS = SPRITE_FRAME_MS;
+const MOTION_DURATION = AVATAR_WALK_MOTION_FRAME_COUNT * MOTION_FRAME_MS;
 
 const MOTION_DURATIONS: Record<Misskey.AvatarWalkActionType, number | null> = {
 	sit: null,
-	wave: 1800,
-	bow: 1200,
-	cheer: 1800,
+	wave: MOTION_DURATION,
+	bow: MOTION_DURATION,
+	cheer: MOTION_DURATION,
 };
 
 type WorldTree = {
@@ -804,7 +806,6 @@ function drawAtlasPlayerSprite(
 		: Math.floor(time / SPRITE_FRAME_MS) % atlas.idleFrameCount);
 	const previousImageSmoothing = context.imageSmoothingEnabled;
 	context.save();
-	if (visibleAction != null && motionFrame == null) applyFallbackActionTransform(context, visibleAction, screenX, screenY);
 	context.imageSmoothingEnabled = smoothing;
 	context.drawImage(
 		image,
@@ -836,24 +837,6 @@ function getVisibleAction(action: Misskey.AvatarWalkAction | null): Misskey.Avat
 	if (action == null) return null;
 	const duration = MOTION_DURATIONS[action.type];
 	return duration == null || Date.now() - action.startedAt < duration ? action : null;
-}
-
-function applyFallbackActionTransform(context: CanvasRenderingContext2D, action: Misskey.AvatarWalkAction, screenX: number, screenY: number): void {
-	const elapsed = Math.max(0, Date.now() - action.startedAt);
-	context.translate(screenX, screenY);
-	if (action.type === 'sit') {
-		const amount = Math.min(1, elapsed / 500);
-		context.translate(0, 22 * amount);
-		context.scale(1, 1 - 0.24 * amount);
-	} else if (action.type === 'wave') {
-		context.rotate(Math.sin(elapsed / 120) * 0.045);
-	} else if (action.type === 'bow') {
-		const amount = Math.sin(Math.min(1, elapsed / (MOTION_DURATIONS.bow ?? 1)) * Math.PI);
-		context.rotate(amount * 0.16);
-	} else {
-		context.translate(0, -Math.abs(Math.sin(elapsed / 150)) * 10);
-	}
-	context.translate(-screenX, -screenY);
 }
 
 function drawRemoteNameBadge(context: CanvasRenderingContext2D, badge: RemoteNameBadge, zoom: number): void {

@@ -9,19 +9,21 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import type { VRM, VRMMeta, VRMPose } from '@pixiv/three-vrm';
+import { loadAvatarWalkMotionClips } from '@/utility/avatar-walk-motion-clips.js';
+import type { AvatarWalkMotionClips, AvatarWalkMotionType } from '@/utility/avatar-walk-motion-clips.js';
 
 const STORAGE_KEY = 'avatarWalkGame::atlas';
 const SHARED_STORAGE_KEY = 'avatarWalkGame::sharedAtlas';
 const ATLAS_STORE = createStore('MisskeyAvatarWalk', 'atlas');
-const ATLAS_VERSION = 5;
+const ATLAS_VERSION = 6;
 const CELL_WIDTH = 256;
 const CELL_HEIGHT = 384;
 const DIRECTION_COUNT = 8;
 const IDLE_FRAME_COUNT = 4;
 const WALK_FRAME_COUNT = 6;
-const MOTION_FRAME_COUNT = 4;
+export const AVATAR_WALK_MOTION_FRAME_COUNT = 8;
 export const AVATAR_WALK_ACTIONS = ['sit', 'wave', 'bow', 'cheer'] as const;
-const FRAME_COUNT = IDLE_FRAME_COUNT + WALK_FRAME_COUNT + AVATAR_WALK_ACTIONS.length * MOTION_FRAME_COUNT;
+const FRAME_COUNT = IDLE_FRAME_COUNT + WALK_FRAME_COUNT + AVATAR_WALK_ACTIONS.length * AVATAR_WALK_MOTION_FRAME_COUNT;
 const SHARED_ATLAS_SCALE = 0.5;
 
 export const AVATAR_WALK_ATLAS_UPDATED_EVENT = 'misskey:avatarWalkAtlasUpdated';
@@ -34,7 +36,7 @@ export type AvatarWalkAtlasProgress = {
 };
 
 export type StoredAvatarWalkAtlas = {
-	version: 1 | 2 | 3 | 4 | typeof ATLAS_VERSION;
+	version: typeof ATLAS_VERSION;
 	image: Blob;
 	cellWidth: number;
 	cellHeight: number;
@@ -85,7 +87,7 @@ export async function loadAvatarWalkAtlas(): Promise<StoredAvatarWalkAtlas | nul
 			await del(STORAGE_KEY);
 		}
 	}
-	if ((atlas?.version !== 1 && atlas?.version !== 2 && atlas?.version !== 3 && atlas?.version !== 4 && atlas?.version !== ATLAS_VERSION) || !(atlas.image instanceof Blob)) return null;
+	if (atlas?.version !== ATLAS_VERSION || !(atlas.image instanceof Blob)) return null;
 	return atlas;
 }
 
@@ -193,7 +195,7 @@ export async function generateAvatarWalkAtlas(
 	if (!file.name.toLowerCase().endsWith('.vrm')) throw new InvalidVrmError();
 	if (file.size > MAX_VRM_FILE_SIZE) throw new VrmFileTooLargeError();
 
-	onProgress?.({ stage: 'loading', completed: 0, total: 1 });
+	onProgress?.({ stage: 'loading', completed: 0, total: 2 });
 	const fileBytes = await file.arrayBuffer();
 	if (!hasGlbSignature(fileBytes)) throw new InvalidVrmError();
 
@@ -222,6 +224,7 @@ export async function generateAvatarWalkAtlas(
 	renderer.setClearColor(0x000000, 0);
 
 	let vrm: VRM | null = null;
+	let motionMixer: THREE.AnimationMixer | null = null;
 	try {
 		const loadingManager = new THREE.LoadingManager();
 		loadingManager.setURLModifier((url) => {
@@ -234,8 +237,14 @@ export async function generateAvatarWalkAtlas(
 		const gltf = await loader.parseAsync(fileBytes, '');
 		vrm = gltf.userData.vrm as VRM | undefined ?? null;
 		if (vrm == null) throw new InvalidVrmError();
+		onProgress?.({ stage: 'loading', completed: 1, total: 2 });
 
 		VRMUtils.rotateVRM0(vrm);
+		const motionClips = await loadAvatarWalkMotionClips(vrm);
+		const currentMotionMixer = new THREE.AnimationMixer(vrm.scene);
+		motionMixer = currentMotionMixer;
+		const motionActions = createMotionActions(currentMotionMixer, motionClips);
+		onProgress?.({ stage: 'loading', completed: 2, total: 2 });
 		const scene = new THREE.Scene();
 		const avatarRoot = new THREE.Group();
 		avatarRoot.add(vrm.scene);
@@ -283,8 +292,7 @@ export async function generateAvatarWalkAtlas(
 		for (let direction = 0; direction < DIRECTION_COUNT; direction++) {
 			avatarRoot.rotation.y = direction * Math.PI / 4;
 			for (let frame = 0; frame < FRAME_COUNT; frame++) {
-				vrm.humanoid.resetNormalizedPose();
-				vrm.humanoid.setNormalizedPose(createAtlasPose(frame));
+				applyAtlasFrame(vrm, currentMotionMixer, motionActions, frame);
 				vrm.springBoneManager?.reset();
 				vrm.update(1 / 60);
 				avatarRoot.updateWorldMatrix(true, true);
@@ -308,7 +316,7 @@ export async function generateAvatarWalkAtlas(
 			idleFrameCount: IDLE_FRAME_COUNT,
 			walkFrameCount: WALK_FRAME_COUNT,
 			motionCount: AVATAR_WALK_ACTIONS.length,
-			motionFrameCount: MOTION_FRAME_COUNT,
+			motionFrameCount: AVATAR_WALK_MOTION_FRAME_COUNT,
 			createdAt: Date.now(),
 			model: getModelMetadata(vrm.meta),
 		};
@@ -317,6 +325,10 @@ export async function generateAvatarWalkAtlas(
 		onProgress?.({ stage: 'saving', completed: 1, total: 1 });
 		return atlas;
 	} finally {
+		if (motionMixer != null && vrm != null) {
+			motionMixer.stopAllAction();
+			motionMixer.uncacheRoot(vrm.scene);
+		}
 		if (vrm != null) VRMUtils.deepDispose(vrm.scene);
 		renderer.dispose();
 		renderer.forceContextLoss();
@@ -393,56 +405,54 @@ function createIdlePose(frame: number): VRMPose {
 	};
 }
 
-function createAtlasPose(frame: number): VRMPose {
+function createLocomotionPose(frame: number): VRMPose {
 	if (frame < IDLE_FRAME_COUNT) return createIdlePose(frame);
-	if (frame < IDLE_FRAME_COUNT + WALK_FRAME_COUNT) return createWalkPose(frame - IDLE_FRAME_COUNT);
-	const motionFrame = frame - IDLE_FRAME_COUNT - WALK_FRAME_COUNT;
-	const action = AVATAR_WALK_ACTIONS[Math.floor(motionFrame / MOTION_FRAME_COUNT)] ?? AVATAR_WALK_ACTIONS[0];
-	return createActionPose(action, motionFrame % MOTION_FRAME_COUNT);
+	return createWalkPose(frame - IDLE_FRAME_COUNT);
 }
 
-function createActionPose(action: typeof AVATAR_WALK_ACTIONS[number], frame: number): VRMPose {
-	const phase = frame / MOTION_FRAME_COUNT * Math.PI * 2;
-	if (action === 'sit') {
-		const amount = easeOut(Math.min(1, frame / (MOTION_FRAME_COUNT - 1)));
-		return {
-			hips: { position: [0, -0.34 * amount, 0.04 * amount], rotation: quaternion(-0.08 * amount, 0, 0) },
-			spine: { rotation: quaternion(0.12 * amount, 0, 0) },
-			leftUpperLeg: { rotation: quaternion(-1.18 * amount, 0, 0) },
-			rightUpperLeg: { rotation: quaternion(-1.18 * amount, 0, 0) },
-			leftLowerLeg: { rotation: quaternion(1.42 * amount, 0, 0) },
-			rightLowerLeg: { rotation: quaternion(1.42 * amount, 0, 0) },
-			leftUpperArm: { rotation: quaternion(0.16, 0, -1.1) },
-			rightUpperArm: { rotation: quaternion(0.16, 0, 1.1) },
-		};
-	}
-	if (action === 'wave') {
-		return {
-			spine: { rotation: quaternion(-0.04, 0, -0.04) },
-			leftUpperArm: { rotation: quaternion(0.04, 0, -1.18) },
-			rightUpperArm: { rotation: quaternion(-0.18, 0, 2.35) },
-			rightLowerArm: { rotation: quaternion(0, Math.sin(phase) * 0.35, 0.72 + Math.sin(phase) * 0.28) },
-		};
-	}
-	if (action === 'bow') {
-		const amount = [0, 0.65, 1, 0.35][frame] ?? 0;
-		return {
-			hips: { rotation: quaternion(0.22 * amount, 0, 0) },
-			spine: { rotation: quaternion(0.72 * amount, 0, 0) },
-			chest: { rotation: quaternion(0.28 * amount, 0, 0) },
-			leftUpperArm: { rotation: quaternion(0.12, 0, -1.08) },
-			rightUpperArm: { rotation: quaternion(0.12, 0, 1.08) },
-		};
-	}
-	const bob = Math.abs(Math.sin(phase)) * 0.07;
+function createMotionActions(
+	mixer: THREE.AnimationMixer,
+	clips: AvatarWalkMotionClips,
+): Record<AvatarWalkMotionType, THREE.AnimationAction> {
 	return {
-		hips: { position: [0, bob, 0] },
-		spine: { rotation: quaternion(-0.08, 0, Math.sin(phase) * 0.04) },
-		leftUpperArm: { rotation: quaternion(-0.18, 0, -2.35) },
-		rightUpperArm: { rotation: quaternion(-0.18, 0, 2.35) },
-		leftLowerArm: { rotation: quaternion(0, 0, -0.35) },
-		rightLowerArm: { rotation: quaternion(0, 0, 0.35) },
+		sit: mixer.clipAction(clips.sit),
+		wave: mixer.clipAction(clips.wave),
+		bow: mixer.clipAction(clips.bow),
+		cheer: mixer.clipAction(clips.cheer),
 	};
+}
+
+function applyAtlasFrame(
+	vrm: VRM,
+	mixer: THREE.AnimationMixer,
+	actions: Record<AvatarWalkMotionType, THREE.AnimationAction>,
+	frame: number,
+): void {
+	mixer.stopAllAction();
+	mixer.setTime(0);
+	vrm.humanoid.resetNormalizedPose();
+
+	if (frame < IDLE_FRAME_COUNT + WALK_FRAME_COUNT) {
+		vrm.humanoid.setNormalizedPose(createLocomotionPose(frame));
+		return;
+	}
+
+	const motionFrame = frame - IDLE_FRAME_COUNT - WALK_FRAME_COUNT;
+	const motionType = AVATAR_WALK_ACTIONS[Math.floor(motionFrame / AVATAR_WALK_MOTION_FRAME_COUNT)] ?? AVATAR_WALK_ACTIONS[0];
+	const actionFrame = motionFrame % AVATAR_WALK_MOTION_FRAME_COUNT;
+	const action = actions[motionType];
+	const progress = actionFrame / (AVATAR_WALK_MOTION_FRAME_COUNT - 1);
+	action.reset();
+	action.setLoop(THREE.LoopOnce, 1);
+	action.clampWhenFinished = true;
+	action.play();
+	mixer.setTime(action.getClip().duration * progress);
+
+	if (motionType === 'sit') {
+		const hips = vrm.humanoid.getNormalizedBoneNode('hips');
+		const hipsHeight = vrm.humanoid.normalizedRestPose.hips.position?.[1] ?? 1;
+		if (hips != null) hips.position.y -= hipsHeight * 0.38 * easeOut(progress);
+	}
 }
 
 function easeOut(value: number): number {
