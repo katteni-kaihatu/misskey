@@ -278,6 +278,22 @@ export type Channels = {
 			claimTimeIsUp: null | Record<string, never>;
 		}
 	};
+	avatarWalkRoom: {
+		params: {
+			roomId: 'main';
+		};
+		events: {
+			snapshot: (payload: { players: AvatarWalkPlayer[]; }) => void;
+			joined: (payload: AvatarWalkPlayer) => void;
+			moved: (payload: AvatarWalkMovement) => void;
+			atlasUpdated: (payload: { userId: User['id']; atlas: AvatarWalkSharedAtlas | null; }) => void;
+			left: (payload: { userId: User['id']; }) => void;
+		};
+		receives: {
+			move: Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving'>;
+			setAtlas: AvatarWalkSharedAtlasInput | null;
+		};
+	};
 	chatUser: {
 		params: {
 			otherId: string;
@@ -326,6 +342,34 @@ export type Channels = {
 			};
 		};
 	};
+};
+
+export type AvatarWalkPlayer = {
+	user: UserLite;
+	x: number;
+	y: number;
+	direction: number;
+	moving: boolean;
+	updatedAt: number;
+	atlas: AvatarWalkSharedAtlas | null;
+};
+
+export type AvatarWalkMovement = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'updatedAt'> & {
+	userId: User['id'];
+};
+
+export type AvatarWalkSharedAtlas = {
+	url: string;
+	version: number;
+	cellWidth: number;
+	cellHeight: number;
+	directionCount: number;
+	idleFrameCount: number;
+	walkFrameCount: number;
+};
+
+export type AvatarWalkSharedAtlasInput = Omit<AvatarWalkSharedAtlas, 'url'> & {
+	fileId: string;
 };
 
 export type NoteUpdatedEvent = { id: Note['id'] } & ({

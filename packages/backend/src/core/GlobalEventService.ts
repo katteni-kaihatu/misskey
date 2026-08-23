@@ -26,6 +26,7 @@ import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { bindThis } from '@/decorators.js';
 import { Serialized } from '@/types.js';
+import type { AvatarWalkMovement, AvatarWalkPlayer, AvatarWalkSharedAtlas } from '@/core/AvatarWalkService.js';
 import type Emitter from 'strict-event-emitter-types';
 import type { EventEmitter } from 'events';
 
@@ -204,6 +205,18 @@ export interface ReversiGameEventTypes {
 		userId: MiUser['id'];
 	};
 }
+
+export interface AvatarWalkRoomEventTypes {
+	joined: AvatarWalkPlayer;
+	moved: AvatarWalkMovement;
+	atlasUpdated: {
+		userId: MiUser['id'];
+		atlas: AvatarWalkSharedAtlas | null;
+	};
+	left: {
+		userId: MiUser['id'];
+	};
+}
 //#endregion
 
 // 辞書(interface or type)から{ type, body }ユニオンを定義
@@ -323,6 +336,10 @@ export type GlobalEvents = {
 		name: `reversiGameStream:${MiReversiGame['id']}`;
 		payload: EventTypesToEventPayload<ReversiGameEventTypes>;
 	};
+	avatarWalkRoom: {
+		name: `avatarWalkRoomStream:${string}`;
+		payload: EventTypesToEventPayload<AvatarWalkRoomEventTypes>;
+	};
 };
 
 // API event definitions
@@ -434,5 +451,10 @@ export class GlobalEventService {
 	@bindThis
 	public publishReversiGameStream<K extends keyof ReversiGameEventTypes>(gameId: MiReversiGame['id'], type: K, value?: ReversiGameEventTypes[K]): void {
 		this.publish(`reversiGameStream:${gameId}`, type, typeof value === 'undefined' ? null : value);
+	}
+
+	@bindThis
+	public publishAvatarWalkRoomStream<K extends keyof AvatarWalkRoomEventTypes>(roomId: string, type: K, value: AvatarWalkRoomEventTypes[K]): void {
+		this.publish(`avatarWalkRoomStream:${roomId}`, type, value);
 	}
 }

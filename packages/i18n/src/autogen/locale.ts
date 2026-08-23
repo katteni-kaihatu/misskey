@@ -5117,6 +5117,10 @@ export interface Locale extends ILocale {
      */
     "bubbleGame": string;
     /**
+     * アバター散歩
+     */
+    "avatarWalkGame": string;
+    /**
      * 効果音
      */
     "sfx": string;
@@ -6514,6 +6518,92 @@ export interface Locale extends ILocale {
              */
             "section3": string;
         };
+    };
+    "_avatarWalk": {
+        /**
+         * VRMをぽいっと入れる
+         */
+        "dropVrm": string;
+        /**
+         * 自分のアバターで、昔のMMO風の世界を歩けます。クリックしてファイルを選ぶこともできます。
+         */
+        "dropVrmDescription": string;
+        /**
+         * VRMは端末内だけで処理し、生成アトラスだけを参加者向けに自動共有します
+         */
+        "localOnly": string;
+        /**
+         * WASDでアバターを操作し、ホイールで画角を調整するゲーム画面
+         */
+        "gameCanvasLabel": string;
+        /**
+         * WASD / 矢印キーで移動・ホイールでズーム
+         */
+        "controls": string;
+        /**
+         * クリックして操作
+         */
+        "focusToPlay": string;
+        /**
+         * 画角を縮小
+         */
+        "zoomOut": string;
+        /**
+         * 画角を拡大
+         */
+        "zoomIn": string;
+        /**
+         * 標準の画角に戻す
+         */
+        "resetZoom": string;
+        /**
+         * VRMを入れ替える
+         */
+        "replaceAvatar": string;
+        /**
+         * アバターを削除
+         */
+        "removeAvatar": string;
+        /**
+         * この端末に保存したアバター画像を削除しますか？
+         */
+        "removeConfirm": string;
+        /**
+         * VRMを端末内で読み込んでいます
+         */
+        "loadingVrm": string;
+        /**
+         * 高解像度の歩行アトラスを撮影しています
+         */
+        "renderingAtlas": string;
+        /**
+         * この端末に保存しています
+         */
+        "savingAtlas": string;
+        /**
+         * アバターの準備ができました
+         */
+        "avatarReady": string;
+        /**
+         * このファイルをVRMとして読み込めませんでした。VRM 0.xまたは1.0のファイルを選んでください。
+         */
+        "invalidVrm": string;
+        /**
+         * VRMのサイズは100MB以下にしてください。
+         */
+        "fileTooLarge": string;
+        /**
+         * アバター画像の生成に失敗しました。別のVRMで試してください。
+         */
+        "generationFailed": string;
+        /**
+         * このブラウザのローカルストレージを利用できませんでした。
+         */
+        "storageFailed": string;
+        /**
+         * 共有用のアバター画像をDriveから削除できませんでした。次回起動時にもう一度削除します。
+         */
+        "sharedFileDeleteFailed": string;
     };
     "_announcement": {
         /**
@@ -10048,6 +10138,10 @@ export interface Locale extends ILocale {
          * ダイレクトメッセージ
          */
         "chat": string;
+        /**
+         * アバター散歩
+         */
+        "avatarWalk": string;
     };
     "_widgetOptions": {
         /**

@@ -30,7 +30,7 @@ export { api, entities, acct, note, nyaize };
 //#region standalone types
 import type { Endpoints } from './api.types.js';
 import type { StreamEvents, IStream, IChannelConnection } from './streaming.js';
-import type { Channels } from './streaming.types.js';
+import type { AvatarWalkMovement, AvatarWalkPlayer, AvatarWalkSharedAtlas, AvatarWalkSharedAtlasInput, Channels } from './streaming.types.js';
 import type { Acct } from './acct.js';
 
 export type {
@@ -40,5 +40,9 @@ export type {
 	StreamEvents,
 	IStream,
 	IChannelConnection,
+	AvatarWalkMovement,
+	AvatarWalkPlayer,
+	AvatarWalkSharedAtlas,
+	AvatarWalkSharedAtlasInput,
 };
 //#endregion

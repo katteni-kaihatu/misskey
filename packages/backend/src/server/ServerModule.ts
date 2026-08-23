@@ -5,6 +5,7 @@
 
 import { Module } from '@nestjs/common';
 import { EndpointsModule } from '@/server/api/EndpointsModule.js';
+import MainStreamConnection from '@/server/api/stream/Connection.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { ApiCallService } from './api/ApiCallService.js';
 import { FileServerService } from './FileServerService.js';
@@ -30,7 +31,6 @@ import { UrlPreviewService } from './web/UrlPreviewService.js';
 import { ClientLoggerService } from './web/ClientLoggerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
 
-import MainStreamConnection from '@/server/api/stream/Connection.js';
 import { MainChannel } from './api/stream/channels/main.js';
 import { AdminChannel } from './api/stream/channels/admin.js';
 import { AntennaChannel } from './api/stream/channels/antenna.js';
@@ -51,6 +51,7 @@ import { ChatUserChannel } from './api/stream/channels/chat-user.js';
 import { ChatRoomChannel } from './api/stream/channels/chat-room.js';
 import { ReversiChannel } from './api/stream/channels/reversi.js';
 import { ReversiGameChannel } from './api/stream/channels/reversi-game.js';
+import { AvatarWalkRoomChannel } from './api/stream/channels/avatar-walk-room.js';
 import { NoteStreamingHidingService } from './api/stream/NoteStreamingHidingService.js';
 import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.js';
 
@@ -97,6 +98,7 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		ChatRoomChannel,
 		ReversiChannel,
 		ReversiGameChannel,
+		AvatarWalkRoomChannel,
 		HomeTimelineChannel,
 		HybridTimelineChannel,
 		LocalTimelineChannel,

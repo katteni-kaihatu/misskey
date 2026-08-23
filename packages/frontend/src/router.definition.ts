@@ -579,6 +579,10 @@ export const ROUTE_DEF = [{
 	component: page(() => import('@/pages/games.vue')),
 	loginRequired: false,
 }, {
+	path: '/avatar-walk',
+	component: page(() => import('@/pages/avatar-walk.vue')),
+	loginRequired: false,
+}, {
 	path: '/bubble-game',
 	component: page(() => import('@/pages/drop-and-fusion.vue')),
 	loginRequired: true,
@@ -603,7 +607,7 @@ export const ROUTE_DEF = [{
 	path: '/redirect-test',
 	redirect: $i ? `@${$i.username}` : '/',
 	loginRequired: true,
-},{
+}, {
 	path: "/neos/directupload",
 	component: page(() => import('@/pages/neos/direct-upload.vue')),
 }, {
