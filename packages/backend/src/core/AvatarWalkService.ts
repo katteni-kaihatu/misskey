@@ -10,7 +10,6 @@ import type { Packed } from '@/misc/json-schema.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import type { DriveFilesRepository } from '@/models/_.js';
 
@@ -85,7 +84,6 @@ export class AvatarWalkService {
 		private driveFilesRepository: DriveFilesRepository,
 
 		private userEntityService: UserEntityService,
-		private driveFileEntityService: DriveFileEntityService,
 		private globalEventService: GlobalEventService,
 	) {
 	}
@@ -182,9 +180,9 @@ export class AvatarWalkService {
 		if (input != null) {
 			const file = await this.driveFilesRepository.findOneBy({ id: input.fileId, userId });
 			if (file == null || !file.type.startsWith('image/') || file.size > MAX_SHARED_ATLAS_SIZE || file.isSensitive) return;
-			const packedFile = await this.driveFileEntityService.pack(file);
 			atlas = {
-				url: packedFile.url,
+				// The webpublic image is resized to 2048px and no longer matches the atlas metadata.
+				url: file.url,
 				version: input.version,
 				cellWidth: input.cellWidth,
 				cellHeight: input.cellHeight,
