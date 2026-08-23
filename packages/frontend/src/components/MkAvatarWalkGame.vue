@@ -47,8 +47,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<canvas
 				ref="canvasEl"
 				:class="$style.canvas"
-				width="480"
-				height="320"
+				:width="GAME_WIDTH * CANVAS_RENDER_SCALE"
+				:height="GAME_HEIGHT * CANVAS_RENDER_SCALE"
 				tabindex="0"
 				:aria-label="i18n.ts._avatarWalk.gameCanvasLabel"
 				@pointerdown="focusGame"
@@ -167,6 +167,7 @@ withDefaults(defineProps<{
 
 const GAME_WIDTH = 480;
 const GAME_HEIGHT = 320;
+const CANVAS_RENDER_SCALE = 2;
 const DEFAULT_CAMERA_ZOOM = 0.75;
 const MIN_CAMERA_ZOOM = 0.5;
 const MAX_CAMERA_ZOOM = 1.1;
@@ -504,6 +505,7 @@ function drawGame(time: number): void {
 	if (canvas == null || storedAtlas == null || atlasImage == null) return;
 	const context = canvas.getContext('2d');
 	if (context == null) return;
+	context.setTransform(CANVAS_RENDER_SCALE, 0, 0, CANVAS_RENDER_SCALE, 0, 0);
 	context.imageSmoothingEnabled = false;
 
 	const viewWidth = GAME_WIDTH / cameraZoom.value;
@@ -1008,7 +1010,6 @@ onUnmounted(() => {
 	width: 100%;
 	aspect-ratio: 3 / 2;
 	background: var(--MI_THEME-bg);
-	image-rendering: pixelated;
 	outline: none;
 
 	&:focus-visible {
