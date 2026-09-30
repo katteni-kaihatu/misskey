@@ -158,6 +158,7 @@ import {
 	getEmojiName,
 	getUnicodeEmoji,
 } from '@@/js/emojilist.js';
+import { apiUrl } from '@@/js/config.js';
 import type {
 	UnicodeEmojiDef,
 	CustomEmojiFolderTree,
@@ -165,7 +166,6 @@ import type {
 import XSection from '@/components/MkEmojiPicker.section.vue';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import * as os from '@/os.js';
-import { apiUrl } from '@@/js/config.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import MkButton from '@/components/MkButton.vue';
 import { isTouchUsing } from '@/utility/touch.js';
@@ -178,6 +178,7 @@ import { checkReactionPermissions } from '@/utility/check-reaction-permissions.j
 import { prefer } from '@/preferences.js';
 import { useRouter } from '@/router.js';
 import { haptic } from '@/utility/haptic.js';
+import { addExtendedReaction } from '@/utility/extended-reactions.js';
 import { noteEvents } from '@/composables/use-note-capture.js';
 
 const router = useRouter();
@@ -226,7 +227,7 @@ const searchResultCustom = ref<Misskey.entities.EmojiSimple[]>([]);
 const searchResultUnicode = ref<UnicodeEmojiDef[]>([]);
 const tab = ref<'index' | 'custom' | 'unicode' | 'tags'>('index');
 
-const customEmojiFolderRoot: CustomEmojiFolderTree = {value: '', category: '', children: []};
+const customEmojiFolderRoot: CustomEmojiFolderTree = { value: '', category: '', children: [] };
 
 function parseAndMergeCategories(input: string, root: CustomEmojiFolderTree): CustomEmojiFolderTree {
 	const parts = input.split('/').map(p => p.trim());
@@ -236,7 +237,7 @@ function parseAndMergeCategories(input: string, root: CustomEmojiFolderTree): Cu
 		let existingNode = currentNode.children.find((node) => node.value === part);
 
 		if (!existingNode) {
-			const newNode: CustomEmojiFolderTree = {value: part, category: input, children: []};
+			const newNode: CustomEmojiFolderTree = { value: part, category: input, children: [] };
 			currentNode.children.push(newNode);
 			existingNode = newNode;
 		}
@@ -461,13 +462,13 @@ function chosen(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef, 
 		const rect = el.getBoundingClientRect();
 		const x = rect.left + (el.offsetWidth / 2);
 		const y = rect.top + (el.offsetHeight / 2);
-		const {dispose} = os.popup(MkRippleEffect, {x, y}, {
+		const { dispose } = os.popup(MkRippleEffect, { x, y }, {
 			end: () => dispose(),
 		});
 	}
 
 	const key = getKey(emoji);
-	console.log("chosen! 2")
+	console.log('chosen! 2');
 	emit('chosen', key);
 
 	haptic();
@@ -678,18 +679,18 @@ const messageHandler = async (response: MessageEvent) => {
 				}
 
 				// ノートにリアクション
-				const noteIdEl = document.getElementById('noteId');
+				const noteIdEl = window.document.getElementById('noteId');
 				if (noteIdEl && noteIdEl.innerText) {
 					const noteId = noteIdEl.innerText;
 					try {
-						await misskeyApi('notes/reactions/create', {
+						await (props.targetNote?.user.host == null && props.targetNote ? addExtendedReaction(noteId, `:${emojiName}:`) : misskeyApi('notes/reactions/create', {
 							noteId: noteId,
 							reaction: `:${emojiName}:`,
-						});
+						}));
 						console.log('Reaction added to note:', noteId);
 
 						// ローカルUIを更新するためにイベントを発火（通常のリアクションと同じ処理）
-						noteEvents.emit(`reacted:${noteId}`, {
+						if (props.targetNote?.user.host != null) noteEvents.emit(`reacted:${noteId}`, {
 							userId: $i!.id,
 							reaction: `:${emojiName}@.:`,
 							emoji: {
@@ -732,13 +733,12 @@ if (!(window as any)._emojiMessageHandlerRegistered) {
 
 /** ここまで */
 
-
 onMounted(() => {
 	focus();
 });
 
 onUnmounted(() => {
-	window.removeEventListener("message", messageHandler);
+	window.removeEventListener('message', messageHandler);
 	(window as any)._emojiMessageHandlerRegistered = false;
 });
 

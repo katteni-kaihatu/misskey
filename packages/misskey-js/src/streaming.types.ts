@@ -383,6 +383,9 @@ export type AvatarWalkSharedAtlasInput = Omit<AvatarWalkSharedAtlas, 'url'> & {
 };
 
 export type NoteUpdatedEvent = { id: Note['id'] } & ({
+	type: 'extendedReactionUpdated';
+	body: Record<string, never>;
+} | {
 	type: 'reacted';
 	body: {
 		reaction: string;

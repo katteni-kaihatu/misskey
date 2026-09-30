@@ -512,6 +512,12 @@ import type {
 	NotesDraftsListResponse,
 	NotesDraftsUpdateRequest,
 	NotesDraftsUpdateResponse,
+	NotesExtendedReactionsCreateRequest,
+	NotesExtendedReactionsDeleteRequest,
+	NotesExtendedReactionsListRequest,
+	NotesExtendedReactionsListResponse,
+	NotesExtendedReactionsShowRequest,
+	NotesExtendedReactionsShowResponse,
 	NotesFavoritesCreateRequest,
 	NotesFavoritesDeleteRequest,
 	NotesFeaturedRequest,
@@ -1010,6 +1016,10 @@ export type Endpoints = {
 	'notes/drafts/delete': { req: NotesDraftsDeleteRequest; res: EmptyResponse };
 	'notes/drafts/list': { req: NotesDraftsListRequest; res: NotesDraftsListResponse };
 	'notes/drafts/update': { req: NotesDraftsUpdateRequest; res: NotesDraftsUpdateResponse };
+	'notes/extended-reactions/create': { req: NotesExtendedReactionsCreateRequest; res: EmptyResponse };
+	'notes/extended-reactions/delete': { req: NotesExtendedReactionsDeleteRequest; res: EmptyResponse };
+	'notes/extended-reactions/list': { req: NotesExtendedReactionsListRequest; res: NotesExtendedReactionsListResponse };
+	'notes/extended-reactions/show': { req: NotesExtendedReactionsShowRequest; res: NotesExtendedReactionsShowResponse };
 	'notes/favorites/create': { req: NotesFavoritesCreateRequest; res: EmptyResponse };
 	'notes/favorites/delete': { req: NotesFavoritesDeleteRequest; res: EmptyResponse };
 	'notes/featured': { req: NotesFeaturedRequest; res: NotesFeaturedResponse };

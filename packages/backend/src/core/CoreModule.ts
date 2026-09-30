@@ -49,6 +49,7 @@ import { NotificationService } from './NotificationService.js';
 import { PollService } from './PollService.js';
 import { PushNotificationService } from './PushNotificationService.js';
 import { QueryService } from './QueryService.js';
+import { ExtendedReactionService } from './ExtendedReactionService.js';
 import { ReactionService } from './ReactionService.js';
 import { ReactionsBufferingService } from './ReactionsBufferingService.js';
 import { RelayService } from './RelayService.js';
@@ -354,6 +355,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		PushNotificationService,
 		QueryService,
 		ReactionService,
+		ExtendedReactionService,
 		ReactionsBufferingService,
 		RelayService,
 		RoleService,
@@ -660,6 +662,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		PushNotificationService,
 		QueryService,
 		ReactionService,
+		ExtendedReactionService,
 		ReactionsBufferingService,
 		RelayService,
 		RoleService,

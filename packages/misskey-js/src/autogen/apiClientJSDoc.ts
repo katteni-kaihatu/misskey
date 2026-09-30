@@ -3769,8 +3769,52 @@ declare module '../api.js' {
     ): Promise<SwitchCaseResponseType<E, P>>;
 
     /**
+     * Add an instance-local reaction. The first reaction uses the ordinary federated reaction.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:reactions*
+     */
+    request<E extends 'notes/extended-reactions/create', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * Remove the specified instance-local reaction without promoting another reaction.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:reactions*
+     */
+    request<E extends 'notes/extended-reactions/delete', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * List users of ordinary and instance-local reactions on a visible note.
+     *
+     * **Credential required**: *No*
+     */
+    request<E extends 'notes/extended-reactions/list', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * Get merged ordinary and instance-local reaction counts for visible notes.
+     *
+     * **Credential required**: *No*
+     */
+    request<E extends 'notes/extended-reactions/show', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
      * No description provided.
-     * 
+     *
      * **Credential required**: *Yes* / **Permission**: *write:favorites*
      */
     request<E extends 'notes/favorites/create', P extends Endpoints[E]['req']>(
@@ -3781,7 +3825,7 @@ declare module '../api.js' {
 
     /**
      * No description provided.
-     * 
+     *
      * **Credential required**: *Yes* / **Permission**: *write:favorites*
      */
     request<E extends 'notes/favorites/delete', P extends Endpoints[E]['req']>(
@@ -3792,10 +3836,10 @@ declare module '../api.js' {
 
     /**
      * No description provided.
-     * 
+     *
      * **Credential required**: *No*
      */
-    request<E extends 'notes/featured', P extends Endpoints[E]['req']>(
+    request<E extends'notes/featured', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,
       credential?: string | null,

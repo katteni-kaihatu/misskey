@@ -4,14 +4,17 @@
  */
 
 import { ref } from 'vue';
-import type { Ref } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { isLink } from '@@/js/is-link.js';
 import { shouldCollapsed } from '@@/js/collapsed.js';
 import { host } from '@@/js/config.js';
-import { pleaseLogin } from '@/utility/please-login.js';
+import type { Ref } from 'vue';
 import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
+import type { DI as DIType } from '@/di.js';
+import type { ExtractInjectedType } from '@/types/misc.js';
+import { addExtendedReaction } from '@/utility/extended-reactions.js';
+import { pleaseLogin } from '@/utility/please-login.js';
 import { checkWordMute } from '@/utility/check-word-mute.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import * as sound from '@/utility/sound.js';
@@ -34,8 +37,6 @@ import MkUsersTooltip from '@/components/MkUsersTooltip.vue';
 import MkReactionsViewerDetails from '@/components/MkReactionsViewer.details.vue';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
 import { notePage } from '@/filters/note.js';
-import type { DI as DIType } from '@/di.js';
-import type { ExtractInjectedType } from '@/types/misc.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { WordMuteResult } from '@/utility/check-word-mute.js';
 
@@ -199,7 +200,7 @@ export function useNote(
 
 		if (appearNote.reactionAcceptance === 'likeOnly' && els.reactButton != null) {
 			useTooltip(els.reactButton, async (showing) => {
-				const reactions = await misskeyApi('notes/reactions', {
+				const reactions = await misskeyApi($appearNote.extendedReactions ? 'notes/extended-reactions/list' : 'notes/reactions', {
 					noteId: appearNote.id,
 					limit: 10,
 				});
@@ -254,12 +255,9 @@ export function useNote(
 		if (appearNote.reactionAcceptance === 'likeOnly') {
 			sound.playMisskeySfx('reaction');
 			if (props.mock) return;
-			misskeyApi('notes/reactions/create', {
-				noteId: appearNote.id,
-				reaction: '❤️',
-			}).then(() => {
-				noteEvents.emit(`reacted:${appearNote.id}`, { userId: $i!.id, reaction: '❤️' });
-			});
+			($appearNote.extendedReactions ? addExtendedReaction(appearNote.id, '❤️') : misskeyApi('notes/reactions/create', { noteId: appearNote.id, reaction: '❤️' })).then(() => {
+				if (!$appearNote.extendedReactions) noteEvents.emit(`reacted:${appearNote.id}`, { userId: $i!.id, reaction: '❤️' });
+			}).catch(error => os.alert({ type: 'error', text: error.message }));
 			if (els.reactButton != null && els.reactButton.value != null && prefer.s.animation) {
 				const rect = els.reactButton.value.getBoundingClientRect();
 				const { dispose } = os.popup(MkRippleEffect, {
@@ -284,12 +282,9 @@ export function useNote(
 					if (createReactionMock) createReactionMock(reaction);
 					return;
 				}
-				misskeyApi('notes/reactions/create', {
-					noteId: appearNote.id,
-					reaction: reaction,
-				}).then(() => {
-					noteEvents.emit(`reacted:${appearNote.id}`, { userId: $i!.id, reaction: reaction });
-				});
+				($appearNote.extendedReactions ? addExtendedReaction(appearNote.id, reaction) : misskeyApi('notes/reactions/create', { noteId: appearNote.id, reaction: reaction })).then(() => {
+					if (!$appearNote.extendedReactions) noteEvents.emit(`reacted:${appearNote.id}`, { userId: $i!.id, reaction: reaction });
+				}).catch(error => os.alert({ type: 'error', text: error.message }));
 				if (appearNote.text && appearNote.text.length > 100 && (Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 3)) {
 					claimAchievement('reactWithoutRead');
 				}
@@ -303,15 +298,12 @@ export function useNote(
 		if (!isLoggedIn) return;
 		showMovedDialog();
 		sound.playMisskeySfx('reaction');
-		misskeyApi('notes/reactions/create', {
-			noteId: appearNote.id,
-			reaction: reaction,
-		}).then(() => {
-			noteEvents.emit(`reacted:${appearNote.id}`, {
+		($appearNote.extendedReactions ? addExtendedReaction(appearNote.id, reaction) : misskeyApi('notes/reactions/create', { noteId: appearNote.id, reaction: reaction })).then(() => {
+			if (!$appearNote.extendedReactions) noteEvents.emit(`reacted:${appearNote.id}`, {
 				userId: $i!.id,
 				reaction: reaction,
 			});
-		});
+		}).catch(error => os.alert({ type: 'error', text: error.message }));
 	}
 
 	function undoReact(): void {
@@ -324,6 +316,10 @@ export function useNote(
 	}
 
 	function toggleReact(customMockCallback?: (reaction: string) => void) {
+		if ($appearNote.extendedReactions && appearNote.reactionAcceptance !== 'likeOnly') {
+			react(customMockCallback);
+			return;
+		}
 		if ($appearNote.myReaction == null) {
 			react(customMockCallback);
 		} else {

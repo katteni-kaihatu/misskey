@@ -14,9 +14,11 @@ import { $i } from '@/i.js';
 import { store } from '@/store.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
+import { fetchExtendedReactions } from '@/utility/extended-reactions.js';
 import { globalEvents } from '@/events.js';
 
 export const noteEvents = new EventEmitter<{
+	[ev: `extendedUpdated:${string}`]: () => void;
 	[ev: `reacted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; reaction: string; emoji?: { name: string; url: string; } | null; }) => void;
 	[ev: `unreacted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; reaction: string; emoji?: { name: string; url: string; } | null; }) => void;
 	[ev: `pollVoted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; choice: number; }) => void;
@@ -99,6 +101,10 @@ function pollingSubscribe(props: {
 	const { note, $note } = props;
 
 	function onFetched(data: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis'>): void {
+		if ($note.extendedReactions) {
+			noteEvents.emit(`extendedUpdated:${note.id}`);
+			return;
+		}
 		$note.reactions = data.reactions;
 		$note.reactionCount = Object.values(data.reactions).reduce((a, b) => a + b, 0);
 		$note.reactionEmojis = data.reactionEmojis;
@@ -125,6 +131,11 @@ function realtimeSubscribe(props: {
 		if (id !== note.id) return;
 
 		switch (type) {
+			case 'extendedReactionUpdated': {
+				noteEvents.emit(`extendedUpdated:${id}`);
+				break;
+			}
+
 			case 'reacted': {
 				noteEvents.emit(`reacted:${id}`, {
 					userId: body.userId,
@@ -185,6 +196,9 @@ export type ReactiveNoteData = {
 	reactionCount: Misskey.entities.Note['reactionCount'];
 	reactionEmojis: Misskey.entities.Note['reactionEmojis'];
 	myReaction: Misskey.entities.Note['myReaction'];
+	myReactions: string[];
+	extendedReactions: boolean;
+	reactionVersion: number;
 	pollChoices: NonNullable<Misskey.entities.Note['poll']>['choices'];
 };
 
@@ -214,8 +228,40 @@ export function useNoteCapture(props: {
 		reactionCount: note.reactionCount,
 		reactionEmojis: note.reactionEmojis,
 		myReaction: note.myReaction,
+		myReactions: note.myReaction ? [note.myReaction] : [],
+		extendedReactions: !mock && note.user.host == null,
+		reactionVersion: 0,
 		pollChoices: note.poll?.choices ?? [],
 	});
+
+	let disposed = false;
+	let refreshing = false;
+	let refreshAgain = false;
+
+	async function refreshExtended(): Promise<void> {
+		if (!$note.extendedReactions || disposed) return;
+		if (refreshing) { refreshAgain = true; return; }
+		refreshing = true;
+		try {
+			const state = await fetchExtendedReactions(note.id);
+			if (state && !disposed) {
+				$note.reactions = state.reactions;
+				$note.reactionCount = Object.values(state.reactions).reduce((sum, count) => sum + count, 0);
+				$note.reactionEmojis = state.reactionEmojis;
+				$note.myReactions = state.myReactions;
+				$note.myReaction = state.myReaction;
+				$note.reactionVersion++;
+			}
+		} catch {
+			// Keep the previous state on transient network failures.
+		} finally {
+			refreshing = false;
+			if (refreshAgain) { refreshAgain = false; void refreshExtended(); }
+		}
+	}
+
+	noteEvents.on(`extendedUpdated:${note.id}`, refreshExtended);
+	void refreshExtended();
 
 	noteEvents.on(`reacted:${note.id}`, onReacted);
 	noteEvents.on(`unreacted:${note.id}`, onUnreacted);
@@ -226,6 +272,11 @@ export function useNoteCapture(props: {
 	let latestPollVotedKey: string | null = null;
 
 	function onReacted(ctx: { userId: Misskey.entities.User['id']; reaction: string; emoji?: { name: string; url: string; } | null; }): void {
+		if ($note.extendedReactions) {
+			if ($i && ctx.userId === $i.id) $note.myReaction = ctx.reaction;
+			void refreshExtended();
+			return;
+		}
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
 		normalizedName = normalizedName.match('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
 		if (reactionUserMap.has(ctx.userId) && reactionUserMap.get(ctx.userId) === normalizedName) return;
@@ -246,6 +297,10 @@ export function useNoteCapture(props: {
 	}
 
 	function onUnreacted(ctx: { userId: Misskey.entities.User['id']; reaction: string; emoji?: { name: string; url: string; } | null; }): void {
+		if ($note.extendedReactions) {
+			void refreshExtended();
+			return;
+		}
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
 		normalizedName = normalizedName.match('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
 
@@ -300,6 +355,8 @@ export function useNoteCapture(props: {
 	}
 
 	onUnmounted(() => {
+		disposed = true;
+		noteEvents.off(`extendedUpdated:${note.id}`, refreshExtended);
 		noteEvents.off(`reacted:${note.id}`, onReacted);
 		noteEvents.off(`unreacted:${note.id}`, onUnreacted);
 		noteEvents.off(`pollVoted:${note.id}`, onPollVoted);

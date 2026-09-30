@@ -103,6 +103,7 @@ export interface DriveEventTypes {
 }
 
 export interface NoteEventTypes {
+	extendedReactionUpdated: Record<string, never>;
 	pollVoted: {
 		choice: number;
 		userId: MiUser['id'];

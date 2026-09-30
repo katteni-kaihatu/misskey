@@ -450,3 +450,8 @@ export * as 'chat/rooms/invitations/outbox' from './endpoints/chat/rooms/invitat
 export * as 'chat/history' from './endpoints/chat/history.js';
 export * as 'chat/read-all' from './endpoints/chat/read-all.js';
 export * as 'v2/admin/emoji/list' from './endpoints/v2/admin/emoji/list.js';
+
+export * as 'notes/extended-reactions/create' from './endpoints/notes/extended-reactions/create.js';
+export * as 'notes/extended-reactions/delete' from './endpoints/notes/extended-reactions/delete.js';
+export * as 'notes/extended-reactions/show' from './endpoints/notes/extended-reactions/show.js';
+export * as 'notes/extended-reactions/list' from './endpoints/notes/extended-reactions/list.js';

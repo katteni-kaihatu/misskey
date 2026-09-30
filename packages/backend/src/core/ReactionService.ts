@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import * as Redis from 'ioredis';
 import { Inject, Injectable } from '@nestjs/common';
+import { acquireDistributedLock } from '@/misc/distributed-lock.js';
 import { DI } from '@/di-symbols.js';
 import type { EmojisRepository, NoteReactionsRepository, UsersRepository, NotesRepository, MiMeta } from '@/models/_.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
@@ -70,6 +72,9 @@ const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 @Injectable()
 export class ReactionService {
 	constructor(
+		@Inject(DI.redis)
+		private redisClient: Redis.Redis,
+
 		@Inject(DI.meta)
 		private meta: MiMeta,
 
@@ -102,8 +107,30 @@ export class ReactionService {
 	) {
 	}
 
+	/** Serialize legacy and extended operations across workers. */
 	@bindThis
-	public async create(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot'] }, note: MiNote, _reaction?: string | null) {
+	public async withReactionLock<T>(userId: string, noteId: string, operation: () => Promise<T>): Promise<T> {
+		const unlock = await acquireDistributedLock(this.redisClient, `reaction:${userId}:${noteId}`, 30_000, 100, 50);
+		try {
+			return await operation();
+		} finally {
+			await unlock();
+		}
+	}
+
+	@bindThis
+	public async create(user: Pick<MiUser, 'id' | 'host' | 'isBot'>, note: MiNote, reaction?: string | null) {
+		return this.withReactionLock(user.id, note.id, () => this.createUnlocked(user, note, reaction));
+	}
+
+	@bindThis
+	public async delete(user: Pick<MiUser, 'id' | 'host' | 'isBot'>, note: MiNote) {
+		return this.withReactionLock(user.id, note.id, () => this.deleteUnlocked(user, note));
+	}
+
+	/** Shared visibility, blocking, emoji permission and acceptance checks. */
+	@bindThis
+	public async resolveReaction(user: Pick<MiUser, 'id' | 'host' | 'isBot'>, note: MiNote, _reaction?: string | null): Promise<string> {
 		// Check blocking
 		if (note.userId !== user.id) {
 			const blocked = await this.userBlockingService.checkBlocked(note.userId, user.id);
@@ -164,6 +191,13 @@ export class ReactionService {
 			}
 		}
 
+		return reaction;
+	}
+
+	@bindThis
+	public async createUnlocked(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot'] }, note: MiNote, _reaction?: string | null) {
+		const reaction = await this.resolveReaction(user, note, _reaction);
+
 		const record: MiNoteReaction = {
 			id: this.idService.gen(),
 			noteId: note.id,
@@ -182,7 +216,7 @@ export class ReactionService {
 
 				if (exists.reaction !== reaction) {
 					// 別のリアクションがすでにされていたら置き換える
-					await this.delete(user, note);
+					await this.deleteUnlocked(user, note);
 					await this.noteReactionsRepository.insert(record);
 				} else {
 					// 同じリアクションがすでにされていたらエラー
@@ -286,7 +320,7 @@ export class ReactionService {
 	}
 
 	@bindThis
-	public async delete(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot']; }, note: MiNote) {
+	public async deleteUnlocked(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot']; }, note: MiNote) {
 		// if already unreacted
 		const exist = await this.noteReactionsRepository.findOneBy({
 			noteId: note.id,

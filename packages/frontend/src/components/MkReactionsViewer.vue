@@ -22,6 +22,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:isInitial="initialReactions.has(reaction)"
 		:noteId="props.noteId"
 		:myReaction="props.myReaction"
+		:myReactions="props.myReactions"
+		:extendedReactions="props.extendedReactions"
+		:reactionVersion="props.reactionVersion"
 		@reactionToggled="onMockToggleReaction"
 	/>
 	<slot v-if="hasMoreReactions" name="more"></slot>
@@ -45,6 +48,9 @@ const props = withDefaults(defineProps<{
 	reactions: Misskey.entities.Note['reactions'];
 	reactionEmojis: Misskey.entities.Note['reactionEmojis'];
 	myReaction: Misskey.entities.Note['myReaction'];
+	myReactions?: string[];
+	extendedReactions?: boolean;
+	reactionVersion?: number;
 	maxNumber?: number;
 }>(), {
 	maxNumber: Infinity,
@@ -82,7 +88,7 @@ function canReact(reaction: string) {
 		: isSupportedEmoji(reaction);
 }
 
-watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) => {
+watch([() => props.reactions, () => props.maxNumber, () => props.myReactions], ([newSource, maxNumber]) => {
 	let newReactions: [string, number][] = [];
 	hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
 
@@ -123,6 +129,9 @@ watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) =
 		newReactions.push([props.myReaction, newSource[props.myReaction]]);
 	}
 
+	for (const reaction of props.myReactions ?? []) {
+		if (newSource[reaction] && !newReactions.some(([name]) => name === reaction)) newReactions.push([reaction, newSource[reaction]]);
+	}
 	_reactions.value = newReactions;
 }, { immediate: true, deep: true });
 </script>

@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	ref="buttonEl"
 	v-ripple="canToggle"
 	class="_button"
-	:class="[$style.root, { [$style.reacted]: myReaction == reaction, [$style.canToggle]: canToggle, [$style.small]: prefer.s.reactionsDisplaySize === 'small', [$style.large]: prefer.s.reactionsDisplaySize === 'large' }]"
+	:class="[$style.root, { [$style.reacted]: extendedReactions ? myReactions?.includes(reaction) : myReaction == reaction, [$style.canToggle]: canToggle, [$style.small]: prefer.s.reactionsDisplaySize === 'small', [$style.large]: prefer.s.reactionsDisplaySize === 'large' }]"
 	@click="toggleReaction()"
 	@contextmenu.prevent.stop="menu"
 >
@@ -45,6 +45,7 @@ import { store } from '@/store';
 import { noteEvents } from '@/composables/use-note-capture.js';
 import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as isEmojiMuted } from '@/utility/emoji-mute.js';
 import { addToEmojiPalette } from '@/utility/emoji-palette.js';
+import { addExtendedReaction, deleteExtendedReaction } from '@/utility/extended-reactions.js';
 import { haptic } from '@/utility/haptic.js';
 
 const props = defineProps<{
@@ -52,6 +53,9 @@ const props = defineProps<{
 	reaction: string;
 	reactionEmojis: Misskey.entities.Note['reactionEmojis'];
 	myReaction: Misskey.entities.Note['myReaction'];
+	myReactions?: string[];
+	extendedReactions?: boolean;
+	reactionVersion?: number;
 	count: number;
 	isInitial: boolean;
 }>();
@@ -82,6 +86,19 @@ async function toggleReaction() {
 	if (!canToggle.value) return;
 	if ($i == null) return;
 
+	if (props.extendedReactions && !mock) {
+		if (props.myReactions?.includes(props.reaction)) {
+			const { canceled } = await os.confirm({ type: 'warning', text: i18n.ts.cancelReactionConfirm });
+			if (!canceled) await deleteExtendedReaction(props.noteId, props.reaction).catch(error => os.alert({ type: 'error', text: error.message }));
+		} else {
+			if (prefer.s.confirmOnReact) {
+				const { canceled } = await os.confirm({ type: 'question', text: i18n.tsx.reactAreYouSure({ emoji: props.reaction.replace('@.', '') }) });
+				if (canceled) return;
+			}
+			await addExtendedReaction(props.noteId, props.reaction).catch(error => os.alert({ type: 'error', text: error.message }));
+		}
+		return;
+	}
 	const me = $i;
 
 	const oldReaction = props.myReaction;
@@ -239,21 +256,20 @@ function anime() {
 	});
 }
 
-watch(() => props.count, (newCount, oldCount) => {
-	console.log('count changed', oldCount, newCount);
-	misskeyApi('notes/reactions', {
+watch([() => props.count, () => props.reactionVersion], ([newCount], [oldCount]) => {
+	misskeyApi(props.extendedReactions ? 'notes/extended-reactions/list' : 'notes/reactions', {
 		noteId: props.noteId,
 		type: props.reaction,
 		limit: 10,
 	}).then((reactions) => {
-		users.value = reactions.map(x => x.user);
+		users.value = [...new Map(reactions.map(x => [x.user.id, x.user])).values()];
 	});
 
 	if (oldCount < newCount) anime();
 });
 
 onMounted(() => {
-	misskeyApi('notes/reactions', {
+	misskeyApi(props.extendedReactions ? 'notes/extended-reactions/list' : 'notes/reactions', {
 		noteId: props.noteId,
 		type: props.reaction,
 		limit: 10,
@@ -268,13 +284,13 @@ if (!mock) {
 	useTooltip(buttonEl, async (showing) => {
 		if (buttonEl.value == null) return;
 
-		const reactions = await misskeyApi('notes/reactions', {
+		const reactions = await misskeyApi(props.extendedReactions ? 'notes/extended-reactions/list' : 'notes/reactions', {
 			noteId: props.noteId,
 			type: props.reaction,
 			limit: 10,
 		});
 
-		const users = reactions.map(x => x.user);
+		const users = [...new Map(reactions.map(x => [x.user.id, x.user])).values()];
 
 		const { dispose } = os.popup(XDetails, {
 			showing,

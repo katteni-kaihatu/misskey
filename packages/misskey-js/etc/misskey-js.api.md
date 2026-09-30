@@ -600,6 +600,50 @@ type AuthSessionUserkeyRequest = operations['auth___session___userkey']['request
 type AuthSessionUserkeyResponse = operations['auth___session___userkey']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+export type AvatarWalkAction = {
+    type: AvatarWalkActionType;
+    startedAt: number;
+};
+
+// @public (undocumented)
+export type AvatarWalkActionType = 'sit' | 'wave' | 'bow' | 'cheer';
+
+// @public (undocumented)
+export type AvatarWalkMovement = Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'action' | 'updatedAt'> & {
+    userId: User['id'];
+};
+
+// @public (undocumented)
+export type AvatarWalkPlayer = {
+    user: UserLite;
+    x: number;
+    y: number;
+    direction: number;
+    moving: boolean;
+    action: AvatarWalkAction | null;
+    updatedAt: number;
+    atlas: AvatarWalkSharedAtlas | null;
+};
+
+// @public (undocumented)
+export type AvatarWalkSharedAtlas = {
+    url: string;
+    version: number;
+    cellWidth: number;
+    cellHeight: number;
+    directionCount: number;
+    idleFrameCount: number;
+    walkFrameCount: number;
+    motionCount?: number;
+    motionFrameCount?: number;
+};
+
+// @public (undocumented)
+export type AvatarWalkSharedAtlasInput = Omit<AvatarWalkSharedAtlas, 'url'> & {
+    fileId: string;
+};
+
+// @public (undocumented)
 type Blocking = components['schemas']['Blocking'];
 
 // @public (undocumented)
@@ -922,6 +966,29 @@ export type Channels = {
             cancel: null | Record<string, never>;
             updateSettings: ReversiUpdateSettings<ReversiUpdateKey>;
             claimTimeIsUp: null | Record<string, never>;
+        };
+    };
+    avatarWalkRoom: {
+        params: {
+            roomId: 'main';
+        };
+        events: {
+            snapshot: (payload: {
+                players: AvatarWalkPlayer[];
+            }) => void;
+            joined: (payload: AvatarWalkPlayer) => void;
+            moved: (payload: AvatarWalkMovement) => void;
+            atlasUpdated: (payload: {
+                userId: User['id'];
+                atlas: AvatarWalkSharedAtlas | null;
+            }) => void;
+            left: (payload: {
+                userId: User['id'];
+            }) => void;
+        };
+        receives: {
+            move: Pick<AvatarWalkPlayer, 'x' | 'y' | 'direction' | 'moving' | 'action'>;
+            setAtlas: AvatarWalkSharedAtlasInput | null;
         };
     };
     chatUser: {
@@ -2082,6 +2149,12 @@ declare namespace entities {
         NotesDraftsListResponse,
         NotesDraftsUpdateRequest,
         NotesDraftsUpdateResponse,
+        NotesExtendedReactionsCreateRequest,
+        NotesExtendedReactionsDeleteRequest,
+        NotesExtendedReactionsListRequest,
+        NotesExtendedReactionsListResponse,
+        NotesExtendedReactionsShowRequest,
+        NotesExtendedReactionsShowResponse,
         NotesFavoritesCreateRequest,
         NotesFavoritesDeleteRequest,
         NotesFeaturedRequest,
@@ -3038,6 +3111,24 @@ type NotesDraftsUpdateRequest = operations['notes___drafts___update']['requestBo
 
 // @public (undocumented)
 type NotesDraftsUpdateResponse = operations['notes___drafts___update']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NotesExtendedReactionsCreateRequest = operations['notes___extended-reactions___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NotesExtendedReactionsDeleteRequest = operations['notes___extended-reactions___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NotesExtendedReactionsListRequest = operations['notes___extended-reactions___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NotesExtendedReactionsListResponse = operations['notes___extended-reactions___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NotesExtendedReactionsShowRequest = operations['notes___extended-reactions___show']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NotesExtendedReactionsShowResponse = operations['notes___extended-reactions___show']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type NotesFavoritesCreateRequest = operations['notes___favorites___create']['requestBody']['content']['application/json'];
