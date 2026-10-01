@@ -2429,7 +2429,7 @@ declare module '../api.js' {
     /**
      * No description provided.
      * 
-     * **Credential required**: *No*
+     * **Credential required**: *Yes* / **Permission**: *read:account*
      */
     request<E extends 'federation/update-remote-user', P extends Endpoints[E]['req']>(
       endpoint: E,
@@ -3839,7 +3839,7 @@ declare module '../api.js' {
      *
      * **Credential required**: *No*
      */
-    request<E extends'notes/featured', P extends Endpoints[E]['req']>(
+    request<E extends 'notes/featured', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,
       credential?: string | null,
