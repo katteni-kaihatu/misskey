@@ -15,8 +15,11 @@ const mocks = vi.hoisted(() => ({ request: vi.fn(), capabilities: vi.fn() }));
 vi.mock('@/utility/auto-translation.js', () => ({ requestAutoTranslation: mocks.request, getAutoTranslationCapabilities: mocks.capabilities }));
 vi.mock('@/i.js', () => ({ $i: { id: 'alice' } }));
 vi.mock('@/preferences.js', async () => {
-	const { reactive } = await import('vue');
-	return { prefer: { s: reactive({ 'autoTranslation.enabled': true, 'autoTranslation.targetLang': 'ja' }) } };
+	const { ref } = await import('vue');
+	return { prefer: {
+		s: { 'autoTranslation.enabled': true, 'autoTranslation.targetLang': 'ja' },
+		r: { 'autoTranslation.enabled': ref(true), 'autoTranslation.targetLang': ref('ja') },
+	} };
 });
 vi.mock('@/i18n.js', () => ({ i18n: { ts: { retry: 'Retry', _autoTranslation: {
 	translated: 'Translated', showTranslation: 'Translation', showOriginal: 'Original', translating: 'Translating', failed: 'Failed',
@@ -48,7 +51,9 @@ describe('automatic translation display', () => {
 			disconnect() {}
 		});
 		prefer.s['autoTranslation.enabled'] = true;
+		prefer.r['autoTranslation.enabled'].value = true;
 		prefer.s['autoTranslation.targetLang'] = 'ja';
+		prefer.r['autoTranslation.targetLang'].value = 'ja';
 		mocks.capabilities.mockResolvedValue({ available: true, languages: ['ja', 'en'] });
 		mocks.request.mockReset();
 		mocks.request.mockResolvedValue(result('Translated text'));
@@ -77,6 +82,7 @@ describe('automatic translation display', () => {
 		const view = create();
 		await visible();
 		prefer.s['autoTranslation.targetLang'] = 'en';
+		prefer.r['autoTranslation.targetLang'].value = 'en';
 		await flushPromises();
 		resolves[0](result('Stale translation'));
 		await flushPromises();
@@ -85,6 +91,7 @@ describe('automatic translation display', () => {
 		await flushPromises();
 		expect(view.container.querySelector('.body')!.textContent).toBe('Current translation');
 		prefer.s['autoTranslation.enabled'] = false;
+		prefer.r['autoTranslation.enabled'].value = false;
 		await flushPromises();
 		expect(view.container.querySelector('.body')!.textContent).toBe('Original text');
 	});

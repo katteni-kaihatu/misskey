@@ -43,6 +43,8 @@ const showOriginal = ref(false);
 const loading = ref(false);
 const failed = ref(false);
 const retry = ref(0);
+const enabled = prefer.r['autoTranslation.enabled'];
+const targetLang = prefer.r['autoTranslation.targetLang'];
 let observer: IntersectionObserver | undefined;
 let generation = 0;
 const translated = computed(() => result.value?.status === 'translated');
@@ -55,19 +57,19 @@ onMounted(() => {
 onBeforeUnmount(() => { generation++; observer?.disconnect(); });
 
 watch(() => [props.note.id, props.note.text, props.note.cw, props.note.isHidden, props.note.deletedAt,
-	props.active, intersecting.value, prefer.s['autoTranslation.enabled'], prefer.s['autoTranslation.targetLang'], $i?.id, retry.value], async () => {
+	props.active, intersecting.value, enabled.value, targetLang.value, $i?.id, retry.value], async () => {
 	const current = ++generation;
 	result.value = undefined;
 	showOriginal.value = false;
 	loading.value = false;
 	failed.value = false;
-	if (!props.active || !intersecting.value || !prefer.s['autoTranslation.enabled'] || !$i || props.note.isHidden || props.note.deletedAt || (!props.note.text && !props.note.cw)) return;
+	if (!props.active || !intersecting.value || !enabled.value || !$i || props.note.isHidden || props.note.deletedAt || (!props.note.text && !props.note.cw)) return;
 	const isCurrent = () => current === generation;
 	try {
 		const capability = await getAutoTranslationCapabilities();
 		if (!isCurrent() || !capability.available) return;
 		loading.value = true;
-		const translation = await requestAutoTranslation(props.note, prefer.s['autoTranslation.targetLang'], isCurrent);
+		const translation = await requestAutoTranslation(props.note, targetLang.value, isCurrent);
 		if (isCurrent()) result.value = translation;
 	} catch {
 		if (isCurrent()) failed.value = true;
