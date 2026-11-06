@@ -116,6 +116,11 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/settings/preferences',
 		active: currentPage.value?.route.name === 'preferences',
 	}, {
+		icon: 'ti ti-language',
+		text: i18n.ts._autoTranslation.title,
+		to: '/settings/auto-translation',
+		active: currentPage.value?.route.name === 'auto-translation',
+	}, {
 		icon: 'ti ti-palette',
 		text: i18n.ts.theme,
 		to: '/settings/theme',

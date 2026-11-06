@@ -57,6 +57,9 @@ type OmitStrict<T, K extends keyof T> = T extends any ? Pick<T, Exclude<keyof T,
 // NOTE: デフォルト値は他の設定の状態に依存してはならない(依存していた場合、ユーザーがその設定項目単体で「初期値にリセット」した場合不具合の原因になる)
 
 export const PREF_DEF = definePreferences({
+	'autoTranslation.enabled': { accountDependent: true, default: false },
+	'autoTranslation.targetLang': { accountDependent: true, default: 'ja' },
+
 	accounts: {
 		default: [] as [host: string, user: {
 			id: string;

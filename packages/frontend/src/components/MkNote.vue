@@ -67,17 +67,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="$style.text">
 						<span v-if="appearNote.isHidden" style="opacity: 0.5">({{ i18n.ts.private }})</span>
 						<MkA v-if="appearNote.replyId" :class="$style.replyIcon" :to="`/notes/${appearNote.replyId}`"><i class="ti ti-arrow-back-up"></i></MkA>
-						<Mfm
-							v-if="appearNote.text"
-							:parsedNodes="parsed"
-							:text="appearNote.text"
-							:author="appearNote.user"
-							:nyaize="'respect'"
-							:emojiUrls="appearNote.emojis"
-							:enableEmojiMenu="true"
-							:enableEmojiMenuReaction="true"
-							class="_selectable"
-						/>
+						<MkAutoTranslatedNote v-slot="{ text, translated }" :note="appearNote" :active="!mock && (appearNote.cw == null || showContent)">
+							<Mfm
+								v-if="appearNote.text"
+								:parsedNodes="translated ? undefined : parsed"
+								:text="text ?? ''"
+								:author="appearNote.user"
+								:nyaize="'respect'"
+								:emojiUrls="appearNote.emojis"
+								:enableEmojiMenu="true"
+								:enableEmojiMenuReaction="true"
+								class="_selectable"
+							/>
+						</MkAutoTranslatedNote>
 						<div v-if="translating || translation" :class="$style.translation">
 							<MkLoading v-if="translating" mini/>
 							<div v-else-if="translation">
@@ -203,6 +205,7 @@ import { inject, ref, useTemplateRef, provide, computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { Ref } from 'vue';
 import type { Keymap } from '@/utility/hotkey.js';
+import MkAutoTranslatedNote from '@/components/MkAutoTranslatedNote.vue';
 import { useNote } from '@/composables/use-note.js';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';

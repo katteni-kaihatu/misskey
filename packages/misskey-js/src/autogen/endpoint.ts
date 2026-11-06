@@ -29,6 +29,9 @@ import type {
 	AdminAnnouncementsListRequest,
 	AdminAnnouncementsListResponse,
 	AdminAnnouncementsUpdateRequest,
+	AdminAutoTranslationGetConfigResponse,
+	AdminAutoTranslationUpdateConfigRequest,
+	AdminAutoTranslationUpdateConfigResponse,
 	AdminAvatarDecorationsCreateRequest,
 	AdminAvatarDecorationsCreateResponse,
 	AdminAvatarDecorationsDeleteRequest,
@@ -170,6 +173,9 @@ import type {
 	AuthSessionShowResponse,
 	AuthSessionUserkeyRequest,
 	AuthSessionUserkeyResponse,
+	AutoTranslationCapabilitiesResponse,
+	AutoTranslationTranslateNoteRequest,
+	AutoTranslationTranslateNoteResponse,
 	BlockingCreateRequest,
 	BlockingCreateResponse,
 	BlockingDeleteRequest,
@@ -695,6 +701,9 @@ export type Endpoints = {
 	'admin/announcements/delete': { req: AdminAnnouncementsDeleteRequest; res: EmptyResponse };
 	'admin/announcements/list': { req: AdminAnnouncementsListRequest; res: AdminAnnouncementsListResponse };
 	'admin/announcements/update': { req: AdminAnnouncementsUpdateRequest; res: EmptyResponse };
+	'admin/auto-translation/get-config': { req: EmptyRequest; res: AdminAutoTranslationGetConfigResponse };
+	'admin/auto-translation/test-connection': { req: EmptyRequest; res: EmptyResponse };
+	'admin/auto-translation/update-config': { req: AdminAutoTranslationUpdateConfigRequest; res: AdminAutoTranslationUpdateConfigResponse };
 	'admin/avatar-decorations/create': { req: AdminAvatarDecorationsCreateRequest; res: AdminAvatarDecorationsCreateResponse };
 	'admin/avatar-decorations/delete': { req: AdminAvatarDecorationsDeleteRequest; res: EmptyResponse };
 	'admin/avatar-decorations/list': { req: AdminAvatarDecorationsListRequest; res: AdminAvatarDecorationsListResponse };
@@ -797,6 +806,8 @@ export type Endpoints = {
 	'auth/session/generate': { req: AuthSessionGenerateRequest; res: AuthSessionGenerateResponse };
 	'auth/session/show': { req: AuthSessionShowRequest; res: AuthSessionShowResponse };
 	'auth/session/userkey': { req: AuthSessionUserkeyRequest; res: AuthSessionUserkeyResponse };
+	'auto-translation/capabilities': { req: EmptyRequest; res: AutoTranslationCapabilitiesResponse };
+	'auto-translation/translate-note': { req: AutoTranslationTranslateNoteRequest; res: AutoTranslationTranslateNoteResponse };
 	'blocking/create': { req: BlockingCreateRequest; res: BlockingCreateResponse };
 	'blocking/delete': { req: BlockingDeleteRequest; res: BlockingDeleteResponse };
 	'blocking/list': { req: BlockingListRequest; res: BlockingListResponse };

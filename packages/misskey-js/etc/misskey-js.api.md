@@ -128,6 +128,15 @@ type AdminAnnouncementsListResponse = operations['admin___announcements___list']
 type AdminAnnouncementsUpdateRequest = operations['admin___announcements___update']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+type AdminAutoTranslationGetConfigResponse = operations['admin___auto-translation___get-config']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminAutoTranslationUpdateConfigRequest = operations['admin___auto-translation___update-config']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminAutoTranslationUpdateConfigResponse = operations['admin___auto-translation___update-config']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type AdminAvatarDecorationsCreateRequest = operations['admin___avatar-decorations___create']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -598,6 +607,15 @@ type AuthSessionUserkeyRequest = operations['auth___session___userkey']['request
 
 // @public (undocumented)
 type AuthSessionUserkeyResponse = operations['auth___session___userkey']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AutoTranslationCapabilitiesResponse = operations['auto-translation___capabilities']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AutoTranslationTranslateNoteRequest = operations['auto-translation___translate-note']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AutoTranslationTranslateNoteResponse = operations['auto-translation___translate-note']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 export type AvatarWalkAction = {
@@ -1668,6 +1686,9 @@ declare namespace entities {
         AdminAnnouncementsListRequest,
         AdminAnnouncementsListResponse,
         AdminAnnouncementsUpdateRequest,
+        AdminAutoTranslationGetConfigResponse,
+        AdminAutoTranslationUpdateConfigRequest,
+        AdminAutoTranslationUpdateConfigResponse,
         AdminAvatarDecorationsCreateRequest,
         AdminAvatarDecorationsCreateResponse,
         AdminAvatarDecorationsDeleteRequest,
@@ -1809,6 +1830,9 @@ declare namespace entities {
         AuthSessionShowResponse,
         AuthSessionUserkeyRequest,
         AuthSessionUserkeyResponse,
+        AutoTranslationCapabilitiesResponse,
+        AutoTranslationTranslateNoteRequest,
+        AutoTranslationTranslateNoteResponse,
         BlockingCreateRequest,
         BlockingCreateResponse,
         BlockingDeleteRequest,

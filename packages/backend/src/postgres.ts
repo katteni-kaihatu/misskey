@@ -88,6 +88,7 @@ import { MiBubbleGameRecord } from '@/models/BubbleGameRecord.js';
 import { MiReversiGame } from '@/models/ReversiGame.js';
 import { MiChatApproval } from '@/models/ChatApproval.js';
 import { MiSystemAccount } from '@/models/SystemAccount.js';
+import { MiAutoTranslationConfig } from '@/models/AutoTranslationConfig.js';
 
 pg.types.setTypeParser(20, Number);
 
@@ -220,6 +221,7 @@ export const entities = [
 	MiHashtag,
 	MiSwSubscription,
 	MiSystemAccount,
+	MiAutoTranslationConfig,
 	MiAbuseUserReport,
 	MiAbuseReportNotificationRecipient,
 	MiRegistrationTicket,

@@ -117,6 +117,10 @@ export const ROUTE_DEF = [{
 		name: 'preferences',
 		component: page(() => import('@/pages/settings/preferences.vue')),
 	}, {
+		path: '/auto-translation',
+		name: 'auto-translation',
+		component: page(() => import('@/pages/settings/auto-translation.vue')),
+	}, {
 		path: '/theme/install',
 		name: 'theme',
 		component: page(() => import('@/pages/settings/theme.install.vue')),
@@ -490,6 +494,10 @@ export const ROUTE_DEF = [{
 		path: '/external-services',
 		name: 'external-services',
 		component: page(() => import('@/pages/admin/external-services.vue')),
+	}, {
+		path: '/auto-translation',
+		name: 'auto-translation',
+		component: page(() => import('@/pages/admin/auto-translation.vue')),
 	}, {
 		path: '/performance',
 		name: 'performance',

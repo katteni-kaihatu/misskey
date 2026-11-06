@@ -14,7 +14,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkCwButton v-model="showContent" :text="note.text" :files="note.files" :poll="note.poll"/>
 			</p>
 			<div v-show="note.cw == null || showContent">
-				<MkSubNoteContent :class="$style.text" :note="note"/>
+				<MkAutoTranslatedNote v-slot="{ text }" :note="note" :active="note.cw == null || showContent">
+					<MkSubNoteContent :class="$style.text" :note="{ ...note, text }"/>
+				</MkAutoTranslatedNote>
 			</div>
 		</div>
 	</div>
@@ -28,6 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkNoteHeader from '@/components/MkNoteHeader.vue';
+import MkAutoTranslatedNote from '@/components/MkAutoTranslatedNote.vue';
 import MkSubNoteContent from '@/components/MkSubNoteContent.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 import { i18n } from '@/i18n.js';

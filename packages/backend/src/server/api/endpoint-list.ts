@@ -455,3 +455,9 @@ export * as 'notes/extended-reactions/create' from './endpoints/notes/extended-r
 export * as 'notes/extended-reactions/delete' from './endpoints/notes/extended-reactions/delete.js';
 export * as 'notes/extended-reactions/show' from './endpoints/notes/extended-reactions/show.js';
 export * as 'notes/extended-reactions/list' from './endpoints/notes/extended-reactions/list.js';
+
+export * as 'auto-translation/capabilities' from './endpoints/auto-translation/capabilities.js';
+export * as 'auto-translation/translate-note' from './endpoints/auto-translation/translate-note.js';
+export * as 'admin/auto-translation/get-config' from './endpoints/admin/auto-translation/get-config.js';
+export * as 'admin/auto-translation/update-config' from './endpoints/admin/auto-translation/update-config.js';
+export * as 'admin/auto-translation/test-connection' from './endpoints/admin/auto-translation/test-connection.js';

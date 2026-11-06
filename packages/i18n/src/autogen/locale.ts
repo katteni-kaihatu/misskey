@@ -13560,4 +13560,110 @@ export interface Locale extends ILocale {
          */
         "mfm": string;
     };
+    "_autoTranslation": {
+        /**
+         * 常時翻訳
+         */
+        "title": string;
+        /**
+         * 画面に表示された投稿を指定した言語に翻訳します。同じ言語と判定できた投稿は翻訳しません。原文はいつでも表示できます。設定はアカウントごとに保存されます。
+         */
+        "description": string;
+        /**
+         * 投稿を常に翻訳する
+         */
+        "enableClient": string;
+        /**
+         * 翻訳先の言語
+         */
+        "targetLang": string;
+        /**
+         * このサーバーでは常時翻訳を利用できません。管理者の設定または利用権限を確認してください。
+         */
+        "unavailable": string;
+        /**
+         * 常時翻訳専用の接続設定です。既存のDeepL翻訳とは別に動作します。APIキーはサーバー側でのみ使用します。
+         */
+        "adminDescription": string;
+        /**
+         * 常時翻訳を有効にする
+         */
+        "enableServer": string;
+        /**
+         * APIの接続先
+         */
+        "baseUrl": string;
+        /**
+         * PLaMo翻訳APIのベースURLを指定します。例: https://translate.example.com/v1
+         */
+        "baseUrlDescription": string;
+        /**
+         * モデルID
+         */
+        "model": string;
+        /**
+         * APIキー（Bearer認証）
+         */
+        "apiKey": string;
+        /**
+         * 設定済みです。変更する場合だけ入力してください。
+         */
+        "keyConfigured": string;
+        /**
+         * 未設定です。
+         */
+        "keyNotConfigured": string;
+        /**
+         * 保存時にAPIキーを削除する
+         */
+        "clearKey": string;
+        /**
+         * LAN・VPN内の接続先とHTTP接続を許可する
+         */
+        "allowPrivateNetwork": string;
+        /**
+         * 管理者が指定した接続先にのみ適用します。LAN・VPN内のAPIを使う場合に有効にしてください。
+         */
+        "privateNetworkDescription": string;
+        /**
+         * サーバー全体の同時翻訳数（1〜16）
+         */
+        "maxConcurrency": string;
+        /**
+         * 保存して接続を確認
+         */
+        "saveAndTest": string;
+        /**
+         * 設定を保存できませんでした。接続先、モデルID、APIキー、同時翻訳数を確認してください。
+         */
+        "configFailed": string;
+        /**
+         * 接続できました。指定したモデルを確認しました。
+         */
+        "connectionSucceeded": string;
+        /**
+         * 保存または接続確認に失敗しました。設定とAPIの稼働状態を確認してください。
+         */
+        "connectionFailed": string;
+        /**
+         * 自動翻訳
+         */
+        "translated": string;
+        /**
+         * 翻訳中…
+         */
+        "translating": string;
+        /**
+         * 原文を表示
+         */
+        "showOriginal": string;
+        /**
+         * 翻訳を表示
+         */
+        "showTranslation": string;
+        /**
+         * 翻訳できなかったため、原文を表示しています。
+         */
+        "failed": string;
+    };
 }

@@ -78,6 +78,7 @@ import { FanoutTimelineService } from './FanoutTimelineService.js';
 import { ChannelFollowingService } from './ChannelFollowingService.js';
 import { ChatService } from './ChatService.js';
 import { RegistryApiService } from './RegistryApiService.js';
+import { AutoTranslationService } from './auto-translation/AutoTranslationService.js';
 import { ReversiService } from './ReversiService.js';
 import { PageService } from './PageService.js';
 import { AvatarWalkService } from './AvatarWalkService.js';
@@ -389,6 +390,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChannelMutingService,
 		ChatService,
 		RegistryApiService,
+		AutoTranslationService,
 		ReversiService,
 		PageService,
 		AvatarWalkService,
@@ -696,6 +698,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChannelMutingService,
 		ChatService,
 		RegistryApiService,
+		AutoTranslationService,
 		ReversiService,
 		PageService,
 		AvatarWalkService,

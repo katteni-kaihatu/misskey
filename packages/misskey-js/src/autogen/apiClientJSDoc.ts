@@ -198,6 +198,39 @@ declare module '../api.js' {
     /**
      * No description provided.
      * 
+     * **Credential required**: *Yes* / **Permission**: *read:admin:meta*
+     */
+    request<E extends 'admin/auto-translation/get-config', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
+     * **Credential required**: *Yes* / **Permission**: *read:admin:meta*
+     */
+    request<E extends 'admin/auto-translation/test-connection', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
+     * **Credential required**: *Yes* / **Permission**: *write:admin:meta*
+     */
+    request<E extends 'admin/auto-translation/update-config', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
      * **Credential required**: *Yes* / **Permission**: *write:admin:avatar-decorations*
      */
     request<E extends 'admin/avatar-decorations/create', P extends Endpoints[E]['req']>(
@@ -1320,6 +1353,28 @@ declare module '../api.js' {
      * **Credential required**: *No*
      */
     request<E extends 'auth/session/userkey', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
+     * **Credential required**: *Yes* / **Permission**: *read:account*
+     */
+    request<E extends 'auto-translation/capabilities', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
+     * **Credential required**: *Yes* / **Permission**: *read:account*
+     */
+    request<E extends 'auto-translation/translate-note', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,
       credential?: string | null,
@@ -3770,7 +3825,7 @@ declare module '../api.js' {
 
     /**
      * Add an instance-local reaction. The first reaction uses the ordinary federated reaction.
-     *
+     * 
      * **Credential required**: *Yes* / **Permission**: *write:reactions*
      */
     request<E extends 'notes/extended-reactions/create', P extends Endpoints[E]['req']>(
@@ -3781,7 +3836,7 @@ declare module '../api.js' {
 
     /**
      * Remove the specified instance-local reaction without promoting another reaction.
-     *
+     * 
      * **Credential required**: *Yes* / **Permission**: *write:reactions*
      */
     request<E extends 'notes/extended-reactions/delete', P extends Endpoints[E]['req']>(
@@ -3792,7 +3847,7 @@ declare module '../api.js' {
 
     /**
      * List users of ordinary and instance-local reactions on a visible note.
-     *
+     * 
      * **Credential required**: *No*
      */
     request<E extends 'notes/extended-reactions/list', P extends Endpoints[E]['req']>(
@@ -3803,7 +3858,7 @@ declare module '../api.js' {
 
     /**
      * Get merged ordinary and instance-local reaction counts for visible notes.
-     *
+     * 
      * **Credential required**: *No*
      */
     request<E extends 'notes/extended-reactions/show', P extends Endpoints[E]['req']>(
@@ -3814,7 +3869,7 @@ declare module '../api.js' {
 
     /**
      * No description provided.
-     *
+     * 
      * **Credential required**: *Yes* / **Permission**: *write:favorites*
      */
     request<E extends 'notes/favorites/create', P extends Endpoints[E]['req']>(
@@ -3825,7 +3880,7 @@ declare module '../api.js' {
 
     /**
      * No description provided.
-     *
+     * 
      * **Credential required**: *Yes* / **Permission**: *write:favorites*
      */
     request<E extends 'notes/favorites/delete', P extends Endpoints[E]['req']>(
@@ -3836,7 +3891,7 @@ declare module '../api.js' {
 
     /**
      * No description provided.
-     *
+     * 
      * **Credential required**: *No*
      */
     request<E extends 'notes/featured', P extends Endpoints[E]['req']>(
