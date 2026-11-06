@@ -1,0 +1,36 @@
+[Unit]
+Description=MediaPipe CPU language detector for Misskey translation
+After=network.target
+
+[Service]
+Type=simple
+User=plamo
+Group=plamo
+WorkingDirectory=/opt/mediapipe-language-detector
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=MKL_NUM_THREADS=1
+Environment=LANGUAGE_DETECTOR_MODEL=/opt/mediapipe-language-detector/language_detector.tflite
+ExecStart=/opt/mediapipe-language-detector/venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8768 --workers 1 --limit-concurrency 32 --no-access-log --no-proxy-headers
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryMax=512M
+CPUQuota=100%
+CPUWeight=25
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -74,3 +74,43 @@ export function detectTranslationLanguage(prose: string): string | null {
 	if (!first || first[0] === 'und' || (second && first[1] - second[1] < 0.08)) return null;
 	return iso3[first[0]] ?? null;
 }
+
+// Bump this when detection rules change so old decisions/translations are not reused.
+export const languageDetectionRevision = 'mediapipe-1.2.2-v1';
+
+export type LanguagePrediction = { language: string; probability: number };
+
+/** Small Japanese replies are commonly mistaken for Chinese by statistical models. */
+export function detectJapaneseReply(prose: string): 'ja' | null {
+	const letters = prose.match(/\p{L}/gu) ?? [];
+	if (letters.length === 0) return null;
+	if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(prose) &&
+		letters.every(letter => /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー]/u.test(letter))) return 'ja';
+	// Explicit conversational replies only: arbitrary Han-only text may be Chinese.
+	if (/^(?:草+|笑+|乙|了解)$/u.test(prose.replace(/\s/gu, ''))) return 'ja';
+	return null;
+}
+
+/** Select only sufficiently confident, supported languages from the server detector. */
+export function selectTranslationLanguage(prose: string, predictions: LanguagePrediction[]): string | null {
+	const japanese = detectJapaneseReply(prose);
+	if (japanese) return japanese;
+	const [first] = [...predictions].sort((a, b) => b.probability - a.probability);
+	if (!first) return null;
+	let language = normalizeTranslationLanguage(first.language);
+	let threshold = 0.8;
+	// Product names and acronyms can dominate character counts in short Japanese posts.
+	// Require Google's top choice to agree, kana, and no foreign-script/English sentence.
+	if (language === 'ja' && /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(prose) &&
+		(prose.match(/\p{L}/gu) ?? []).every(letter => /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Latin}ー]/u.test(letter)) &&
+		!/(?:\p{Script=Latin}+\s+){2}\p{Script=Latin}+/u.test(prose)) threshold = 0.25;
+	if (first.probability < threshold) return null;
+	if (language === 'zh') {
+		// An undifferentiated zh result cannot establish equality with either script.
+		const simplified = /[这们说个让还]/u.test(prose);
+		const traditional = /[這們說個讓還]/u.test(prose);
+		if (simplified === traditional) return null;
+		language = simplified ? 'zh-hans' : 'zh-hant';
+	}
+	return (translationLanguages as readonly string[]).includes(language) ? language : null;
+}

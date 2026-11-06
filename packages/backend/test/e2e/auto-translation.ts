@@ -17,10 +17,15 @@ describe('automatic translation API', () => {
 		if (req.headers.authorization !== 'Bearer e2e-only-key') { res.writeHead(401).end(); return; }
 		res.setHeader('Content-Type', 'application/json');
 		if (req.url === '/v1/models') { res.end(JSON.stringify({ data: [{ id: 'translation-test' }] })); return; }
-		calls++;
 		const chunks: Buffer[] = [];
 		for await (const chunk of req) chunks.push(chunk);
 		const body = JSON.parse(Buffer.concat(chunks).toString());
+		if (req.url === '/v1/language-detection') {
+			const language = body.text.includes('使った') ? 'ja' : 'en';
+			res.end(JSON.stringify({ predictions: [{ language, probability: 0.7 }] }));
+			return;
+		}
+		calls++;
 		res.end(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: body.messages[0].content.replace('Hello', 'こんにちは') } }] }));
 	});
 	beforeAll(async () => {
@@ -55,6 +60,10 @@ describe('automatic translation API', () => {
 		const japanese = await post(alice, { text: '今日はよく晴れています' });
 		const skipped = await api('auto-translation/translate-note', { noteId: japanese.id, targetLang: 'ja' }, alice);
 		expect(skipped.body.status).toBe('sameLanguage');
+		const mixed = await post(alice, { text: 'Example Editorを使ったよ' });
+		expect((await api('auto-translation/translate-note', { noteId: mixed.id, targetLang: 'ja' }, alice)).body.status).toBe('sameLanguage');
+		const short = await post(alice, { text: '夜が更ける' });
+		expect((await api('auto-translation/translate-note', { noteId: short.id, targetLang: 'ja' }, alice)).body.status).toBe('sameLanguage');
 		expect(calls).toBe(0);
 		const english = await post(alice, { text: 'Hello @alice :blobcat:' });
 		const translated = await api('auto-translation/translate-note', { noteId: english.id, targetLang: 'ja' }, alice);

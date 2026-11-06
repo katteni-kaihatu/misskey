@@ -16,7 +16,8 @@ import { MiAutoTranslationConfig } from '@/models/AutoTranslationConfig.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { RoleService } from '@/core/RoleService.js';
-import { detectTranslationLanguage, normalizeTranslationLanguage, protectTranslationText, translationLanguages } from './text.js';
+import { detectJapaneseReply, detectTranslationLanguage, languageDetectionRevision, normalizeTranslationLanguage, protectTranslationText, selectTranslationLanguage, translationLanguages } from './text.js';
+import type { LanguagePrediction } from './text.js';
 
 export class AutoTranslationError extends Error {
 	constructor(public readonly reason: 'unavailable' | 'not_found' | 'not_visible' | 'invalid_language' | 'invalid_config' | 'busy' | 'upstream') {
@@ -39,6 +40,9 @@ const releaseLock = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.
 
 @Injectable()
 export class AutoTranslationService {
+	private readonly languageRequests = new Map<string, Promise<string | null>>();
+	private detectorBackoff: { revision: string; until: number } | null = null;
+
 	constructor(
 		@Inject(DI.db) private db: DataSource,
 		@Inject(DI.redis) private redis: Redis.Redis,
@@ -132,6 +136,39 @@ export class AutoTranslationService {
 		if (!Array.isArray(result.data) || !result.data.some(item => item.id === config.model)) throw new AutoTranslationError('upstream');
 	}
 
+	private async detectLanguage(config: MiAutoTranslationConfig, prose: string): Promise<string | null> {
+		if (!prose) return null;
+		const digest = createHash('sha256').update(JSON.stringify([languageDetectionRevision, config.revision, prose])).digest('hex');
+		const key = `auto-translation:language:${digest}`;
+		const cached = await this.redis.get(key);
+		if (cached !== null) return JSON.parse(cached) as string | null;
+		const pending = this.languageRequests.get(key);
+		if (pending) return pending;
+		const request = (async () => {
+			const fallback = () => detectJapaneseReply(prose) ?? detectTranslationLanguage(prose);
+			if (this.detectorBackoff?.revision === config.revision && this.detectorBackoff.until > Date.now()) return fallback();
+			try {
+				const result = await this.request(config, 'language-detection', { text: prose }, 1500) as { predictions?: LanguagePrediction[] } | null;
+				if (!result || !Array.isArray(result.predictions) || result.predictions.length > 10 ||
+					!result.predictions.every(item => item && typeof item.language === 'string' &&
+						typeof item.probability === 'number' && Number.isFinite(item.probability) && item.probability >= 0 && item.probability <= 1)) throw new AutoTranslationError('upstream');
+				const language = selectTranslationLanguage(prose, result.predictions);
+				// Cache unknown as well; transport failures must be retried after backoff.
+				await this.redis.set(key, JSON.stringify(language), 'EX', 86400);
+				return language;
+			} catch {
+				this.detectorBackoff = { revision: config.revision, until: Date.now() + 30_000 };
+				return fallback();
+			}
+		})();
+		this.languageRequests.set(key, request);
+		try {
+			return await request;
+		} finally {
+			this.languageRequests.delete(key);
+		}
+	}
+
 	private async withCapacity<T>(limit: number, deadline: number, run: () => Promise<T>): Promise<T> {
 		const token = randomUUID();
 		const waiting = 'auto-translation:waiting';
@@ -184,11 +221,11 @@ export class AutoTranslationService {
 		const config = await this.getConfig();
 		if (!config.enabled || !config.baseUrl || !config.apiKey || !config.model) throw new AutoTranslationError('unavailable');
 		const prose = protectTranslationText([note.cw, note.text].filter(Boolean).join('\n')).prose;
-		const sourceLang = detectTranslationLanguage(prose);
+		const sourceLang = await this.detectLanguage(config, prose);
 		const base = { sourceLang, targetLang, text: null, cw: null };
 		if (!prose) return { ...base, status: 'skipped' };
 		if (sourceLang === targetLang) return { ...base, status: 'sameLanguage' };
-		const digest = createHash('sha256').update(JSON.stringify([note.id, note.text, note.cw, targetLang, config.revision])).digest('hex');
+		const digest = createHash('sha256').update(JSON.stringify([note.id, note.text, note.cw, targetLang, config.revision, languageDetectionRevision])).digest('hex');
 		const cacheKey = `auto-translation:result:${digest}`;
 		const lockKey = `auto-translation:lock:${digest}`;
 		const token = randomUUID();
