@@ -13,7 +13,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<span>{{ i18n.ts._autoTranslation.translated }}</span>
 		<button class="_textButton" type="button" :aria-pressed="showOriginal" @click.stop="showOriginal = !showOriginal">{{ showOriginal ? i18n.ts._autoTranslation.showTranslation : i18n.ts._autoTranslation.showOriginal }}</button>
 	</div>
-	<div v-else-if="loading" :class="$style.status" role="status">{{ i18n.ts._autoTranslation.translating }}</div>
 	<div v-else-if="failed" :class="$style.status">
 		<span>{{ i18n.ts._autoTranslation.failed }}</span>
 		<button class="_textButton" type="button" @click.stop="retry++">{{ i18n.ts.retry }}</button>
@@ -40,7 +39,6 @@ const rootEl = ref<HTMLElement>();
 const intersecting = ref(false);
 const result = ref<TranslationResult>();
 const showOriginal = ref(false);
-const loading = ref(false);
 const failed = ref(false);
 const retry = ref(0);
 const enabled = prefer.r['autoTranslation.enabled'];
@@ -61,20 +59,16 @@ watch(() => [props.note.id, props.note.text, props.note.cw, props.note.isHidden,
 	const current = ++generation;
 	result.value = undefined;
 	showOriginal.value = false;
-	loading.value = false;
 	failed.value = false;
 	if (!props.active || !intersecting.value || !enabled.value || !$i || props.note.isHidden || props.note.deletedAt || (!props.note.text && !props.note.cw)) return;
 	const isCurrent = () => current === generation;
 	try {
 		const capability = await getAutoTranslationCapabilities();
 		if (!isCurrent() || !capability.available) return;
-		loading.value = true;
 		const translation = await requestAutoTranslation(props.note, targetLang.value, isCurrent);
 		if (isCurrent()) result.value = translation;
 	} catch {
 		if (isCurrent()) failed.value = true;
-	} finally {
-		if (isCurrent()) loading.value = false;
 	}
 }, { immediate: true });
 </script>

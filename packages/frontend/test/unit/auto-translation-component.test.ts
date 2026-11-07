@@ -60,10 +60,17 @@ describe('automatic translation display', () => {
 	});
 	afterEach(() => { wrapper?.unmount(); });
 	test('waits for viewport visibility and preserves an original-text toggle', async () => {
+		let finish!: (value: unknown) => void;
+		mocks.request.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
 		const view = create();
 		await flushPromises();
 		expect(mocks.request).not.toHaveBeenCalled();
+		const originalMarkup = view.container.innerHTML;
 		await visible();
+		expect(mocks.request).toHaveBeenCalledTimes(1);
+		expect(view.container.innerHTML).toBe(originalMarkup);
+		finish(result('Translated text'));
+		await flushPromises();
 		expect(view.container.querySelector('.body')!.textContent).toBe('Translated text');
 		await fireEvent.click(view.container.querySelector('button')!);
 		expect(view.container.querySelector('.body')!.textContent).toBe('Original text');
