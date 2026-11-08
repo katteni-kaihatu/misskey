@@ -30,6 +30,7 @@ import { updateCurrentAccountPartial } from '@/accounts.js';
 import { genId } from '@/utility/id.js';
 import { unisonReload } from '@/utility/unison-reload.js';
 import { isBirthday } from '@/utility/is-birthday.js';
+import { postFromHotkey } from '@/utility/post-from-hotkey.js';
 
 export async function mainBoot() {
 	const { isClientUpdated, lastVersion } = await common(async () => {
@@ -395,10 +396,11 @@ export async function mainBoot() {
 	let safemodeRequestCount = 0;
 	let safemodeRequestTimer: number | null = null;
 	const keymap = {
-		'p|n': () => {
+		'p': () => {
 			if ($i == null) return;
 			post();
 		},
+		'n': postFromHotkey,
 		'd': async () => {
 			const value = !store.s.darkMode;
 			if (prefer.s.syncDeviceDarkMode) {
