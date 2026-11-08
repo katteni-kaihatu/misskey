@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
   <div :class="$style.wrap" @click="handleBlurClick" :tabindex="0" v-if="!showMedium">
     <img :src="srcBlur" :alt="alt" :class="$style.img" draggable="false" />

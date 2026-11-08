@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <MkContainer :showHeader="widgetProps.showHeader" class="mkw-memo data-cy-mkw-memo">
 	<template #icon><i class="ti ti-note"></i></template>

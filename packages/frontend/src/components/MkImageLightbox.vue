@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div class="catalist__modal__overlay" tabindex="0" @click.self="onOverlayClick">
 	<div class="catalist__modal__modal">

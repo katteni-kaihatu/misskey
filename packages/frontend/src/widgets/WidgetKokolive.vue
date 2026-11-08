@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 	<MkContainer :show-header="widgetProps.showHeader">
     <template #header>{{ i18n.ts._widgets.kokolive }}</template>
