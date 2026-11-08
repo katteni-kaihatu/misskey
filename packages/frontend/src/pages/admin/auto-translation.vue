@@ -7,7 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader>
 	<div class="_spacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 16px; --MI_SPACER-max: 32px;">
 		<div class="_gaps_m">
-			<MkInfo>{{ i18n.ts._autoTranslation.adminDescription }}</MkInfo>
+			<MkInfo>
+				<div class="_gaps_s">
+					<strong>{{ i18n.ts._autoTranslation.providerCredit }}</strong>
+					<div>{{ i18n.ts._autoTranslation.adminDescription }}</div>
+					<div><MkLink url="https://huggingface.co/pfnet/plamo-3-translate-0.8b">{{ i18n.ts._autoTranslation.aboutProvider }}</MkLink></div>
+				</div>
+			</MkInfo>
 			<MkSwitch v-model="config.enabled">{{ i18n.ts._autoTranslation.enableServer }}</MkSwitch>
 			<MkInput v-model="config.baseUrl" type="url">
 				<template #label>{{ i18n.ts._autoTranslation.baseUrl }}</template>
@@ -38,6 +44,7 @@ import { reactive, ref } from 'vue';
 import MkButton from '@/components/MkButton.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import MkInput from '@/components/MkInput.vue';
+import MkLink from '@/components/MkLink.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';

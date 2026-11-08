@@ -5,7 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_gaps_m">
-	<MkInfo>{{ i18n.ts._autoTranslation.description }}</MkInfo>
+	<MkInfo>
+		<div class="_gaps_s">
+			<strong>{{ i18n.ts._autoTranslation.providerCredit }}</strong>
+			<div>{{ i18n.ts._autoTranslation.description }}</div>
+			<div><MkLink url="https://huggingface.co/pfnet/plamo-3-translate-0.8b">{{ i18n.ts._autoTranslation.aboutProvider }}</MkLink></div>
+		</div>
+	</MkInfo>
 	<MkInfo v-if="!capability.available" warn>{{ i18n.ts._autoTranslation.unavailable }}</MkInfo>
 	<MkSwitch v-model="enabled" :disabled="!capability.available && !enabled">{{ i18n.ts._autoTranslation.enableClient }}</MkSwitch>
 	<MkSelect v-model="targetLang" :items="languages"><template #label>{{ i18n.ts._autoTranslation.targetLang }}</template></MkSelect>
@@ -14,6 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import MkInfo from '@/components/MkInfo.vue';
+import MkLink from '@/components/MkLink.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import { getAutoTranslationCapabilities } from '@/utility/auto-translation.js';

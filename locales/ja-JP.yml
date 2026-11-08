@@ -3632,6 +3632,8 @@ _qr:
 
 _autoTranslation:
   title: "常時翻訳"
+  providerCredit: "この機能は、Preferred Networksの翻訳モデル「PLaMo Translate」を使用しています。"
+  aboutProvider: "PLaMo Translateについて"
   description: "画面に表示された投稿を指定した言語に翻訳します。同じ言語と判定できた投稿は翻訳しません。原文はいつでも表示できます。設定はアカウントごとに保存されます。"
   enableClient: "投稿を常に翻訳する"
   targetLang: "翻訳先の言語"
