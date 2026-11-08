@@ -11,11 +11,14 @@ import { postFromHotkey } from '@/utility/post-from-hotkey.js';
 const mocks = vi.hoisted(() => ({
 	user: { id: 'user' } as { id: string } | null,
 	apiWithDialog: vi.fn(),
+	misskeyApi: vi.fn(),
+	alert: vi.fn(),
 	post: vi.fn(),
 }));
 
 vi.mock('@/i.js', () => ({ get $i() { return mocks.user; } }));
-vi.mock('@/os.js', () => ({ apiWithDialog: mocks.apiWithDialog, post: mocks.post }));
+vi.mock('@/os.js', () => ({ apiWithDialog: mocks.apiWithDialog, alert: mocks.alert, post: mocks.post }));
+vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: mocks.misskeyApi }));
 vi.mock('@/router.js', async () => {
 	const { Nirax } = await import('@/lib/nirax.js');
 	return {
@@ -46,6 +49,7 @@ describe('N key post destination', () => {
 		vi.resetAllMocks();
 		mocks.user = { id: 'user' };
 		mocks.apiWithDialog.mockResolvedValue(channel);
+		mocks.misskeyApi.mockResolvedValue(channel);
 		mainRouter.replaceByPath('/');
 	});
 
@@ -58,7 +62,17 @@ describe('N key post destination', () => {
 
 		await pressN();
 
-		expect(mocks.apiWithDialog).toHaveBeenCalledWith('channels/show', { channelId: 'channel-a' });
+		expect(mocks.misskeyApi).toHaveBeenCalledWith('channels/show', { channelId: 'channel-a' });
+		expect(mocks.post).toHaveBeenCalledExactlyOnceWith({ channel });
+	});
+
+	test('does not display loading or success dialogs when opening a channel post', async () => {
+		mainRouter.replaceByPath('/channels/channel-a');
+
+		await pressN();
+
+		expect(mocks.apiWithDialog).not.toHaveBeenCalled();
+		expect(mocks.alert).not.toHaveBeenCalled();
 		expect(mocks.post).toHaveBeenCalledExactlyOnceWith({ channel });
 	});
 
@@ -67,7 +81,7 @@ describe('N key post destination', () => {
 
 		await pressN();
 
-		expect(mocks.apiWithDialog).not.toHaveBeenCalled();
+		expect(mocks.misskeyApi).not.toHaveBeenCalled();
 		expect(mocks.post).toHaveBeenCalledExactlyOnceWith();
 	});
 
@@ -75,18 +89,18 @@ describe('N key post destination', () => {
 		mainRouter.replaceByPath('/channels/channel-a');
 		await pressN();
 		const nextChannel = { ...channel, id: 'channel-b', name: 'Channel B' };
-		mocks.apiWithDialog.mockResolvedValue(nextChannel);
+		mocks.misskeyApi.mockResolvedValue(nextChannel);
 		mainRouter.replaceByPath('/channels/channel-b');
 
 		await pressN();
 
-		expect(mocks.apiWithDialog).toHaveBeenLastCalledWith('channels/show', { channelId: 'channel-b' });
+		expect(mocks.misskeyApi).toHaveBeenLastCalledWith('channels/show', { channelId: 'channel-b' });
 		expect(mocks.post).toHaveBeenLastCalledWith({ channel: nextChannel });
 	});
 
 	test('does not open a stale channel post if navigation occurs while loading', async () => {
 		let resolveChannel!: (value: typeof channel) => void;
-		mocks.apiWithDialog.mockReturnValue(new Promise(resolve => { resolveChannel = resolve; }));
+		mocks.misskeyApi.mockReturnValue(new Promise(resolve => { resolveChannel = resolve; }));
 		mainRouter.replaceByPath('/channels/channel-a');
 		const pending = pressN();
 
@@ -99,10 +113,11 @@ describe('N key post destination', () => {
 
 	test('does not fall back to a normal post when loading the channel fails', async () => {
 		mainRouter.replaceByPath('/channels/channel-a');
-		mocks.apiWithDialog.mockRejectedValue(new Error('Channel unavailable'));
+		mocks.misskeyApi.mockRejectedValue(new Error('Channel unavailable'));
 
 		await pressN();
 
+		expect(mocks.alert).toHaveBeenCalledExactlyOnceWith({ type: 'error', text: 'Channel unavailable' });
 		expect(mocks.post).not.toHaveBeenCalled();
 	});
 
@@ -112,7 +127,7 @@ describe('N key post destination', () => {
 
 		await pressN();
 
-		expect(mocks.apiWithDialog).not.toHaveBeenCalled();
+		expect(mocks.misskeyApi).not.toHaveBeenCalled();
 		expect(mocks.post).not.toHaveBeenCalled();
 	});
 
@@ -124,7 +139,7 @@ describe('N key post destination', () => {
 
 		await pressN();
 
-		expect(mocks.apiWithDialog).not.toHaveBeenCalled();
+		expect(mocks.misskeyApi).not.toHaveBeenCalled();
 		expect(mocks.post).not.toHaveBeenCalled();
 	});
 });

@@ -4,8 +4,9 @@
  */
 
 import { $i } from '@/i.js';
-import { apiWithDialog, post } from '@/os.js';
+import { alert, post } from '@/os.js';
 import { mainRouter } from '@/router.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
 
 export async function postFromHotkey(): Promise<void> {
 	if ($i == null) return;
@@ -19,7 +20,10 @@ export async function postFromHotkey(): Promise<void> {
 	const channelId = current.props.get('channelId');
 	if (typeof channelId !== 'string') return;
 
-	const channel = await apiWithDialog('channels/show', { channelId }).catch(() => null);
+	const channel = await misskeyApi('channels/show', { channelId }).catch(err => {
+		alert({ type: 'error', text: err.message });
+		return null;
+	});
 	if (channel == null || mainRouter.current !== current) return;
 
 	await post({ channel });
