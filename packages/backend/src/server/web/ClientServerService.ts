@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { clientFrameOptions } from './client-frame-options.js';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
@@ -208,7 +209,7 @@ export class ClientServerService {
 
 		fastify.addHook('onRequest', (request, reply, done) => {
 			// クリックジャッキング防止のためiFrameの中に入れられないようにする
-			reply.header('X-Frame-Options', 'DENY');
+			reply.header('X-Frame-Options', clientFrameOptions(request.url));
 			done();
 		});
 

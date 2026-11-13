@@ -19,6 +19,7 @@ const output = await mkdtemp(join(tmpdir(), 'gridspace-doom-smoke-'));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm' };
 const server = createServer(async (request, response) => {
 	const name = new URL(request.url, 'http://localhost').pathname.slice(1);
+	response.setHeader('X-Frame-Options', name === 'index.html' ? 'SAMEORIGIN' : 'DENY');
 	if (name === 'favicon.ico') { response.writeHead(204).end(); return; }
 	if (!name) {
 		response.setHeader('Content-Type', 'text/html');

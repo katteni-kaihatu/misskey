@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<iframe
 					ref="frame"
 					:class="$style.frame"
-					src="/client-assets/doom/index.html"
+					:src="`/client-assets/doom/index.html?v=${encodeURIComponent(version)}`"
 					:title="i18n.ts._doom.title"
 					sandbox="allow-scripts allow-same-origin"
 					allow="autoplay; fullscreen"
@@ -91,7 +91,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, onDeactivated, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import { url } from '@@/js/config.js';
+import { url, version } from '@@/js/config.js';
 import MkButton from '@/components/MkButton.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import { i18n } from '@/i18n.js';
