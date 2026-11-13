@@ -1,0 +1,11 @@
+{
+	"engine": "https://github.com/ozkl/doomgeneric/tree/e257a09527062bfb986b6e5e0780839b6cbd5b71",
+	"compiler": "emscripten/emsdk:4.0.20@sha256:460fff8f8ac87e11b16447fbd66538a686eafa0e4fb977aa0989ed19fe2079f7",
+	"freedoom": "0.13.0",
+	"hashes": {
+		"engine.js": "10332f5768424f6419bc66cea37b900c8dca5e27725bc3320fc868f6c308520e",
+		"engine.wasm": "124a7ce7971ab14202fe821494233379b86cd5e25bfef90cbfdf4246ead365d9",
+		"source.tar.gz": "ed683ebc3619e0fcb50e4c8f5aa6361a20429891eaa92336fb9d3a1173fed02a",
+		"freedoom1.wad.gz": "6679cd1bd95a458db539cc8697f195ea79965310daf8aa18bef0c97b20e0ccc1"
+	}
+}

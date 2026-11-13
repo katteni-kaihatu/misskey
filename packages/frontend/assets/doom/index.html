@@ -1,0 +1,20 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DOOM</title>
+	<style>
+		html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+		canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; outline-offset: -3px; }
+	</style>
+</head>
+<body>
+	<canvas id="screen" width="640" height="400" tabindex="0" aria-label="DOOM"></canvas>
+	<script type="module" src="./player.js"></script>
+</body>
+</html>

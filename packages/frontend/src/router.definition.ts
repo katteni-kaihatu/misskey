@@ -343,6 +343,10 @@ export const ROUTE_DEF = [{
 	component: page(() => import('@/pages/flash/flash-edit.vue')),
 	loginRequired: true,
 }, {
+	path: '/play/doom',
+	component: page(() => import('@/pages/flash/doom.vue')),
+	query: { result: 'shared' },
+}, {
 	path: '/play/:id',
 	component: page(() => import('@/pages/flash/flash.vue')),
 }, {
