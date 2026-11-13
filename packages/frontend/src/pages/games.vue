@@ -17,6 +17,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<img src="/client-assets/reversi/logo.png" style="display: block; max-width: 100%; max-height: 200px; margin: auto;"/>
 				</MkA>
 			</div>
+			<div class="_panel" :class="$style.link">
+				<MkA to="/play/doom" :class="$style.doom">
+					<span :class="$style.doomTitle"><i class="ti ti-device-gamepad" aria-hidden="true"></i> {{ i18n.ts._doom.title }}</span>
+					<span>{{ i18n.ts._doom.description }}</span>
+				</MkA>
+			</div>
 		</div>
 	</div>
 </PageWithHeader>
@@ -32,9 +38,25 @@ definePage(() => ({
 }));
 </script>
 
-<style module>
+<style lang="scss" module>
 .link:focus-within {
 	outline: 2px solid var(--MI_THEME-focus);
 	outline-offset: -2px;
+}
+
+.doom {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	min-height: 160px;
+	padding: 20px;
+	text-align: center;
+}
+
+.doomTitle {
+	font-size: 3rem;
+	font-weight: 900;
 }
 </style>
