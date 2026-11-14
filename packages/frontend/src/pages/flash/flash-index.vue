@@ -6,11 +6,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="true">
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
-		<MkA to="/play/doom" class="_panel _margin" :class="$style.doom">
-			<i class="ti ti-device-gamepad"></i>
-			<div><b>{{ i18n.ts._doom.title }}</b><p>{{ i18n.ts._doom.description }}</p></div>
-			<i class="ti ti-chevron-right"></i>
-		</MkA>
 		<div v-if="tab === 'search'">
 			<div class="_gaps">
 				<MkInput v-model="searchQuery" :large="true" type="search">
@@ -135,16 +130,3 @@ definePage(() => ({
 	icon: 'ti ti-player-play',
 }));
 </script>
-
-<style lang="scss" module>
-.doom {
-	display: flex;
-	align-items: center;
-	gap: 16px;
-	padding: 20px;
-	margin: 0 0 24px;
-
-	> div { flex: 1; }
-	p { margin: 6px 0 0; font-size: .9em; line-height: 1.6; }
-}
-</style>
