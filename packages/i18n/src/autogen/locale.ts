@@ -13803,6 +13803,18 @@ export interface Locale extends ILocale {
     };
     "_gridspace": {
         /**
+         * 一部の列・ウィジェットは参照先を設定し直してください。
+         */
+        "layoutPartial": string;
+        /**
+         * 元の参照先を引き継げませんでした。設定から選び直してください。
+         */
+        "layoutReferenceUnavailable": string;
+        /**
+         * 引き継いだスクリプトを実行する
+         */
+        "startImportedScript": string;
+        /**
          * {host} のデータを編集しています。保存・削除は連携元にも反映されます。
          */
         "manageOnSource": ParameterizedString<"host">;
@@ -14027,11 +14039,11 @@ export interface Locale extends ILocale {
          */
         "settingsCopy": string;
         /**
-         * 画面表示・テーマ・通知音・投稿の公開範囲・アカウントの公開設定などを、れぞらぶの設定に上書きします。ミュート・ブロックは追加しますが、ぐりすぺで設定した対象は解除しません。
+         * 画面表示・デッキ・ウィジェット・アップロード先・テーマ・通知音・投稿の公開範囲・アカウントの公開設定などを、れぞらぶの設定に上書きします。ミュート・ブロックは追加しますが、ぐりすぺで設定した対象は解除しません。
          */
         "settingsCopyDescription": string;
         /**
-         * デッキの列・ウィジェット配置・ドライブの音声ファイルは引き継ぎません。リストを指定した通知設定は、ぐりすぺの設定を残します。
+         * プラグイン・ドライブの通知音は引き継ぎません。取り込んだスクリプトは、実行ボタンを押すまで動きません。リストを指定した通知設定は、ぐりすぺの設定を残します。
          */
         "settingsCopyExclusions": string;
         /**
