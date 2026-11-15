@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+Core/.build/
+Core/.swiftpm/
+DerivedData/
+GridSpace.xcodeproj/
+Local.xcconfig
