@@ -93,7 +93,8 @@ export class GridspaceSearchService {
 	public userQuery(viewer: { id: string } | null) {
 		const query = this.db.getRepository(MiUser).createQueryBuilder('user')
 			.where('user.isDeleted = false AND user.isSuspended = false');
-		if (this.meta.blockedHosts.length) query.andWhere('(user.host IS NULL OR user.host NOT ILIKE ALL(ARRAY[:...blocked]))', { blocked: this.meta.blockedHosts.flatMap(host => [host, `%.${host}`]) });
+		// A relation of patterns avoids estimating hundreds of ILIKE constants for every actor.
+		if (this.meta.blockedHosts.length) query.andWhere('(user.host IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(CAST(:blocked AS text[])) AS blocked_host(pattern) WHERE user.host ILIKE blocked_host.pattern))', { blocked: this.meta.blockedHosts.flatMap(host => [host, `%.${host}`]) });
 		if (viewer) {
 			this.queries.generateBlockQueryForUsers(query, viewer);
 			this.queries.generateMutedUserQueryForUsers(query, viewer);

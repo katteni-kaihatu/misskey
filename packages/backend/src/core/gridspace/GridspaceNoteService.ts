@@ -23,6 +23,7 @@ import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { acquireApObjectLock } from '@/misc/distributed-lock.js';
 import { resolveGridspaceConfig, type GridspacePeerConfig } from './peer-protocol.js';
 import { GridspaceEndpointUnavailable, requestGridspacePeer } from './peer-client.js';
+import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 import { GRIDSPACE_NOTE_BATCH_LIMIT, GRIDSPACE_NOTE_BATCH_BODY_LIMIT, validateGridspaceNoteBatch, canShareGridspaceNote, canonicalGridspaceNoteUri, gridspaceNoteUris, gridspaceNoteId, GRIDSPACE_NOTE_BODY_LIMIT, GRIDSPACE_NOTE_PATH, validateGridspaceBundle, type GridspaceNoteBundle } from './note-protocol.js';
 
 @Injectable()
@@ -47,11 +48,10 @@ export class GridspaceNoteService implements OnModuleInit, OnApplicationShutdown
 
 	public onModuleInit(): void {
 		if (!this.peer) return;
-		this.timer = setInterval(() => { void this.work(); }, 3000);
-		this.timer.unref();
+		this.timer = startGridspaceTimer('note', () => { void this.work(); }, 3000);
 	}
 
-	public onApplicationShutdown(): void { clearInterval(this.timer); }
+	public onApplicationShutdown(): void { stopGridspaceTimer('note', this.timer); }
 
 	private async request(action: string, noteId: string, deadline?: number): Promise<unknown> {
 		if (!this.peer) throw new Error('GridSpace disabled');

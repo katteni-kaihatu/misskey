@@ -5,6 +5,8 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import { GridspacePrivateService } from './GridspacePrivateService.js';
+import type { MiLocalUser } from '@/models/User.js';
+import type { PrivateWireNote } from './private-protocol.js';
 
 describe('delegated note author emoji', () => {
 	test.each([null, 'grid.example'])('uses the author emoji names and host (%s), independently of the body', async host => {
@@ -28,4 +30,24 @@ describe('delegated note author emoji', () => {
 		expect(packed.author.instance.softwareVersion).toBeUndefined();
 		expect(packed.channel).toEqual({ id: 'channel', name: 'Channel', color: '#ff8a8a' });
 	});
+});
+
+test('a page shares actor checks with renote previews but the next request rechecks permissions', async () => {
+	const actor = { uri: 'https://source.example/users/author', host: 'source.example', name: null, username: 'author' };
+	const note = (id: string) => ({ id, origin: 'https://source.example', filterActors: [actor] }) as PrivateWireNote;
+	const localActorAllows = vi.fn(async () => true);
+	const service = Object.assign(Object.create(GridspacePrivateService.prototype), {
+		peer: { origin: 'https://grid.example', peerOrigin: 'https://source.example' },
+		channelAuth: { isClient: false }, localActorAllows,
+		links: { privateLink: async () => ({ id: 'link', generation: 1, peerUserId: 'old', privateTokenCipher: 'cipher' }), privateCredential: () => ({}),
+			json: async () => ({ notes: [{ ...note('one'), renote: note('preview') }, note('two')], next: null, observedAt: new Date(0).toISOString() }), checkPrivateUnchanged: async () => {} },
+	}) as GridspacePrivateService;
+	const viewer = { id: 'viewer' } as MiLocalUser;
+	const first = await service.notes(viewer, { mode: 'channel' }, 20);
+	expect(first.notes).toHaveLength(2);
+	expect(first.notes[0].renote?.id).toBe('preview');
+	expect(localActorAllows).toHaveBeenCalledOnce();
+	localActorAllows.mockResolvedValue(false);
+	expect((await service.notes(viewer, { mode: 'channel' }, 20)).notes).toEqual([]);
+	expect(localActorAllows).toHaveBeenCalledTimes(2);
 });

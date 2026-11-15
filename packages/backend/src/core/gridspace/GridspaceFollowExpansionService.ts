@@ -20,6 +20,7 @@ import { openGridspaceSecret } from './link-crypto.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
 import { GridspaceHistoryService } from './GridspaceHistoryService.js';
 import { resolveGridspaceConfig, type GridspacePeerConfig } from './peer-protocol.js';
+import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 
 type Candidate = { followerId: string; targetId: string; sourceId: string };
 type SourceCandidate = { followerId: string; sourceId: string; linkId: string; generation: number };
@@ -52,11 +53,10 @@ export class GridspaceFollowExpansionService implements OnModuleInit, OnApplicat
 
 	public onModuleInit(): void {
 		if (!this.peer) return;
-		this.timer = setInterval(() => { void this.work(); }, 3000);
-		this.timer.unref();
+		this.timer = startGridspaceTimer('follow-expansion', () => { void this.work(); }, 3000);
 	}
 
-	public onApplicationShutdown(): void { clearInterval(this.timer); }
+	public onApplicationShutdown(): void { stopGridspaceTimer('follow-expansion', this.timer); }
 
 	private async work(): Promise<void> {
 		if (!this.peer || this.working) return;
@@ -65,21 +65,25 @@ export class GridspaceFollowExpansionService implements OnModuleInit, OnApplicat
 			if (this.sourceSide) { await this.workSource(); return; }
 			// Both links must have been initiated here. A mirrored source-side link is
 			// not permission to change the source account's subscriptions.
+			// Resolve each counterpart first and probe the composite subscription indexes.
+			// Materialize before checking receipts so missing pairs cannot multiply user lookups.
 			const candidates = await this.db.query<Candidate[]>(`
-				SELECT DISTINCT viewer."localUserId" AS "followerId", target."localUserId" AS "targetId", source.id AS "sourceId"
+				WITH candidates AS MATERIALIZED (
+				SELECT viewer."localUserId" AS "followerId", target."localUserId" AS "targetId", source.id AS "sourceId"
 				FROM gridspace_link viewer
-				JOIN (
-					SELECT "followerId", "followeeId" FROM following
-					UNION ALL SELECT "followerId", "followeeId" FROM follow_request
-				) subscription ON subscription."followerId" = viewer."localUserId"
-				JOIN "user" source ON source.id = subscription."followeeId" AND source.host = $2
-				JOIN gridspace_link target ON source.uri = $1 || '/users/' || target."peerUserId"
-				LEFT JOIN gridspace_follow_expansion receipt ON receipt."followerId" = viewer."localUserId" AND receipt."targetId" = target."localUserId"
+				JOIN gridspace_link target ON target."peerOrigin" = viewer."peerOrigin"
+					AND target.state = 'active' AND target.initiator = TRUE AND viewer."localUserId" <> target."localUserId"
+				JOIN "user" source ON source.uri = $1 || '/users/' || target."peerUserId" AND source.host = $2
 				WHERE viewer.state = 'active' AND viewer.initiator = TRUE AND viewer."peerOrigin" = $1
-				AND target.state = 'active' AND target.initiator = TRUE AND target."peerOrigin" = $1
-				AND viewer."localUserId" <> target."localUserId"
-				AND (receipt."followerId" IS NULL OR (receipt.state = 'pending' AND receipt."retryAt" <= NOW()))
 				AND ($3::varchar IS NULL OR (viewer."localUserId", target."localUserId") > ($3, $4))
+				AND EXISTS (
+					SELECT 1 FROM following f WHERE f."followerId" = viewer."localUserId" AND f."followeeId" = source.id
+					UNION ALL SELECT 1 FROM follow_request f WHERE f."followerId" = viewer."localUserId" AND f."followeeId" = source.id
+				)
+				)
+				SELECT candidates.* FROM candidates
+				LEFT JOIN gridspace_follow_expansion receipt ON receipt."followerId" = candidates."followerId" AND receipt."targetId" = candidates."targetId"
+				WHERE receipt."followerId" IS NULL OR (receipt.state = 'pending' AND receipt."retryAt" <= NOW())
 				ORDER BY "followerId", "targetId" LIMIT 20
 			`, [this.peer.peerOrigin, new URL(this.peer.peerOrigin).host, this.cursor?.followerId ?? null, this.cursor?.targetId ?? null]);
 			this.cursor = candidates.at(-1) ?? null;

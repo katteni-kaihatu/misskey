@@ -336,12 +336,13 @@ export class GridspacePrivateService {
 	}
 
 	/** Shared by timeline reads and the updated note returned after an action. */
-	public async filterChannelRenote(viewer: MiLocalUser, note: PrivateNote, peerUserId: string): Promise<PrivateNote> {
+	public async filterChannelRenote(viewer: MiLocalUser, note: PrivateNote, peerUserId: string,
+		actorAllows?: (actor: PrivateWireNote['filterActors'][number]) => Promise<boolean>): Promise<PrivateNote> {
 		const { renote: preview, ...body } = note;
 		if (!preview) return body;
 		const wire = preview as PrivateWireNote;
 		if (!Array.isArray(wire.filterActors)) throw new GridspaceLinkError('PEER_UNAVAILABLE');
-		if (!await this.localAllows(viewer, wire, false, peerUserId)) return body;
+		if (!await this.localAllows(viewer, wire, false, peerUserId, actorAllows)) return body;
 		const { filterActors: _actors, renote: _nested, ...flat } = wire;
 		return { ...body, renote: flat };
 	}
@@ -377,9 +378,17 @@ export class GridspacePrivateService {
 		if (!Array.isArray(page.notes) || page.notes.length > (input.mode === 'validate' ? 100 : limit) || page.notes.some(note => note.origin !== this.peer!.peerOrigin)) throw new GridspaceLinkError('PEER_UNAVAILABLE');
 		if (!Number.isFinite(Date.parse(page.observedAt)) || (page.next && !Number.isFinite(Date.parse(page.scannedThrough ?? '')))) throw new GridspaceLinkError('PEER_UNAVAILABLE');
 		const notes: PrivateNote[] = [];
-		for (const note of page.notes) if (await this.localAllows(viewer, note, (input.contextMode ?? input.mode) === 'home', channel?.peerUserId ?? link!.peerUserId)) {
+		// Reuse actor checks only within this response; later requests must see new blocks/mutes.
+		const actorChecks = new Map<string, Promise<boolean>>();
+		const actorAllows = (actor: PrivateWireNote['filterActors'][number]) => {
+			const key = JSON.stringify([actor.uri, actor.host]);
+			let result = actorChecks.get(key);
+			if (!result) { result = this.localActorAllows(viewer, actor); actorChecks.set(key, result); }
+			return result;
+		};
+		for (const note of page.notes) if (await this.localAllows(viewer, note, (input.contextMode ?? input.mode) === 'home', channel?.peerUserId ?? link!.peerUserId, actorAllows)) {
 			const { filterActors: _filterActors, ...display } = note;
-			notes.push(await this.filterChannelRenote(viewer, display, channel?.peerUserId ?? link!.peerUserId));
+			notes.push(await this.filterChannelRenote(viewer, display, channel?.peerUserId ?? link!.peerUserId, actorAllows));
 		}
 		if (channel) await channel.check(); else await this.links.checkPrivateUnchanged(link!);
 		const next = page.next ? encodeHistoryCursor(this.peer!, { ...state, remote: page.next, remoteHead: page.head }, context) : null;

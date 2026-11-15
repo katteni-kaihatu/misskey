@@ -15,6 +15,7 @@ import { resolveGridspaceConfig, GRIDSPACE_PROTOCOL_VERSION, type GridspacePeerC
 import { gridspaceNoteId } from './note-protocol.js';
 import { supportsGridspaceReactions, type ReactionUpdate } from './reaction-protocol.js';
 import { requestGridspacePeer } from './peer-client.js';
+import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 
 /** A transactional, coalescing outbox. Notifications carry no reaction or note content. */
 @Injectable()
@@ -32,11 +33,10 @@ export class GridspaceReactionDeliveryService implements OnModuleInit, OnApplica
 
 	public onModuleInit(): void {
 		if (!this.peer) return;
-		this.timer = setInterval(() => { void this.flush(); }, 3000);
-		this.timer.unref();
+		this.timer = startGridspaceTimer('reaction-delivery', () => { void this.flush(); }, 3000);
 	}
 
-	public onApplicationShutdown(): void { clearInterval(this.timer); }
+	public onApplicationShutdown(): void { stopGridspaceTimer('reaction-delivery', this.timer); }
 
 	public async mutate<T>(note: MiNote, write: (manager: EntityManager) => Promise<T>): Promise<T> {
 		if (!supportsGridspaceReactions(note, this.peer)) return write(this.db.manager);

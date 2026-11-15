@@ -36,6 +36,7 @@ import { IdService } from '@/core/IdService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
 import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
 import { GridspaceFollowGuardService } from './GridspaceFollowGuardService.js';
+import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 import { gridspacePeerTransport } from './peer-client.js';
 import { createGridspaceHeaders, resolveGridspaceConfig, type GridspacePeerConfig } from './peer-protocol.js';
 import { GRIDSPACE_CALLBACK_PATH, GRIDSPACE_CLIENT_PATH, GRIDSPACE_LINK_SCOPES, GRIDSPACE_ALL_SCOPES, GRIDSPACE_PRIVATE_SCOPES, GRIDSPACE_CHANNEL_SCOPE, GRIDSPACE_PRIVATE_CLIENT_PATH, GRIDSPACE_PRIVATE_SCOPE, GRIDSPACE_PRIVATE_RECIPROCAL_SCOPE, GRIDSPACE_REPLY_SCOPE, GRIDSPACE_ACTION_SCOPE, GRIDSPACE_NOTIFICATION_SCOPE, GRIDSPACE_NOTIFICATION_WRITE_SCOPE, gridspaceChallenge, gridspaceHash, openGridspaceSecret, sealGridspaceSecret } from './link-crypto.js';
@@ -70,11 +71,10 @@ export class GridspaceLinkService implements OnModuleInit, OnApplicationShutdown
 
 	public onModuleInit(): void {
 		if (!this.peer) return;
-		this.timer = setInterval(() => { void this.work(); }, 3000);
-		this.timer.unref();
+		this.timer = startGridspaceTimer('link', () => { void this.work(); }, 3000);
 	}
 
-	public onApplicationShutdown(): void { clearInterval(this.timer); }
+	public onApplicationShutdown(): void { stopGridspaceTimer('link', this.timer); }
 
 	private enabled(): GridspacePeerConfig {
 		if (!this.peer) throw new GridspaceLinkError('DISABLED');

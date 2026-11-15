@@ -16,6 +16,7 @@ import { envOption } from '../env.js';
 import { installProcessErrorHandlers } from './process-error-handler.js';
 import { isShutdownInProgress } from './shutdown-handler.js';
 import { readyRef } from './ready.js';
+import { replaceWorker } from './cluster-worker.js';
 
 import 'reflect-metadata';
 
@@ -51,7 +52,7 @@ cluster.on('exit', worker => {
 
 	// 終了したワーカーは従来どおり再生成し、表示色は出力処理へ任せます。
 	clusterLogger.error(`[${worker.id}] died :(`);
-	cluster.fork();
+	replaceWorker(worker);
 });
 
 // Dying away...

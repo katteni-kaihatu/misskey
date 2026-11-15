@@ -22,6 +22,7 @@ import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ApiError } from '@/server/api/error.js';
 import { GridspaceLinkService } from './GridspaceLinkService.js';
+import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 import { sharedDriveUnavailable, validateSharedDriveValues, validateSharedDriveWire, type SharedDriveRef, type SharedDriveRequest, type SharedDriveValues, type SharedDriveWire } from './shared-drive-protocol.js';
 
 type Kind = SharedDriveWire['kind'];
@@ -53,11 +54,10 @@ export class GridspaceSharedDriveService implements OnModuleInit, OnApplicationS
 
 	public onModuleInit() {
 		if (!this.config.gridspace?.enabled) return;
-		this.timer = setInterval(() => void this.tick().catch(() => {}), 2000);
-		this.timer.unref();
+		this.timer = startGridspaceTimer('shared-drive', () => void this.tick().catch(() => {}), 2000);
 	}
 
-	public onApplicationShutdown() { clearInterval(this.timer); }
+	public onApplicationShutdown() { stopGridspaceTimer('shared-drive', this.timer); }
 
 	private async link(userId: string, manager = this.db.manager, cleanup = false) {
 		if (!this.config.gridspace?.enabled) return null;

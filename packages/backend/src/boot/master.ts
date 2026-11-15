@@ -5,7 +5,6 @@
 
 import * as fs from 'node:fs';
 import * as os from 'node:os';
-import cluster from 'node:cluster';
 import chalk from 'chalk';
 import chalkTemplate from 'chalk-template';
 import Logger from '@/logger.js';
@@ -18,6 +17,7 @@ import { envOption } from '@/env.js';
 import { initTelemetry, shutdownTelemetry } from '@/core/telemetry/telemetry-registry.js';
 import { initExtraThreadPool, jobQueue, server } from './common.js';
 import { installShutdownSignalHandlers } from './shutdown-handler.js';
+import { forkWorker } from './cluster-worker.js';
 
 const logger = new Logger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta');
@@ -192,13 +192,13 @@ async function connectDb(): Promise<void> {
 async function spawnWorkers(limit = 1) {
 	const workers = Math.min(limit, os.cpus().length);
 	bootLogger.info(`Starting ${workers} worker${workers === 1 ? '' : 's'}...`);
-	await Promise.all([...Array(workers)].map(spawnWorker));
+	await Promise.all([...Array(workers)].map((_, index) => spawnWorker(envOption.onlyServer && index === 0)));
 	bootLogger.succ('All workers started');
 }
 
-function spawnWorker(): Promise<void> {
+function spawnWorker(background = false): Promise<void> {
 	return new Promise(res => {
-		const worker = cluster.fork();
+		const worker = forkWorker(background);
 		worker.on('message', message => {
 			if (message === 'listenFailed') {
 				bootLogger.error('The server Listen failed due to the previous error.');
