@@ -9,13 +9,12 @@ import { DataSource, In, LessThanOrEqual, type EntityManager } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { MiNote } from '@/models/Note.js';
-import { MiGridspaceReactionDelivery } from '@/models/Gridspace.js';
+import { MiGridspaceReactionDelivery, MiGridspaceReactionNotification } from '@/models/Gridspace.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { resolveGridspaceConfig, GRIDSPACE_PROTOCOL_VERSION, type GridspacePeerConfig } from './peer-protocol.js';
 import { gridspaceNoteId } from './note-protocol.js';
 import { supportsGridspaceReactions, type ReactionUpdate } from './reaction-protocol.js';
 import { requestGridspacePeer } from './peer-client.js';
-import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 
 /** A transactional, coalescing outbox. Notifications carry no reaction or note content. */
 @Injectable()
@@ -33,15 +32,22 @@ export class GridspaceReactionDeliveryService implements OnModuleInit, OnApplica
 
 	public onModuleInit(): void {
 		if (!this.peer) return;
-		this.timer = startGridspaceTimer('reaction-delivery', () => { void this.flush(); }, 3000);
+		this.timer = setInterval(() => { void this.flush(); }, 3000);
+		this.timer.unref();
 	}
 
-	public onApplicationShutdown(): void { stopGridspaceTimer('reaction-delivery', this.timer); }
+	public onApplicationShutdown(): void { clearInterval(this.timer); }
 
-	public async mutate<T>(note: MiNote, write: (manager: EntityManager) => Promise<T>): Promise<T> {
+	public async mutate<T>(note: MiNote, write: (manager: EntityManager) => Promise<T>, notification?: { id: string; userId: string; reaction: string }): Promise<T> {
 		if (!supportsGridspaceReactions(note, this.peer)) return write(this.db.manager);
 		return this.db.transaction(async manager => {
 			const result = await write(manager);
+			if (notification && note.localOnly && note.userHost === new URL(this.peer!.peerOrigin).host) {
+				await manager.insert(MiGridspaceReactionNotification, {
+					reactionId: notification.id, noteId: note.id, notifierId: notification.userId, reaction: notification.reaction,
+					createdAt: new Date(), retryAt: new Date(), attempts: 0,
+				});
+			}
 			await manager.upsert(MiGridspaceReactionDelivery, {
 				noteId: note.id, peerOrigin: this.peer!.peerOrigin, version: randomUUID(), retryAt: new Date(), attempts: 0,
 			}, ['noteId']);
