@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-FileCopyrightText: syuilo and misskey-project -->
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>dev.gridspace.ios.miauth</string>
+        <key>CFBundleURLSchemes</key><array><string>gridspace-auth</string></array>
+    </dict></array>
+    <!-- Scoped to the two reserved test names. Native pins still verify the
+         exact certificate, host and expiry; Release uses a generated plist. -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>g.ios-parity.test</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+            </dict>
+            <key>r.ios-parity.test</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>合成データの互換性試験で、指定した開発用サーバーに接続します。</string>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+</dict>
+</plist>

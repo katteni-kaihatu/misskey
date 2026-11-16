@@ -104,6 +104,20 @@
 - JavaScriptCoreへの移動は、DOM依存やhost APIを切り出せるかを確認してから別途判断する。既存のインタープリターパッケージがそのまま動くとは断定しない。
 - ブリッジは自社originからの定義済み操作に限定する。外部iframeとUGCへ任意のネイティブAPIやユーザーの全権トークンを与えない。Apple規定への適合は別途確認する。
 
+## S0-3: 配布条件と実装境界の照合
+
+2026-11-16に[AppleのApp Review Guidelines 4.7](https://developer.apple.com/app-store/review/guidelines/#mini-apps-mini-games-streaming-games-chatbots-plug-ins-and-game-emulators)を再確認した。次は原文の条件と、現在の実装を分けた記録であり、審査承認ではない。AiScript/Play/プラグインを対象ソフトウェアとして評価するのは設計上の仮定で、機能ごとの適用判断は未確認。
+
+| 条項 | 原文で確認した条件 | 現在の実装と残件 |
+|---|---|---|
+| 4.7.1 | プライバシー、フィルタ、通報・ブロック、課金条件 | 既存Webの操作を保持する。各UGC画面での実操作・対応範囲の照合は未完了 |
+| 4.7.2 | native API・技術の拡張/公開にはAppleの事前許可 | 公開bridgeは交渉・失効通知のみで、authenticatedOperationsはfalse。UGCへ任意API・主トークンを渡さない。OS標準file inputのアダプターを独自のUGC APIと同一視せず、免除とも断定しない |
+| 4.7.3 | 個々のソフトウェアへのデータ・権限共有には都度明示同意 | ファイル選択自体は利用者が操作する。S3で実行所有者・操作・データを結び付ける同意が必要で、同一originや公開userIdだけを権限にしない |
+| 4.7.4 | ソフトウェアの索引・metadataと、全ソフトウェアへのUniversal Links | ソース調査用の一覧は利用者向け索引ではない。現行entitlementは任意のwebcredentialsのみで、applinksや受信ルーターは未実装。私有コードを公開しない索引・遷移先・認可の実装と比較が残る |
+| 4.7.5 | 対象年齢を超えるソフトウェアの識別と年齢制限 | アプリ側の年齢情報・UGCごとの判定・制限をまだ実装/比較していない。既存のセンシティブ表示だけで達成とみなさない |
+
+S3の操作レジストリでは、第一者の画面操作とUGCの能力を分け、所有者・同意・認証文脈が未確認なら権限を発行しない。これは実装方針であり、Appleの許可を得たという意味ではない。UGC機能を取り除いてS5完了に置き換えず、配布判断・必要な許可と機能比較を別々に追跡する。
+
 ## ストレージ互換性
 
 - `Mk:save/load/remove`のキー: widget/button/scratchpad=`aiscript:widget:*`、Play=`aiscript:flash:<id>:*`、plugin=`aiscript:plugins:<installId>:*`。現行の共有範囲を調べずに、アプリで別の名前空間へ変えたり全件を統合したりしない。

@@ -9,8 +9,8 @@ let package = Package(
     platforms: [.iOS(.v16), .macOS(.v13)],
     products: [.library(name: "GridSpaceCore", targets: ["GridSpaceCore"])],
     targets: [
-        .target(name: "GridSpaceCore"),
-        .testTarget(name: "GridSpaceCoreTests", dependencies: ["GridSpaceCore"]),
+        .target(name: "GridSpaceCore", resources: [.copy("Resources/MFM"), .copy("Resources/Emoji")]),
+        .testTarget(name: "GridSpaceCoreTests", dependencies: ["GridSpaceCore"], resources: [.process("Resources")]),
     ],
     swiftLanguageVersions: [.v5]
 )

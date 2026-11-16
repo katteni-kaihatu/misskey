@@ -1,0 +1,37 @@
+name: Test (iOS)
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    paths:
+      - apps/ios/**
+      - .github/workflows/ios.yml
+  pull_request:
+    branches-ignore:
+      - master
+    paths:
+      - apps/ios/**
+      - .github/workflows/ios.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Core tests and iOS SDK build
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null; then
+            brew install xcodegen
+          fi
+      - name: Test Core and build for iOS Simulator
+        run: bash apps/ios/scripts/check-mac.sh

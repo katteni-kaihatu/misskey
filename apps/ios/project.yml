@@ -24,8 +24,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.gridspace.ios
+        IOS_APPLICATION_ENTITLEMENTS: ""
+        CODE_SIGN_ENTITLEMENTS: "$(IOS_APPLICATION_ENTITLEMENTS)"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Configuration/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: ぐりすぺ
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.social-networking
         INFOPLIST_KEY_NSCameraUsageDescription: 投稿する写真や動画を撮影します。
@@ -37,22 +40,42 @@ targets:
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+      configs:
+        Debug:
+          INFOPLIST_FILE: Configuration/Debug-Info.plist
+  GridSpaceTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: GridSpace
+      - package: GridSpaceCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.gridspace.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
   GridSpaceUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
       - UITests
+      - App/LocalParityServer.swift
     dependencies:
       - target: GridSpace
+      - package: GridSpaceCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.gridspace.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   GridSpace:
     build:
       targets:
         GridSpace: all
+        GridSpaceTests: [test]
         GridSpaceUITests: [test]
     test:
       targets:
+        - GridSpaceTests
         - GridSpaceUITests

@@ -1,0 +1,508 @@
+{
+  "mfmVersion": "0.28.0",
+  "emojiVersion": "17.0.3",
+  "fixtures": [
+    {
+      "text": "plain\r\n日本語 👨‍👨‍👧‍👧 :synthetic: **bold <i>nested</i>** ~~strike~~ <small>small</small>",
+      "nodes": [
+        {
+          "type": "text",
+          "props": {
+            "text": "plain\r\n日本語 "
+          }
+        },
+        {
+          "type": "unicodeEmoji",
+          "props": {
+            "emoji": "👨‍👨‍👧‍👧"
+          }
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "emojiCode",
+          "props": {
+            "name": "synthetic"
+          }
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "bold",
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "bold "
+              }
+            },
+            {
+              "type": "italic",
+              "children": [
+                {
+                  "type": "text",
+                  "props": {
+                    "text": "nested"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "strike",
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "strike"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "small",
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "small"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "> quote\n> **nested**\n\n<center>center\nline</center>",
+      "nodes": [
+        {
+          "type": "quote",
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "quote\n"
+              }
+            },
+            {
+              "type": "bold",
+              "children": [
+                {
+                  "type": "text",
+                  "props": {
+                    "text": "nested"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "center",
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "center\nline"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "@alice @bob@remote.example #タグ https://example.test/path?a=1&b=2 [label **bold**](https://example.test) ?[silent](https://example.test)",
+      "nodes": [
+        {
+          "type": "mention",
+          "props": {
+            "username": "alice",
+            "host": null,
+            "acct": "@alice"
+          }
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "mention",
+          "props": {
+            "username": "bob",
+            "host": "remote.example",
+            "acct": "@bob@remote.example"
+          }
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "hashtag",
+          "props": {
+            "hashtag": "タグ"
+          }
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "url",
+          "props": {
+            "url": "https://example.test/path?a=1&b=2"
+          }
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "link",
+          "props": {
+            "silent": false,
+            "url": "https://example.test"
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "label "
+              }
+            },
+            {
+              "type": "bold",
+              "children": [
+                {
+                  "type": "text",
+                  "props": {
+                    "text": "bold"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "link",
+          "props": {
+            "silent": true,
+            "url": "https://example.test"
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "silent"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "`let x = 1`\n```swift\nlet x = \"space  \";\n\nprint(x)\n```",
+      "nodes": [
+        {
+          "type": "inlineCode",
+          "props": {
+            "code": "let x = 1"
+          }
+        },
+        {
+          "type": "blockCode",
+          "props": {
+            "code": "let x = \"space  \";\n\nprint(x)",
+            "lang": "swift"
+          }
+        }
+      ]
+    },
+    {
+      "text": "<plain>**literal** :emoji: @alice</plain> \\(x^2\\)\n\\[\nx^2\n\\]",
+      "nodes": [
+        {
+          "type": "plain",
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "**literal** :emoji: @alice"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "mathInline",
+          "props": {
+            "formula": "x^2"
+          }
+        },
+        {
+          "type": "mathBlock",
+          "props": {
+            "formula": "x^2"
+          }
+        }
+      ]
+    },
+    {
+      "text": "$[blur secret :synthetic:] $[fg.color=abc foreground] $[bg.color=123456 background] $[font.monospace mono] $[x2 large]",
+      "nodes": [
+        {
+          "type": "fn",
+          "props": {
+            "name": "blur",
+            "args": {}
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "secret "
+              }
+            },
+            {
+              "type": "emojiCode",
+              "props": {
+                "name": "synthetic"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "fg",
+            "args": {
+              "color": "abc"
+            }
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "foreground"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "bg",
+            "args": {
+              "color": "123456"
+            }
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "background"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "font",
+            "args": {
+              "monospace": true
+            }
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "mono"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "x2",
+            "args": {}
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "large"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "$[ruby 漢字 かんじ] $[spin.left,speed=2s animated] $[unknown.arg=yes child] $[clickable.ev=event click]",
+      "nodes": [
+        {
+          "type": "fn",
+          "props": {
+            "name": "ruby",
+            "args": {}
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "漢字 かんじ"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "spin",
+            "args": {
+              "left": true,
+              "speed": "2s"
+            }
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "animated"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "unknown",
+            "args": {
+              "arg": "yes"
+            }
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "child"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "props": {
+            "text": " "
+          }
+        },
+        {
+          "type": "fn",
+          "props": {
+            "name": "clickable",
+            "args": {
+              "ev": "event"
+            }
+          },
+          "children": [
+            {
+              "type": "text",
+              "props": {
+                "text": "click"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "\"; globalThis.notExecuted = true; // <script>alert(1)</script> [bad](javascript:alert(1))",
+      "nodes": [
+        {
+          "type": "text",
+          "props": {
+            "text": "\"; globalThis.notExecuted = true; // <script>alert(1)</script> [bad](javascript:alert(1))"
+          }
+        }
+      ]
+    }
+  ]
+}

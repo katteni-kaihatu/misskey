@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-FileCopyrightText: syuilo and misskey-project -->
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>dev.gridspace.ios.miauth</string>
+        <key>CFBundleURLSchemes</key><array><string>gridspace-auth</string></array>
+    </dict></array>
+</dict>
+</plist>

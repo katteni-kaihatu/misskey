@@ -3,6 +3,7 @@
 
 import GridSpaceCore
 import SwiftUI
+import UIKit
 
 @MainActor
 final class AppSession: ObservableObject {
@@ -14,20 +15,58 @@ final class AppSession: ObservableObject {
     private let privacyShield = PrivacyShield()
     private static let originKey = "gridspace.serverOrigin"
 
+    static let productionOrigin = try! ServerOrigin("https://misskey.grid-space.io")
+
+    static var isTesting: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--ui-testing")
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #else
+        return false
+        #endif
+    }
+
     init() {
         WebDownloads.removeOrphanedExports()
+        UploadStagingArea.removeOrphanedFiles()
         // UI tests must not inherit a real account's persistent server selection.
-        let isTesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        let isTesting = Self.isTesting
+        NativeMultipart.removeOrphanedFiles()
+        let attachmentIDs = NativeDraftStore.current().attachmentIDs()
+        if let attachmentIDs { Task { await NativeAttachmentFiles(testing: isTesting).removeOrphans(keeping: attachmentIDs) } }
+        // Gesture QA must exercise real sheet and refresh-control settling.
+        let gestureQA = ProcessInfo.processInfo.arguments.contains("--native-peer-channels-fixture")
+            || ProcessInfo.processInfo.arguments.contains("--native-refresh-fixture")
+            || ProcessInfo.processInfo.arguments.contains("--native-reaction-sheet-fixture")
+        if isTesting && !gestureQA { UIView.setAnimationsEnabled(false) }
         defaults = isTesting ? UserDefaults(suiteName: "GridSpaceUITests")! : .standard
         if isTesting {
             defaults.removeObject(forKey: Self.originKey)
-        } else if let saved = defaults.string(forKey: Self.originKey) {
-            origin = try? ServerOrigin(saved)
-            address = saved
+            #if DEBUG
+            if NativeComposerFixture.enabled {
+                origin = NativeComposerFixture.origin
+                address = NativeComposerFixture.origin.url.absoluteString
+            } else if NativeTimelineFixture.enabled {
+                origin = NativeTimelineFixture.origin
+                address = NativeTimelineFixture.origin.url.absoluteString
+            } else if let server = LocalParityServer.current {
+                NSLog("Local parity Wi-Fi address: %@", server.wifiAddress() ?? "unavailable")
+                origin = server.origin
+                address = server.origin.url.absoluteString
+            } else if ProcessInfo.processInfo.arguments.contains("--compatibility-fixture"),
+               ProcessInfo.processInfo.arguments.contains("--fixture-direct") {
+                origin = try? ServerOrigin("https://example.com")
+                address = "https://example.com"
+            }
+            #endif
+        } else {
+            origin = Self.productionOrigin
+            address = Self.productionOrigin.url.absoluteString
         }
     }
 
     func connect() {
+        guard Self.isTesting else { origin = Self.productionOrigin; address = Self.productionOrigin.url.absoluteString; return }
         do {
             let validated = try ServerOrigin(address)
             // Only the server origin is persisted. Authentication belongs to WebKit.
@@ -40,6 +79,7 @@ final class AppSession: ObservableObject {
     }
 
     func chooseAnotherServer() {
+        guard Self.isTesting else { return }
         origin = nil
         errorMessage = nil
         defaults.removeObject(forKey: Self.originKey)

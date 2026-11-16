@@ -21,6 +21,16 @@ final class ServerOriginTests: XCTestCase {
         XCTAssertFalse(origin.contains(URL(string: "https://example.com/")!))
     }
 
+    func testIPv6AuthorityPreservesBracketsAndExactPort() throws {
+        let origin = try ServerOrigin("https://[fd12:3456::2]:61813")
+        XCTAssertEqual(origin.authority, "[fd12:3456::2]:61813")
+        XCTAssertTrue(origin.contains(URL(string: "https://[fd12:3456::2]:61813/settings/profiles")!))
+        XCTAssertFalse(origin.contains(URL(string: "https://[fd12:3456::2]:61814/")!))
+        XCTAssertFalse(origin.contains(URL(string: "https://[fd12:3456::3]:61813/")!))
+        XCTAssertEqual(try ServerOrigin("https://[fd12:3456::2]").authority, "[fd12:3456::2]")
+        XCTAssertEqual(try ServerOrigin("https://example.com:8443").authority, "example.com:8443")
+    }
+
     func testRejectsNonOriginsAndAuthenticationMaterial() {
         for value in [
             "", " ", "http://example.com", "file:///tmp/test", "javascript:alert(1)",
@@ -30,8 +40,34 @@ final class ServerOriginTests: XCTestCase {
             "https://example.com/#x", "https://example.com:0", "https://example.com:65536",
             "https://exam ple.com", "https://example.com\\@evil.example",
             "https://%65xample.com", "https://example.com\n.evil.example",
+            "https://[fd12::2%25en0]", "https://user@[fd12::2]",
         ] {
             XCTAssertThrowsError(try ServerOrigin(value), value)
+        }
+    }
+
+    func testBlobOriginRetainsIPv6AndRejectsEncodedOriginConfusion() throws {
+        let origin = try ServerOrigin("https://[fd12:3456::2]:61813")
+        XCTAssertTrue(origin.containsBlob(URL(string: "blob:https://[fd12:3456::2]:61813/archive")!))
+        // CFURL/WebKit can escape the brackets without escaping the scheme.
+        XCTAssertTrue(origin.containsBlob(URL(string: "blob:https://%5Bfd12:3456::2%5D:61813/archive")!))
+        for value in [
+            "blob:https://[fd12:3456::3]:61813/archive", "blob:https://[fd12:3456::2]:61814/archive",
+            "blob:http://[fd12:3456::2]:61813/archive", "blob:https://user@[fd12:3456::2]:61813/archive",
+            "blob:null/archive", "https://[fd12:3456::2]:61813/archive",
+        ] {
+            XCTAssertFalse(origin.containsBlob(URL(string: value)!), value)
+        }
+        let dns = try ServerOrigin("https://example.com")
+        XCTAssertTrue(dns.containsBlob(URL(string: "blob:https://example.com/archive")!))
+        XCTAssertTrue(dns.containsBlob(URL(string: "blob:https://example.com/archive%252Fother")!))
+        for value in [
+            "blob:https://%65xample.com/archive", "blob:https://example.com%2Fevil.test/archive",
+            "blob:https://example.com%40evil.test/archive", "blob:https://example.com%3A444/archive",
+            "blob:https://example.com.evil.test/archive", "blob:https://user@example.com/archive",
+            "blob:https%3A%2F%2Fexample.com/archive", "blob:https://%5Bfd12%2540evil.test%5D/archive",
+        ] {
+            XCTAssertFalse(dns.containsBlob(URL(string: value)!), value)
         }
     }
 

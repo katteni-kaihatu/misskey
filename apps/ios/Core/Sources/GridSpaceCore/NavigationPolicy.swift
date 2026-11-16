@@ -39,9 +39,7 @@ public struct NavigationPolicy: Sendable {
         if !isMainFrame && url.absoluteString == "about:srcdoc" { return .allow }
 
         if !isMainFrame && scheme == "blob" {
-            let inner = String(url.absoluteString.dropFirst("blob:".count))
-            if let innerURL = URL(string: inner),
-               ServerOrigin.webComponents(for: innerURL) != nil { return .allow }
+            if ServerOrigin.blobSourceURL(url) != nil { return .allow }
         }
 
         if isMainFrame && isUserActivated && ["mailto", "tel"].contains(scheme ?? "") {

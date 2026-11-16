@@ -29,6 +29,7 @@ final class NavigationPolicyTests: XCTestCase {
             "https://widget.example/frame", "http://widget.example/frame",
             "about:blank", "about:srcdoc", "blob:https://widget.example/1234",
             "blob:https://example.com/1234",
+            "blob:https://[fd12:3456::2]:61813/1234",
         ] {
             XCTAssertEqual(decision(value, main: false), .allow, value)
         }
