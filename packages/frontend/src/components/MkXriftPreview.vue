@@ -231,7 +231,7 @@ function hideFailedImage(event: Event): void {
 .scrollButton { display: grid; place-items: center; width: 32px; height: 28px; border-radius: 6px; color: var(--xrift-fg); background: var(--xrift-well); &:disabled { opacity: 0.35; cursor: default; } &:not(:disabled):hover { background: var(--xrift-hover); } &:focus-visible { outline: 2px solid var(--xrift-focus); outline-offset: -2px; } }
 .worldGrid { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 16px) / 3); gap: 8px; padding: 2px 0 6px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--xrift-border) transparent; direction: ltr; &:focus-visible { outline: 2px solid var(--xrift-focus); outline-offset: -2px; } }
 .worldLink { min-width: 0; font-size: 0.75em; color: inherit; scroll-snap-align: start; > span { display: block; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } &:focus-visible { outline: 2px solid var(--xrift-focus); outline-offset: -2px; } }
-.worldImage { aspect-ratio: 3 / 1; max-height: 80px; overflow: hidden; border-radius: 6px; background: var(--xrift-well); > img { display: block; width: 100%; height: 100%; object-fit: cover; } > img[hidden] { display: none; } }
+.worldImage { aspect-ratio: 12 / 5; max-height: 104px; overflow: hidden; border-radius: 6px; background: var(--xrift-well); > img { display: block; width: 100%; height: 100%; object-fit: cover; } > img[hidden] { display: none; } }
 .profileAction { flex: 0 0 auto; max-width: 45%; }
 .skeleton { height: 10px; border-radius: 4px; background: var(--xrift-well); }
 .skeletonBrand { width: 35%; }

@@ -105,6 +105,11 @@ describe('MkUrlPreview', () => {
 			preferState.dataSaver = dataSaver;
 		}
 	});
+	test('revalidates XRift metadata instead of reusing an old browser-cached list', async () => {
+		await renderPreviewBy({ ...xriftSummary });
+		const request = fetchMock.mock.calls.find(([url]) => String(url).startsWith('/url?'));
+		assert.strictEqual(request?.[1]?.cache, 'no-cache');
+	});
 
 	test('hides sensitive XRift thumbnails', async () => {
 		const preview = await renderPreviewBy({ ...xriftSummary, sensitive: true });

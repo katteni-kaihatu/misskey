@@ -252,7 +252,9 @@ if (requestUrl.hostname === 'catalyst.natsuneko.com') {
 requestUrl.hash = '';
 
 function fetchPreview() {
- window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`)
+ // Revalidate XRift metadata on mount. The server already caches provider
+ // requests, while a browser cache may still contain an older, truncated list.
+ window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`, xriftType.value ? { cache: 'no-cache' } : undefined)
 	.then(res => {
 		if (!res.ok) {
 			if (_DEV_) {
