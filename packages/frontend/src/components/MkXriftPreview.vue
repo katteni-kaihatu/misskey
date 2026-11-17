@@ -60,14 +60,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<span v-if="data?.creator" :class="$style.creator">{{ data.creator }}</span><span v-if="data?.creator && metaDetail" aria-hidden="true"> · </span><span v-if="metaDetail" :class="$style.metaDetail">{{ metaDetail }}</span>
 					</p>
 					<p v-if="message" :class="[$style.description, { [$style.stateMessage]: state !== 'available' }]">{{ message }}</p>
-					<dl v-if="type === 'world' && state === 'available' && hasStats" :class="$style.stats">
-						<div v-if="data?.totalVisits != null"><dt>{{ i18n.ts._xriftPreview.totalVisits }}</dt><dd>{{ format(data.totalVisits) }}</dd></div>
-						<div v-if="data?.visitsLast7Days != null"><dt>{{ i18n.ts._xriftPreview.last7Days }}</dt><dd>{{ format(data.visitsLast7Days) }}</dd></div>
-						<div v-if="data?.publicInstances != null"><dt>{{ i18n.ts._xriftPreview.publicRooms }}</dt><dd>{{ format(data.publicInstances) }}</dd></div>
-					</dl>
-					<div :class="$style.actions">
-						<a :href="url" target="_blank" rel="nofollow noopener" :class="[$style.button, { [$style.primary]: state === 'available' }]">{{ actionLabel }}</a>
-						<a v-if="isLive && data?.worldUrl" :href="data.worldUrl" target="_blank" rel="nofollow noopener" :class="[$style.button, $style.secondary]">{{ i18n.ts._xriftPreview.viewWorld }}</a>
+					<div :class="$style.footer">
+						<dl v-if="type === 'world' && state === 'available' && hasStats" :class="$style.stats">
+							<div v-if="data?.totalVisits != null"><dt>{{ i18n.ts._xriftPreview.totalVisits }}</dt><dd>{{ format(data.totalVisits) }}</dd></div>
+							<div v-if="data?.visitsLast7Days != null"><dt>{{ i18n.ts._xriftPreview.last7Days }}</dt><dd>{{ format(data.visitsLast7Days) }}</dd></div>
+							<div v-if="data?.publicInstances != null"><dt>{{ i18n.ts._xriftPreview.publicRooms }}</dt><dd>{{ format(data.publicInstances) }}</dd></div>
+						</dl>
+						<div :class="$style.actions">
+							<a :href="url" target="_blank" rel="nofollow noopener" :class="[$style.button, { [$style.primary]: state === 'available' }]">{{ actionLabel }}</a>
+							<a v-if="isLive && data?.worldUrl" :href="data.worldUrl" target="_blank" rel="nofollow noopener" :class="[$style.button, $style.secondary]">{{ i18n.ts._xriftPreview.viewWorld }}</a>
+						</div>
 					</div>
 				</template>
 			</div>
@@ -158,16 +160,16 @@ function hideFailedImage(event: Event): void {
 
 <style lang="scss" module>
 .root {
-	// The supplied XRift design deliberately keeps its dark palette in every
-	// Misskey theme. Keep these colors local to the embedded card.
-	--xrift-panel: #463d50;
-	--xrift-visual: #2c2336;
-	--xrift-well: #372e42;
-	--xrift-border: #766d7e;
+	// Match app.xrift.net: dark purple with translucent white surfaces.
+	// Keep the provider palette local to the embedded card in every theme.
+	--xrift-visual: #1a1025;
 	--xrift-fg: #ffffff;
-	--xrift-muted: #c9c1d2;
-	--xrift-ink: #170f23;
-	--xrift-hover: #574d61;
+	--xrift-ink: #000000;
+	--xrift-panel: color-mix(in srgb, var(--xrift-fg) 18%, var(--xrift-visual));
+	--xrift-well: color-mix(in srgb, var(--xrift-ink) 20%, var(--xrift-panel));
+	--xrift-border: color-mix(in srgb, var(--xrift-fg) 25%, var(--xrift-panel));
+	--xrift-muted: color-mix(in srgb, var(--xrift-fg) 85%, var(--xrift-panel));
+	--xrift-hover: color-mix(in srgb, var(--xrift-fg) 10%, var(--xrift-panel));
 	--xrift-live: #4bb34f;
 	--xrift-focus: #a6c8ff;
 	container-type: inline-size;
@@ -196,7 +198,7 @@ function hideFailedImage(event: Event): void {
 .visualIcon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--xrift-muted); }
 .placeholder { background: repeating-linear-gradient(135deg, var(--xrift-visual), var(--xrift-visual) 12px, var(--xrift-border) 12px, var(--xrift-border) 13px); }
 .body { position: relative; isolation: isolate; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
-.bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
+.bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.16; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
 .brandRow { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .brand { display: block; width: 54px; height: auto; flex-shrink: 0; }
 .type { padding: 1px 5px; border: 1px solid var(--xrift-border); border-radius: 3px; font: 700 9px/1.2 monospace; letter-spacing: 0.06em; }
@@ -211,7 +213,8 @@ function hideFailedImage(event: Event): void {
 	dt { color: var(--xrift-muted); font-size: 0.72em; white-space: nowrap; }
 	dd { margin: 2px 0 0; font-size: 1.2em; font-weight: bold; font-variant-numeric: tabular-nums; }
 }
-.actions { display: flex; flex-shrink: 0; gap: 8px; margin-top: auto; padding-top: 4px; }
+.footer { display: flex; flex-shrink: 0; flex-direction: column; gap: 6px; margin-top: auto; }
+.actions { display: flex; flex-shrink: 0; gap: 8px; padding-top: 4px; }
 .button {
 	display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 38px; box-sizing: border-box; flex: 1;
 	padding: 8px 12px; border: 1px solid var(--xrift-border); border-radius: 999px; color: inherit;
