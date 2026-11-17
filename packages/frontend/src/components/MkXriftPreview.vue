@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<article :class="[$style.card, { [$style.landscape]: type !== 'user', [$style.profileSize]: type === 'user', [$style.profile]: type === 'user' && state === 'available' && !loading, [$style.live]: isLive }]" :aria-busy="loading">
 		<div v-if="type !== 'user' || state !== 'available' || loading" :class="$style.brandCorner" role="img" aria-label="XRift">
 			<img :class="[$style.brand, $style.brandFull]" src="/client-assets/xrift/logo-white.svg" alt="" aria-hidden="true" width="886" height="259"/>
-			<img :class="$style.brandCompact" src="/client-assets/xrift/icon.png" alt="" aria-hidden="true" width="512" height="512"/>
+			<img :class="$style.brandCompact" src="/client-assets/xrift/symbol-white.svg" alt="" aria-hidden="true" width="262" height="259"/>
 		</div>
 		<template v-if="type === 'user' && state === 'available' && !loading">
 			<div :class="$style.profileHeading">
@@ -268,7 +268,7 @@ function hideFailedImage(event: Event): void {
 @container (max-width: 560px) {
 	.brandCorner { padding: 5px; border-bottom-left-radius: 7px; }
 	.brandFull { display: none; }
-	.brandCompact { display: block; width: 18px; height: 18px; }
+	.brandCompact { display: block; width: 18px; height: auto; }
 	.brandRow { padding-right: 20px; }
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
