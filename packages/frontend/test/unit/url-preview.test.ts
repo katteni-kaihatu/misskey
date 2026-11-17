@@ -185,7 +185,7 @@ describe('MkUrlPreview', () => {
 	});
 	test('recognizes marketplace item URLs as XRift cards', async () => {
 		const preview = await renderPreviewBy({ ...xriftSummary, url: xriftSummary.url.replace('/world/', '/marketplace/'), xrift: { type: 'item', state: 'available', creator: 'Item creator', acquireCount: 15 } });
-		preview.getByText('ITEM');
+		preview.getByText('アイテム');
 		assert.strictEqual(preview.getByRole('link').getAttribute('href'), xriftSummary.url.replace('/world/', '/marketplace/'));
 	});
 

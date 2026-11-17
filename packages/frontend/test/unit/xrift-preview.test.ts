@@ -16,7 +16,7 @@ afterEach(cleanup);
 describe('XRift cards', () => {
 	test('items display their creator, acquisition count and a marketplace link', () => {
 		const view = render(MkXriftPreview, { props: Item.args });
-		expect(view.getByText('ITEM')).toBeTruthy();
+		expect(view.getByText('アイテム')).toBeTruthy();
 		expect(view.getByText('42人が入手')).toBeTruthy();
 		expect(view.getByText('Item creator')).toBeTruthy();
 		expect(view.getByRole('link', { name: 'アイテムを見る' }).getAttribute('href')).toBe(Item.args.url);
@@ -30,12 +30,14 @@ describe('XRift cards', () => {
 	});
 	test('shows visits, public rooms and a working world link', () => {
 		const view = render(MkXriftPreview, { props: World.args });
+		expect(view.getByText('ワールド')).toBeTruthy();
 		expect(view.getAllByText('12,345').length).toBeGreaterThan(0);
 		expect(view.getByText('2インスタンス公開中')).toBeTruthy();
 		expect(view.getByRole('link', { name: 'ブラウザで入る' }).getAttribute('href')).toBe(World.args.url);
 	});
 	test('a room has distinct join and world links and elapsed time', () => {
 		const view = render(MkXriftPreview, { props: Room.args });
+		expect(view.getByText('インスタンス')).toBeTruthy();
 		expect(view.queryByText('LIVE')).toBeNull();
 		expect(view.getByRole('link', { name: 'このインスタンスに参加' }).getAttribute('href')).toBe(Room.args.url);
 		expect(view.getByRole('link', { name: 'ワールドを見る' }).getAttribute('href')).toBe(World.args.url);

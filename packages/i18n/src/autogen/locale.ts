@@ -15163,19 +15163,19 @@ export interface Locale extends ILocale {
     };
     "_xriftPreview": {
         /**
-         * WORLD
+         * ワールド
          */
         "world": string;
         /**
-         * ITEM
+         * アイテム
          */
         "item": string;
         /**
-         * INSTANCE
+         * インスタンス
          */
         "room": string;
         /**
-         * USER
+         * プロフィール
          */
         "user": string;
         /**

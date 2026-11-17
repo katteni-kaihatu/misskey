@@ -4038,10 +4038,10 @@ _doom:
   saveImage: "結果画像を保存"
 
 _xriftPreview:
-  world: "WORLD"
-  item: "ITEM"
-  room: "INSTANCE"
-  user: "USER"
+  world: "ワールド"
+  item: "アイテム"
+  room: "インスタンス"
+  user: "プロフィール"
   live: "LIVE"
   roomsOpen: "{count}インスタンス公開中"
   visits: "{count} visits"

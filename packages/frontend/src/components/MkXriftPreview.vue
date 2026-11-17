@@ -53,7 +53,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="[$style.skeleton, $style.skeletonButton]"></div>
 				</template>
 				<template v-else>
-					<div :class="$style.brandRow"><img :class="$style.brand" src="/client-assets/xrift/logo-white.svg" alt="XRift" width="886" height="259"/><span :class="$style.type">{{ typeLabel }}</span></div>
+					<div :class="$style.brandRow">
+						<img :class="$style.brand" src="/client-assets/xrift/logo-white.svg" alt="XRift" width="886" height="259"/>
+						<span :class="$style.type">
+							<i v-if="type === 'world'" class="ti ti-world" aria-hidden="true"></i>
+							<i v-else-if="type === 'instance'" class="ti ti-users" aria-hidden="true"></i>
+							<i v-else-if="type === 'item'" class="ti ti-package" aria-hidden="true"></i>
+							<i v-else class="ti ti-user" aria-hidden="true"></i>
+							<span>{{ typeLabel }}</span>
+						</span>
+					</div>
 					<p v-if="isLive" :class="$style.invitation">{{ i18n.ts._xriftPreview.invitation }}</p>
 					<h3 :class="$style.title">{{ heading }}</h3>
 					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive, [$style.worldMeta]: type === 'world' }]">
@@ -204,7 +213,7 @@ function hideFailedImage(event: Event): void {
 .bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.16; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
 .brandRow { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .brand { display: block; width: 54px; height: auto; flex-shrink: 0; }
-.type { padding: 1px 5px; border: 1px solid var(--xrift-border); border-radius: 3px; font: 700 9px/1.2 monospace; letter-spacing: 0.06em; }
+.type { display: inline-flex; align-items: center; min-width: 0; gap: 5px; padding: 4px 8px; border: 1px solid var(--xrift-border); border-radius: 6px; background: color-mix(in srgb, var(--xrift-fg) 15%, transparent); color: var(--xrift-fg); font-size: 12px; font-weight: 750; line-height: 1.2; white-space: nowrap; > i { flex-shrink: 0; } > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; } }
 .title { flex-shrink: 0; margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { flex-shrink: 0; margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .instanceMeta { display: flex; align-items: baseline; gap: 3px; .creator { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .metaDetail { flex-shrink: 0; } }
@@ -271,6 +280,7 @@ function hideFailedImage(event: Event): void {
 	.card { grid-template-columns: 33% minmax(0, 1fr); font-size: 12px; }
 	.body { padding: 12px; gap: 3px; }
 	.title { font-size: 1.1em; -webkit-line-clamp: 1; }
+	.type { padding: 2px 6px; font-size: 11px; }
 	.body .meta { font-size: 0.75em; }
 	.description { font-size: 0.78em; line-height: 1.3; -webkit-line-clamp: 1; }
 	.invitation, .secondary { display: none; }
@@ -289,7 +299,7 @@ function hideFailedImage(event: Event): void {
 @container (max-width: 320px) {
 	.body .meta:not(.instanceMeta) { display: none; }
 	.card.live .title { -webkit-line-clamp: 1; }
-	.body { padding: 10px; gap: 2px; }
+	.body { padding: 8px; gap: 1px; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.worldGrid { scroll-behavior: auto; }
