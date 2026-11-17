@@ -135,7 +135,6 @@ const heading = computed(() => {
 const message = computed(() => {
 	if (state.value === 'error') return i18n.ts._xriftPreview.openDirectly;
 	if (state.value === 'unavailable') return props.type === 'instance' ? i18n.ts._xriftPreview.roomUnavailableDescription : i18n.ts._xriftPreview.unavailableDescription;
-	if (isLive.value && props.summary?.title) return i18n.tsx._xriftPreview.instanceDescription({ name: props.summary.title });
 	if (props.summary?.description?.trim()) return props.summary.description;
 	if (props.type === 'world' && data.value?.publicInstances === 0) return i18n.ts._xriftPreview.noRooms;
 	return null;

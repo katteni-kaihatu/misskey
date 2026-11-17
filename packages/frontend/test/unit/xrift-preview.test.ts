@@ -35,13 +35,13 @@ describe('XRift cards', () => {
 		expect(view.getByRole('img', { name: 'XRift' })).toBeTruthy();
 		expect(view.getByRole('link', { name: 'ワールドに入る' }).getAttribute('href')).toBe(World.args.url);
 	});
-	test('an instance shows its type, world context and join action without a status badge', () => {
+	test('an instance shows its type, world description and join action without a status badge', () => {
 		const view = render(MkXriftPreview, { props: Room.args });
 		expect(view.getByText('インスタンス')).toBeTruthy();
 		expect(view.queryByText('LIVE')).toBeNull();
 		expect(view.queryByText('開催中')).toBeNull();
 		expect(view.getByRole('link', { name: 'このインスタンスに参加' }).getAttribute('href')).toBe(Room.args.url);
-		expect(view.getByText('ワールド「Cozy Workspace Cafe」のインスタンスです。URLからそのまま参加できます。')).toBeTruthy();
+		expect(view.getByText(Room.args.summary.description!)).toBeTruthy();
 		const time = view.getByText('1時間24分前に開始');
 		expect(time.closest('p')?.textContent).toContain('ワールド作者');
 		expect(view.queryByText('12,345 visits')).toBeNull();
