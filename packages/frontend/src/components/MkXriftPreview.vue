@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<article :class="[$style.card, { [$style.profileSize]: type === 'user', [$style.profile]: type === 'user' && state === 'available' && !loading, [$style.live]: isLive }]" :aria-busy="loading">
+	<article :class="[$style.card, { [$style.landscape]: type !== 'user', [$style.profileSize]: type === 'user', [$style.profile]: type === 'user' && state === 'available' && !loading, [$style.live]: isLive }]" :aria-busy="loading">
 		<template v-if="type === 'user' && state === 'available' && !loading">
 			<div :class="$style.profileHeading">
 				<div :class="$style.avatar">
@@ -46,6 +46,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div v-if="isLive && elapsed" :class="$style.elapsed"><small>{{ i18n.ts._xriftPreview.started }}</small><strong>{{ elapsed }}</strong></div>
 			</div>
 			<div :class="$style.body">
+				<img v-if="imageVisible && state === 'available' && !loading" :src="summary?.thumbnail ?? undefined" alt="" aria-hidden="true" :class="$style.bodyBackdrop" loading="lazy" @error="imageFailed = true"/>
 				<template v-if="loading">
 					<span :class="$style.srOnly" role="status">{{ i18n.ts.loading }}</span>
 					<div :class="[$style.skeleton, $style.skeletonBrand]"></div>
@@ -182,6 +183,7 @@ function hideFailedImage(event: Event): void {
 	background: var(--xrift-panel);
 	font-size: 14px;
 	&.live { border-color: var(--xrift-live); }
+	&.landscape { aspect-ratio: 20 / 9; }
 }
 .visual {
 	position: relative;
@@ -192,21 +194,22 @@ function hideFailedImage(event: Event): void {
 }
 .visualIcon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--xrift-muted); }
 .placeholder { background: repeating-linear-gradient(135deg, var(--xrift-visual), var(--xrift-visual) 12px, var(--xrift-border) 12px, var(--xrift-border) 13px); }
-.body { min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 9px; overflow: hidden; }
-.brandRow { display: flex; align-items: center; gap: 7px; }
+.body { position: relative; isolation: isolate; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
+.brandRow { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .brand { font-size: 11px; font-weight: 800; letter-spacing: 0.03em; }
 .type { padding: 1px 5px; border: 1px solid var(--xrift-border); border-radius: 3px; font: 700 9px/1.2 monospace; letter-spacing: 0.06em; }
-.title { margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.meta { margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.description { margin: 0; font-size: 0.9em; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.invitation { margin: 0; font-size: 0.85em; font-weight: bold; }
+.title { flex-shrink: 0; margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.meta { flex-shrink: 0; margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.description { min-height: 0; margin: 0; font-size: 0.9em; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.invitation { flex-shrink: 0; margin: 0; font-size: 0.85em; font-weight: bold; }
 .stats {
-	display: flex; gap: 6px; margin: 0;
+	display: flex; flex-shrink: 0; gap: 6px; margin: 0;
 	> div { flex: 1; min-width: 0; padding: 7px; background: var(--xrift-well); border-radius: 6px; }
 	dt { color: var(--xrift-muted); font-size: 0.72em; white-space: nowrap; }
 	dd { margin: 2px 0 0; font-size: 1.2em; font-weight: bold; font-variant-numeric: tabular-nums; }
 }
-.actions { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
+.actions { display: flex; flex-shrink: 0; gap: 8px; margin-top: auto; padding-top: 4px; }
 .button {
 	display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 38px; box-sizing: border-box; flex: 1;
 	padding: 8px 12px; border: 1px solid var(--xrift-border); border-radius: 999px; color: inherit;

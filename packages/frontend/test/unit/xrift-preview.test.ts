@@ -72,4 +72,9 @@ describe('XRift cards', () => {
 			expect(view.queryAllByRole('img')).toHaveLength(0);
 		} finally { preferState.dataSaver = saved; }
 	});
+	test('hides both the main thumbnail and decorative backdrop for sensitive worlds', () => {
+		const summary = { ...World.args.summary, thumbnail: 'https://media.example/image', sensitive: true };
+		const view = render(MkXriftPreview, { props: { ...World.args, summary } });
+		expect(view.container.querySelectorAll('img')).toHaveLength(0);
+	});
 });
