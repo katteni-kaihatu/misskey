@@ -35,10 +35,11 @@ describe('delegated note author emoji', () => {
 test('a page shares actor checks with renote previews but the next request rechecks permissions', async () => {
 	const actor = { uri: 'https://source.example/users/author', host: 'source.example', name: null, username: 'author' };
 	const note = (id: string) => ({ id, origin: 'https://source.example', filterActors: [actor] }) as PrivateWireNote;
-	const localActorAllows = vi.fn(async () => true);
+	const actorAllows = vi.fn(async () => true);
+	const localActorChecker = vi.fn(async () => actorAllows);
 	const service = Object.assign(Object.create(GridspacePrivateService.prototype), {
 		peer: { origin: 'https://grid.example', peerOrigin: 'https://source.example' },
-		channelAuth: { isClient: false }, localActorAllows,
+		channelAuth: { isClient: false }, localActorChecker,
 		links: { privateLink: async () => ({ id: 'link', generation: 1, peerUserId: 'old', privateTokenCipher: 'cipher' }), privateCredential: () => ({}),
 			json: async () => ({ notes: [{ ...note('one'), renote: note('preview') }, note('two')], next: null, observedAt: new Date(0).toISOString() }), checkPrivateUnchanged: async () => {} },
 	}) as GridspacePrivateService;
@@ -46,8 +47,8 @@ test('a page shares actor checks with renote previews but the next request reche
 	const first = await service.notes(viewer, { mode: 'channel' }, 20);
 	expect(first.notes).toHaveLength(2);
 	expect(first.notes[0].renote?.id).toBe('preview');
-	expect(localActorAllows).toHaveBeenCalledOnce();
-	localActorAllows.mockResolvedValue(false);
+	expect(localActorChecker).toHaveBeenCalledOnce();
+	actorAllows.mockResolvedValue(false);
 	expect((await service.notes(viewer, { mode: 'channel' }, 20)).notes).toEqual([]);
-	expect(localActorAllows).toHaveBeenCalledTimes(2);
+	expect(localActorChecker).toHaveBeenCalledTimes(2);
 });

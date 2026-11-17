@@ -28328,6 +28328,7 @@ export interface operations {
                             source: 'local' | 'peer' | 'channel';
                             /** @enum {string} */
                             status: 'ok' | 'disabled' | 'unavailable' | 'unauthorized';
+                            retryable: boolean;
                             unreadCount: number | null;
                         }[];
                     };
