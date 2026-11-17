@@ -5,19 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkGridspaceNoteLinkPreview v-if="linkedNote" :url="url"/>
-<a v-else-if="xrift" :href="url" target="_blank" rel="nofollow noopener" :class="$style.xriftEmbed" :title="title ?? undefined">
-	<img v-if="thumbnail && !sensitive && !prefer.s.dataSaver.urlPreviewThumbnail" :src="thumbnail" :alt="title ?? ''" :class="$style.xriftThumbnail" loading="lazy"/>
-	<div :class="$style.xriftBody">
-		<div :class="$style.xriftBrand">
-			<img v-if="icon" :src="icon" alt="" :class="$style.siteIcon" loading="lazy"/>
-			<span>XRift</span>
-			<i class="ti ti-external-link" aria-hidden="true"></i>
-		</div>
-		<h1 :class="$style.xriftTitle">{{ title }}</h1>
-		<p v-if="xrift.creator" :class="$style.xriftCreator">{{ xrift.creator }}</p>
-		<p v-if="description" :class="$style.xriftDescription">{{ description }}</p>
-	</div>
-</a>
+<MkXriftPreview v-else-if="xriftType" :url="url" :type="xriftType" :summary="summalyResult" :loading="fetching" :failed="unknownUrl"/>
 <template v-else-if="player.url && playerEnabled">
 	<div
 		:class="$style.player"
@@ -179,6 +167,8 @@ import MkButton from '@/components/MkButton.vue';
 import { transformPlayerUrl } from '@/utility/url-preview.js';
 import { store } from '@/store.js';
 import { prefer } from '@/preferences.js';
+import MkXriftPreview from '@/components/MkXriftPreview.vue';
+import type { XriftPreview } from 'misskey-js';
 
 const props = withDefaults(defineProps<{
 	url: string;
@@ -200,9 +190,13 @@ const self = maybeRelativeUrl !== props.url;
 const attr = self ? 'to' : 'href';
 const target = self ? null : '_blank';
 const fetching = ref(true);
-type PreviewSummary = SummalyResult & { xrift?: { creator: string | null } };
+type PreviewSummary = SummalyResult & { xrift?: XriftPreview };
 const summalyResult = ref<PreviewSummary | null>(null);
-const xrift = computed(() => requestUrl.origin === 'https://app.xrift.net' ? summalyResult.value?.xrift : null);
+const xriftType = computed(() => {
+	if (requestUrl.origin !== 'https://app.xrift.net' || requestUrl.username || requestUrl.password) return null;
+	const match = /^\/(world|instance|user)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.exec(requestUrl.pathname);
+	return match ? match[1].toLowerCase() as XriftPreview['type'] : null;
+});
 const title = computed(() => summalyResult.value?.title ?? null);
 const description = computed(() => summalyResult.value?.description ?? null);
 const thumbnail = computed(() => summalyResult.value?.thumbnail ?? null);
@@ -382,65 +376,6 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" module>
-.xriftEmbed {
-	display: block;
-	border: 1px solid var(--MI_THEME-divider);
-	border-radius: var(--MI-radius);
-	overflow: clip;
-	color: var(--MI_THEME-fg);
-	background: var(--MI_THEME-panel);
-
-	&:hover {
-		text-decoration: none;
-		.xriftTitle { text-decoration: underline; }
-	}
-}
-
-.xriftThumbnail {
-	display: block;
-	width: 100%;
-	max-height: 320px;
-	aspect-ratio: 16 / 9;
-	object-fit: cover;
-	background: var(--MI_THEME-bg);
-}
-
-.xriftBody {
-	padding: var(--MI-margin);
-	overflow-wrap: anywhere;
-}
-
-.xriftBrand {
-	display: flex;
-	align-items: center;
-	gap: var(--MI-marginHalf);
-	font-size: 0.85em;
-	color: color-mix(in srgb, var(--MI_THEME-fg) 70%, transparent);
-
-	> i { margin-left: auto; }
-}
-
-.xriftTitle {
-	margin: var(--MI-marginHalf) 0 0;
-	font-size: 1.1em;
-}
-
-.xriftCreator {
-	margin: var(--MI-marginHalf) 0 0;
-	font-size: 0.85em;
-	color: color-mix(in srgb, var(--MI_THEME-fg) 70%, transparent);
-}
-
-.xriftDescription {
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 3;
-	overflow: hidden;
-	margin: var(--MI-marginHalf) 0 0;
-	font-size: 0.9em;
-	white-space: pre-wrap;
-}
-
 .player {
 	position: relative;
 	width: 100%;

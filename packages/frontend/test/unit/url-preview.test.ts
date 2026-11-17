@@ -5,6 +5,7 @@
 
 import { describe, test, assert, afterEach } from 'vitest';
 import { render, cleanup, type RenderResult } from '@testing-library/vue';
+import type { XriftPreview } from 'misskey-js';
 import type { SummalyResult } from '@misskey-dev/summaly';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
@@ -12,7 +13,7 @@ import MkUrlPreview from '@/components/MkUrlPreview.vue';
 import { preferState } from '../setup.unit.js';
 
 describe('MkUrlPreview', () => {
-	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: { creator: string | null } }): Promise<RenderResult> => {
+	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: XriftPreview }): Promise<RenderResult> => {
 		if (!summary.player) {
 			summary.player = {
 				url: null,
@@ -78,7 +79,7 @@ describe('MkUrlPreview', () => {
 		thumbnail: 'https://example.local/proxied-thumbnail.webp',
 		icon: 'https://example.local/proxied-icon.webp',
 		sitename: 'XRift',
-		xrift: { creator: 'World creator' },
+		xrift: { type: 'world', state: 'available', creator: 'World creator' } as XriftPreview,
 	};
 
 	test('renders an XRift world card with its creator and proxied thumbnail', async () => {

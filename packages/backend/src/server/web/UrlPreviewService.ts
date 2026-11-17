@@ -12,6 +12,7 @@ import type Logger from '@/logger.js';
 import { deepClone } from '@/misc/clone.js';
 import { query } from '@/misc/prelude/url.js';
 import { MemoryKVCache } from '@/misc/cache.js';
+import { StatusError } from '@/misc/status-error.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
@@ -19,14 +20,16 @@ import { ApiError } from '@/server/api/error.js';
 import { MiMeta } from '@/models/Meta.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createHash } from 'node:crypto';
-import { fetchXriftSummary, getXriftWorldUrl } from './xrift.js';
+import { fetchXriftSummary, getXriftResource, xriftImageUrl } from './xrift.js';
+import type { XriftSummary } from './xrift.js';
 
 @Injectable()
 export class UrlPreviewService implements OnApplicationShutdown {
 	private logger: Logger;
 	private summaryCache: MemoryKVCache<SummalyResult>;
-	private xriftSummaryCache = new MemoryKVCache<SummalyResult | null>(1000 * 60 * 5, 100);
-	private xriftInFlight = new Map<string, Promise<SummalyResult | null>>();
+	private xriftSummaryCache = new MemoryKVCache<XriftSummary | null>(1000 * 60 * 5, 100);
+	private xriftInFlight = new Map<string, Promise<XriftSummary | null>>();
+	private xriftRateLimit: { keyVersion: string; until: number } | null = null;
 	private readonly summalyDefaultUserAgent: string;
 
 	constructor(
@@ -89,18 +92,35 @@ export class UrlPreviewService implements OnApplicationShutdown {
 
 		try {
 			const apiKey = this.meta.xriftApiKey;
-			const worldUrl = getXriftWorldUrl(url);
-			let xrift: SummalyResult | null | undefined;
-			if (worldUrl && apiKey) {
+			const resource = getXriftResource(url);
+			let xrift: XriftSummary | null | undefined;
+			if (resource && apiKey) {
 				const keyVersion = createHash('sha256').update(apiKey).digest('hex');
-				const cacheKey = `${worldUrl}@${keyVersion}`;
+				const cacheKey = `${resource.url}@${keyVersion}`;
 				try {
 					xrift = await this.xriftSummaryCache.fetchMaybe(cacheKey, () => {
 						const pending = this.xriftInFlight.get(cacheKey);
 						if (pending) return pending;
-						const request = fetchXriftSummary(worldUrl, apiKey, (apiUrl, headers) => this.httpRequestService.getJson(apiUrl, 'application/json', headers))
+						const request = fetchXriftSummary(resource.url, apiKey, (apiUrl, headers) => this.fetchXriftJson(apiUrl, headers, keyVersion))
+							.then(async result => {
+								if (result?.xrift.state !== 'available') return result;
+								// Public API does not promise world thumbnails. Only reuse the
+								// OGP image, never its title or arbitrary provider metadata.
+								const thumbnailFor = async (worldUrl: string): Promise<string | null> => {
+									try {
+										const ogp = await this.summaryCache.fetchMaybe(`${worldUrl}@_DEFAULT_`, () => this.meta.urlPreviewSummaryProxyUrl
+											? this.fetchSummaryFromProxy(worldUrl) : this.fetchSummary(worldUrl));
+										return xriftImageUrl(ogp?.thumbnail);
+									} catch { return null; }
+								};
+								await Promise.all([
+									result.xrift.worldUrl && !result.thumbnail ? thumbnailFor(result.xrift.worldUrl).then(image => { result.thumbnail = image; }) : null,
+									...(result.xrift.worlds ?? []).map(async world => { world.thumbnail ??= await thumbnailFor(world.url); }),
+								]);
+								return result;
+							})
 							.catch(() => {
-								this.logger.warn('Failed to get XRift world preview');
+								this.logger.warn('Failed to get XRift preview');
 								return null;
 							})
 							.finally(() => this.xriftInFlight.delete(cacheKey));
@@ -108,7 +128,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 						return request;
 					});
 				} catch {
-					this.logger.warn('Failed to get XRift world preview');
+					this.logger.warn('Failed to get XRift preview');
 				}
 			}
 			const fetcher = async () => {
@@ -139,12 +159,15 @@ export class UrlPreviewService implements OnApplicationShutdown {
 
 			summary.icon = this.wrap(summary.icon);
 			summary.thumbnail = this.wrap(summary.thumbnail);
+			if (xrift && 'xrift' in summary) {
+				for (const world of (summary as XriftSummary).xrift.worlds ?? []) world.thumbnail = this.wrap(world.thumbnail);
+			}
 
 			if (summary.sensitive !== true) {
 				summary.sensitive = this.utilityService.isKeyWordIncluded(summary.url, this.meta.urlPreviewSensitiveList);
 			}
 
-			reply.header('Cache-Control', worldUrl ? 'max-age=300' : 'max-age=86400, immutable');
+			reply.header('Cache-Control', resource ? 'max-age=300' : 'max-age=86400, immutable');
 
 			return summary;
 		} catch (err) {
@@ -160,6 +183,24 @@ export class UrlPreviewService implements OnApplicationShutdown {
 				}),
 			};
 		}
+	}
+
+	private async fetchXriftJson(url: string, headers: Record<string, string>, keyVersion: string): Promise<unknown> {
+		if (this.xriftRateLimit?.keyVersion === keyVersion && this.xriftRateLimit.until > Date.now()) {
+			throw new StatusError('XRift rate limit', 429);
+		}
+		const response = await this.httpRequestService.send(url, {
+			method: 'GET', headers: { Accept: 'application/json', ...headers }, timeout: 5000, size: 1024 * 256,
+		}, { throwErrorWhenResponseNotOk: false, validators: [] });
+		if (response.status === 429) {
+			const reset = Number(response.headers.get('X-RateLimit-Reset')) * 1000;
+			this.xriftRateLimit = { keyVersion, until: reset > Date.now() && Number.isFinite(reset) ? reset : Date.now() + 60 * 60 * 1000 };
+		}
+		if (!response.ok) {
+			await response.text().catch(() => undefined);
+			throw new StatusError('XRift request failed', response.status);
+		}
+		return response.json();
 	}
 
 	@bindThis
