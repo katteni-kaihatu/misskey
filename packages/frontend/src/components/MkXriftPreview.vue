@@ -253,6 +253,12 @@ function hideFailedImage(event: Event): void {
 .skeletonText { width: 60%; }
 .skeletonButton { margin-top: auto; height: 38px; border-radius: 999px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@container (min-width: 641px) {
+	.description { -webkit-line-clamp: 3; }
+}
+@container (min-width: 700px) {
+	.description { -webkit-line-clamp: 4; }
+}
 @container (max-width: 640px) {
 	.body { padding: 16px; gap: 8px; }
 	.title { font-size: 1.15em; }
