@@ -2,6 +2,8 @@
 
 `https://misskey.grid-space.io` に接続するSwiftUI/UIKitのネイティブクライアントです。通常起動ではサーバー入力やWebタブを表示しません。Webへのフォールバックを完成条件に含めない方針へ変更しました。現行の実装順序・残件は[ネイティブ開発計画](../../plans/ios-native-client.md)を参照してください。旧S1–S5のWeb互換性計画と検証記録は履歴として残します。
 
+2026-11-17に開発方針を更新しました。写真・カメラからの投稿体験、MFM・Playのネイティブ対応、リアルタイム通信の効率を、必要なサーバーAPI拡張と合わせて改善します。技術の比較候補、未決定事項、受入条件は上記の計画にまとめています。この方針更新でカメラやPlayの実装が完了したわけではありません。以下は現在の実装と実行方法です。
+
 ホーム/ローカル/グローバルと追加したチャンネルのタイムライン、検索、通知、自分のプロフィールをネイティブ画面で操作します。下線付きのフィードタブ、丸いアバター、本文と操作アイコン、固定の下部ナビゲーション、右下の青い投稿ボタンを使います。右上の投稿ボタンとタイムライン先頭の投稿誘導欄は表示しません。下部のホームアイコンをタップすると、選択中のTL/チャンネルの先頭へ戻り、保留中の新着も反映します。別の画面やノート詳細から押してもTLへ戻り、他のフィードの読書位置は動かしません。外部サイトへの通常のリンクは確認してブラウザで開きます。タイムラインのホーム・ローカル・グローバルは、上のタブのタップと左右スワイプで切り替えます。未ログイン時はローカル・グローバルを表示します。同じサーバーのノート・ユーザー・メンション・タグはネイティブへ遷移します。未実装の内部画面をWebViewで開きません。
 
 上部タブ右端の編集ボタンから、タブの追加・削除・ドラッグでの並べ替えができます。「チャンネルを追加」で名前・説明を検索し、選んだチャンネルをタブへ追加します。チャンネルも左右スワイプ、引っ張って更新、末尾での自動読み込みで読めます。最大20個まで保存し、同じチャンネルの重複は防ぎます。設定はこの端末のアカウントごとに保存され、再起動後も順序を復元します。最後のタブを削除するとローカルを残します。
@@ -299,6 +301,85 @@ docker run --rm --mount "type=bind,source=$((Get-Location).Path)/apps/ios,target
 
 ## Mac側のCodexへの引き継ぎ
 
-上の手順で作業ブランチを取得し、Mac側のCodexでリポジトリを開けば、次の指示で続行できます。アプリ本体は`apps/ios/`、機能一覧と実装計画は`plans/ios-native-parity/`にあります。
+2026-11-17の引き継ぎです。対象は`katteni-kaihatu/misskey`の`codex/ios-native-parity-plan`ブランチです。アプリ本体は`apps/ios/`、現行方針と優先順位は[ネイティブ開発計画](../../plans/ios-native-client.md)、過去の実行結果は[検証記録](../../plans/ios-native-parity/validation.md)にあります。`plans/ios-native-parity/`の旧Web併用案を現行方針として採用しないでください。
 
-> apps/ios/README.mdとplans/ios-native-parity/README.mdを読み、iOSクライアントの実装を続けてください。まずbash apps/ios/scripts/check-mac.shで実際のiOS SDKビルドを行い、失敗を修正してください。次に利用可能なシミュレーターでUIテストを実行し、上の確認表を基にWeb互換性を確認してください。未確認を対応済みにせず、既存PWAの機能を残したまま、写真選択と型付きブリッジの実装へ進めてください。認証情報をソースへ保存せず、ユーザーの依頼なしにpushやストア提出は行わないでください。
+### ブランチを取得する
+
+Macにこのリポジトリがない場合は、ターミナルで作業先へ移動して取得します。
+
+```sh
+git clone --branch codex/ios-native-parity-plan --single-branch https://github.com/katteni-kaihatu/misskey.git grid-space-misskey
+cd grid-space-misskey
+```
+
+既にある場合は、そのリポジトリで次を実行します。作業中の変更があれば先に確認し、上書きせずに保存してください。`origin`が上記のリポジトリを指していることも確認します。
+
+```sh
+git status --short --branch
+git remote get-url origin
+git fetch origin
+git switch codex/ios-native-parity-plan
+git pull --ff-only origin codex/ios-native-parity-plan
+```
+
+### Xcodeと実行環境を確認する
+
+フル版のXcodeを起動し、初回設定と必要なiOS Simulatorのインストールを済ませます。`xcode-select -p`がCommandLineToolsを指す場合は、XcodeのSettings > LocationsでCommand Line Toolsにフル版のXcodeを選びます。
+
+```sh
+xcode-select -p
+xcodebuild -version
+```
+
+XcodeGenが未導入なら、Homebrewを使う環境では`brew install xcodegen`で導入できます。初回のネイティブSDKビルドは次のコマンドで行います。
+
+```sh
+bash apps/ios/scripts/check-mac.sh
+open apps/ios/GridSpace.xcodeproj
+```
+
+この手順は同梱済みのMFM・絵文字データを使います。サーバーの起動やデータの再生成を行う段階では、`.node-version`と`package.json`の`packageManager`に合うNode/pnpmと依存関係も準備してください。
+
+### Simulatorと実機で確認する
+
+SDKビルドが通ったら利用可能なSimulatorを選び、テストを実行します。
+
+```sh
+xcrun simctl list devices available
+IOS_SIMULATOR='<表示されたSimulatorのUDID>' bash apps/ios/scripts/check-mac.sh --test
+```
+
+隔離バックエンドや専用写真ライブラリが必要な試験は、その環境がないとスキップされます。スキップを機能の確認済みとして数えず、必要な環境は上の「合成PWAとの通し試験」「GridSpace連携先を含む隔離比較」を参照してください。写真UIの自動試験に個人の写真ライブラリを使わないでください。
+
+カメラ・日本語入力・スクロール・発熱は手元のiPhoneで確認します。XcodeでApple Accountと署名用Teamを設定し、iPhoneをペアリングしてデベロッパモードを有効にしたうえで実行します。
+
+```sh
+xcrun devicectl list devices
+export IOS_DEVICE='<接続端末のidentifier>'
+export IOS_DEVELOPMENT_TEAM='<自分のDevelopment Team ID>'
+bash apps/ios/scripts/check-device.sh --test
+bash apps/ios/scripts/check-device.sh --install
+```
+
+`--test`はDebugの試験、`--install`は通常利用と性能確認用のReleaseビルドです。Simulatorの性能をiPhoneの性能として扱わないでください。署名・認証情報はリポジトリへ保存しません。
+
+### Mac側のCodexへ渡す指示
+
+取得した`grid-space-misskey`をMac側のCodexで開き、次の指示を渡します。
+
+```text
+このブランチのネイティブiOSクライアント開発を続けてください。
+AGENTS.md、apps/ios/README.md、plans/ios-native-client.mdを読み、
+plans/ios-native-parity/validation.mdで既存の検証結果と未確認範囲を確認してください。
+
+まず作業ツリーとブランチを確認し、bash apps/ios/scripts/check-mac.shでSDKビルドを行ってください。
+利用可能なSimulatorでテストし、環境不足によるスキップと成功を分けて記録してください。
+次に写真・カメラ・添付編集・下書き復旧を一連のネイティブ投稿体験として改善してください。
+MFM・Playの小規模な試作と、リアルタイム通信・描画の性能検証も現行計画に沿って進めてください。
+
+必要なサーバーAPI拡張は許容されています。実装前に該当するbackend/frontendのスキルを参照し、
+既存PWAとの互換性を保ってください。通常画面のWebフォールバックは採用しないでください。
+PlayのJavaScriptCore対応やPWAへの性能優位を未検証のまま達成済みにしないでください。
+実機のReleaseビルドで確認し、結果と未確認事項を検証記録へ残してください。
+認証情報をソースやログへ保存せず、別途の指示なしにpushやストア提出は行わないでください。
+```
