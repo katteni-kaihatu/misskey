@@ -56,8 +56,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="$style.brandRow"><img :class="$style.brand" src="/client-assets/xrift/logo-white.svg" alt="XRift" width="886" height="259"/><span :class="$style.type">{{ typeLabel }}</span></div>
 					<p v-if="isLive" :class="$style.invitation">{{ i18n.ts._xriftPreview.invitation }}</p>
 					<h3 :class="$style.title">{{ heading }}</h3>
-					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive }]">
-						<span v-if="data?.creator" :class="$style.creator">{{ data.creator }}</span><span v-if="data?.creator && metaDetail" aria-hidden="true"> · </span><span v-if="metaDetail" :class="$style.metaDetail">{{ metaDetail }}</span>
+					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive, [$style.worldMeta]: type === 'world' }]">
+						<span v-if="data?.creator" :class="$style.creator">{{ data.creator }}</span><span v-if="data?.creator && metaDetail" :class="$style.metaSeparator" aria-hidden="true"> · </span><span v-if="metaDetail" :class="$style.metaDetail">{{ metaDetail }}</span>
 					</p>
 					<p v-if="message" :class="[$style.description, { [$style.stateMessage]: state !== 'available' }]">{{ message }}</p>
 					<div :class="$style.footer">
@@ -132,8 +132,9 @@ const heading = computed(() => {
 const message = computed(() => {
 	if (state.value === 'error') return i18n.ts._xriftPreview.openDirectly;
 	if (state.value === 'unavailable') return props.type === 'instance' ? i18n.ts._xriftPreview.roomUnavailableDescription : i18n.ts._xriftPreview.unavailableDescription;
+	if (props.summary?.description?.trim()) return props.summary.description;
 	if (props.type === 'world' && data.value?.publicInstances === 0) return i18n.ts._xriftPreview.noRooms;
-	return props.summary?.description;
+	return null;
 });
 const actionLabel = computed(() => {
 	if (state.value !== 'available') return i18n.ts._xriftPreview.open;
@@ -231,7 +232,7 @@ function hideFailedImage(event: Event): void {
 .card.profile { display: flex; flex-direction: column; aspect-ratio: auto; padding: 20px; gap: 14px; }
 .profileHeading { display: flex; gap: 18px; align-items: center; min-height: 0; }
 .avatar { display: grid; place-items: center; width: 72px; height: 72px; flex-shrink: 0; border-radius: 50%; background: var(--xrift-well); color: var(--xrift-muted); overflow: hidden; > img { width: 100%; height: 100%; object-fit: cover; } > i { font-size: 32px; } }
-.profileIdentity { flex: 1; min-width: 0; .title { margin: 5px 0; } }
+.profileIdentity { flex: 1; min-width: 0; .title { margin: 5px 0; } .meta { white-space: normal; overflow-wrap: anywhere; } }
 .worlds { min-height: 0; overflow: hidden; }
 .worldsHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .worldCount { margin: 0; font-size: 0.8em; color: var(--xrift-muted); }
@@ -247,22 +248,35 @@ function hideFailedImage(event: Event): void {
 .skeletonText { width: 60%; }
 .skeletonButton { margin-top: auto; height: 38px; border-radius: 999px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@container (max-width: 560px) {
-	.body { padding: 14px; gap: 7px; }
+@container (max-width: 640px) {
+	.body { padding: 12px; gap: 5px; }
 	.title { font-size: 1.15em; }
-	.description:not(.stateMessage), .stats, .invitation { display: none; }
-	.stats > div { padding: 5px; }
+	.description { font-size: 0.83em; line-height: 1.4; }
+	.invitation { display: none; }
+	.worldMeta .metaDetail, .worldMeta .metaSeparator { display: none; }
+	.stats {
+		gap: 8px;
+		font-size: 0.75em;
+		> div { display: flex; flex: 0 1 auto; align-items: baseline; gap: 4px; padding: 0; background: none; }
+		dt { overflow: hidden; font-size: 1em; text-overflow: ellipsis; }
+		dd { flex-shrink: 0; margin: 0; font-size: 1em; }
+	}
+	.actions { padding-top: 0; }
+}
+@container (max-width: 560px) {
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
 }
 @container (max-width: 420px) {
 	.card { grid-template-columns: 33% minmax(0, 1fr); font-size: 12px; }
-	.body { padding: 12px; gap: 6px; }
-	.title { font-size: 1.1em; }
-	.description:not(.stateMessage), .stats, .invitation, .secondary { display: none; }
+	.body { padding: 12px; gap: 3px; }
+	.title { font-size: 1.1em; -webkit-line-clamp: 1; }
+	.body .meta { font-size: 0.75em; }
+	.description { font-size: 0.78em; line-height: 1.3; -webkit-line-clamp: 1; }
+	.invitation, .secondary { display: none; }
 	.badge { top: 7px; left: 7px; font-size: 9px; padding: 4px 6px; }
 	.button { min-height: 36px; padding: 7px 8px; }
-	.actions { padding-top: 4px; }
+	.footer { gap: 4px; }
 	.card.profile { padding: 12px; gap: 12px; }
 	.profileHeading { gap: 10px; }
 	.avatar { width: 48px; height: 48px; }
@@ -273,9 +287,9 @@ function hideFailedImage(event: Event): void {
 	.worldCount { font-size: 0.75em; }
 }
 @container (max-width: 320px) {
-	.meta:not(.instanceMeta) { display: none; }
+	.body .meta:not(.instanceMeta) { display: none; }
 	.card.live .title { -webkit-line-clamp: 1; }
-	.body { padding: 10px; gap: 4px; }
+	.body { padding: 10px; gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.worldGrid { scroll-behavior: auto; }

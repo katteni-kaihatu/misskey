@@ -79,6 +79,15 @@ describe('XRift cards', () => {
 		const view = render(MkXriftPreview, { props: { ...World.args, summary: { ...World.args.summary, xrift: { ...World.args.summary.xrift, publicInstances: 0 } } } });
 		expect(view.getByRole('link', { name: 'ワールドに入る' })).toBeTruthy();
 	});
+	test('keeps the world description when there are no public instances', () => {
+		const view = render(MkXriftPreview, { props: { ...World.args, summary: { ...World.args.summary, xrift: { ...World.args.summary.xrift, publicInstances: 0 } } } });
+		expect(view.getByText(World.args.summary.description!)).toBeTruthy();
+		expect(view.queryByText('公開中のインスタンスはありません')).toBeNull();
+	});
+	test('uses the empty-instance message only when the world has no description', () => {
+		const view = render(MkXriftPreview, { props: { ...World.args, summary: { ...World.args.summary, description: ' ', xrift: { ...World.args.summary.xrift, publicInstances: 0 } } } });
+		expect(view.getByText('公開中のインスタンスはありません')).toBeTruthy();
+	});
 	test('sensitive and data saver modes also hide profile world images', () => {
 		const saved = preferState.dataSaver;
 		try {

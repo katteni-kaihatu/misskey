@@ -4052,7 +4052,7 @@ _xriftPreview:
   publicWorlds: "公開ワールド"
   previousWorlds: "前のワールドを表示"
   nextWorlds: "次のワールドを表示"
-  joinedAt: "{date}からXRift"
+  joinedAt: "{date}からXRiftに参加"
   started: "開始から"
   startedAgo: "{time}前に開始"
   minutes: "{count}分"

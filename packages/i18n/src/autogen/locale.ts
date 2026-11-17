@@ -15219,7 +15219,7 @@ export interface Locale extends ILocale {
          */
         "nextWorlds": string;
         /**
-         * {date}からXRift
+         * {date}からXRiftに参加
          */
         "joinedAt": ParameterizedString<"date">;
         /**
