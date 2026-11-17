@@ -28,5 +28,6 @@ export const Profile = { ...World, args: { ...World.args, type: 'user', summary:
 export const Unavailable = { ...World, args: { ...World.args, summary: { ...summary, xrift: { type: 'world', state: 'unavailable', creator: null } } } } satisfies StoryObj<typeof MkXriftPreview>;
 export const Loading = { ...World, args: { ...World.args, summary: null, loading: true } } satisfies StoryObj<typeof MkXriftPreview>;
 export const Error = { ...World, args: { ...World.args, summary: null, failed: true } } satisfies StoryObj<typeof MkXriftPreview>;
+export const Item = { ...World, args: { ...World.args, type: 'item', url: url.replace('/world/', '/marketplace/'), summary: { ...summary, title: 'Picture Frame', description: '写真を飾れる額縁。ワールドに置いて、お気に入りの写真を展示できます。', xrift: { type: 'item', state: 'available', creator: 'Item creator', acquireCount: 42 } } } } satisfies StoryObj<typeof MkXriftPreview>;
 
 export const ProfileWithoutWorlds = { ...Profile, args: { ...Profile.args, summary: { ...Profile.args.summary, xrift: { ...Profile.args.summary.xrift, totalWorlds: 0, worlds: [] } } } } satisfies StoryObj<typeof MkXriftPreview>;

@@ -7,24 +7,41 @@ import { cleanup, render } from '@testing-library/vue';
 import locales from 'i18n';
 import { updateI18n } from '@/i18n.js';
 import MkXriftPreview from '@/components/MkXriftPreview.vue';
-import { World, Room, Profile } from '@/components/MkXriftPreview.stories.impl.js';
+import { World, Room, Profile, Item } from '@/components/MkXriftPreview.stories.impl.js';
 import { preferState } from '../setup.unit.js';
 
 beforeAll(() => updateI18n(locales['ja-JP']));
 afterEach(cleanup);
 
 describe('XRift cards', () => {
-	test('shows visits, public rooms and a working world link', () => {
-		const view = render(MkXriftPreview, { props: World.args });
-		expect(view.getAllByText('12,345').length).toBeGreaterThan(0);
-		expect(view.getByText('2インスタンス公開中')).toBeTruthy();
-		expect(view.getByRole('link', { name: 'ブラウザで入る' }).getAttribute('href')).toBe(World.args.url);
+	test('items display their creator, acquisition count and a marketplace link', () => {
+		const view = render(MkXriftPreview, { props: Item.args });
+		expect(view.getByText('アイテム')).toBeTruthy();
+		expect(view.getByText('42人が入手')).toBeTruthy();
+		expect(view.getByText('Item creator')).toBeTruthy();
+		expect(view.getByRole('link', { name: 'アイテムを見る' }).getAttribute('href')).toBe(Item.args.url);
+		expect(view.container.querySelector('iframe')).toBeNull();
 	});
-	test('a room has distinct join and world links and elapsed time', () => {
+	test('unavailable items keep a direct link and hide cached details', () => {
+		const view = render(MkXriftPreview, { props: { ...Item.args, summary: { ...Item.args.summary, xrift: { type: 'item', state: 'unavailable', creator: null } } } });
+		expect(view.getByText('このアイテムは利用できません')).toBeTruthy();
+		expect(view.queryByText('Picture Frame')).toBeNull();
+		expect(view.getByRole('link', { name: 'XRiftで開く' }).getAttribute('href')).toBe(Item.args.url);
+	});
+	test('shows the world type, visits, branding and a working entry link', () => {
+		const view = render(MkXriftPreview, { props: World.args });
+		expect(view.getByText('ワールド')).toBeTruthy();
+		expect(view.getByText('12,345 visits')).toBeTruthy();
+		expect(view.getByRole('img', { name: 'XRift' })).toBeTruthy();
+		expect(view.getByRole('link', { name: 'ワールドに入る' }).getAttribute('href')).toBe(World.args.url);
+	});
+	test('an instance shows its type, world description and join action without a status badge', () => {
 		const view = render(MkXriftPreview, { props: Room.args });
+		expect(view.getByText('インスタンス')).toBeTruthy();
 		expect(view.queryByText('LIVE')).toBeNull();
+		expect(view.queryByText('開催中')).toBeNull();
 		expect(view.getByRole('link', { name: 'このインスタンスに参加' }).getAttribute('href')).toBe(Room.args.url);
-		expect(view.getByRole('link', { name: 'ワールドを見る' }).getAttribute('href')).toBe(World.args.url);
+		expect(view.getByText(Room.args.summary.description!)).toBeTruthy();
 		const time = view.getByText('1時間24分前に開始');
 		expect(time.closest('p')?.textContent).toContain('ワールド作者');
 		expect(view.queryByText('12,345 visits')).toBeNull();
@@ -65,6 +82,15 @@ describe('XRift cards', () => {
 		const view = render(MkXriftPreview, { props: { ...World.args, summary: { ...World.args.summary, xrift: { ...World.args.summary.xrift, publicInstances: 0 } } } });
 		expect(view.getByRole('link', { name: 'ワールドに入る' })).toBeTruthy();
 	});
+	test('keeps the world description when there are no public instances', () => {
+		const view = render(MkXriftPreview, { props: { ...World.args, summary: { ...World.args.summary, xrift: { ...World.args.summary.xrift, publicInstances: 0 } } } });
+		expect(view.getByText(World.args.summary.description!)).toBeTruthy();
+		expect(view.queryByText('公開中のインスタンスはありません')).toBeNull();
+	});
+	test('uses the empty-instance message only when the world has no description', () => {
+		const view = render(MkXriftPreview, { props: { ...World.args, summary: { ...World.args.summary, description: ' ', xrift: { ...World.args.summary.xrift, publicInstances: 0 } } } });
+		expect(view.getByText('公開中のインスタンスはありません')).toBeTruthy();
+	});
 	test('sensitive and data saver modes also hide profile world images', () => {
 		const saved = preferState.dataSaver;
 		try {
@@ -77,7 +103,7 @@ describe('XRift cards', () => {
 	test('hides both the main thumbnail and decorative backdrop for sensitive worlds', () => {
 		const summary = { ...World.args.summary, thumbnail: 'https://media.example/image', sensitive: true };
 		const view = render(MkXriftPreview, { props: { ...World.args, summary } });
-		expect(view.container.querySelectorAll('img')).toHaveLength(1);
+		expect(view.container.querySelectorAll('img[src="https://media.example/image"]')).toHaveLength(0);
 		expect(view.getByRole('img', { name: 'XRift' })).toBeTruthy();
 	});
 });

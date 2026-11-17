@@ -12400,7 +12400,7 @@ export interface Locale extends ILocale {
          */
         "xriftKeyConfigured": string;
         /**
-         * read:worlds・read:users・read:instances権限のあるAPIキー（xrift_sk_で始まるキー）を入力してください。保存済みのキーは表示されません。未設定の場合は通常のOGPを表示します。
+         * 表示する情報に応じてread:worlds・read:users・read:instances・read:marketplace権限のあるAPIキー（xrift_sk_で始まるキー）を入力してください。保存済みのキーは表示されません。未設定の場合は通常のOGPを表示します。アイテムの表示にはread:marketplaceを追加してAPIキーを再発行してください。
          */
         "xriftApiKeyDescription": string;
         /**
@@ -12408,7 +12408,7 @@ export interface Locale extends ILocale {
          */
         "xriftRemoveKey": string;
         /**
-         * 有効にすると、公開ワールド・インスタンス・プロフィールの情報と画像をこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。
+         * 有効にすると、公開ワールド・インスタンス・プロフィール・マーケットプレイスのアイテムの情報と画像をこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。
          */
         "xriftTermsNotice": string;
         /**
@@ -15163,15 +15163,27 @@ export interface Locale extends ILocale {
     };
     "_xriftPreview": {
         /**
-         * WORLD
+         * ワールド
          */
         "world": string;
         /**
-         * INSTANCE
+         * アイテム
+         */
+        "item": string;
+        /**
+         * インスタンス
          */
         "room": string;
         /**
-         * USER
+         * 開催中
+         */
+        "active": string;
+        /**
+         * ワールド「{name}」のインスタンスです。URLからそのまま参加できます。
+         */
+        "instanceDescription": ParameterizedString<"name">;
+        /**
+         * プロフィール
          */
         "user": string;
         /**
@@ -15186,6 +15198,10 @@ export interface Locale extends ILocale {
          * {count} visits
          */
         "visits": ParameterizedString<"count">;
+        /**
+         * {count}人が入手
+         */
+        "acquisitions": ParameterizedString<"count">;
         /**
          * 総訪問
          */
@@ -15211,7 +15227,7 @@ export interface Locale extends ILocale {
          */
         "nextWorlds": string;
         /**
-         * {date}からXRift
+         * {date}からXRiftに参加
          */
         "joinedAt": ParameterizedString<"date">;
         /**
@@ -15235,7 +15251,7 @@ export interface Locale extends ILocale {
          */
         "invitation": string;
         /**
-         * ブラウザで入る
+         * ワールドに入る
          */
         "enter": string;
         /**
@@ -15250,6 +15266,10 @@ export interface Locale extends ILocale {
          * ワールドを見る
          */
         "viewWorld": string;
+        /**
+         * アイテムを見る
+         */
+        "viewItem": string;
         /**
          * プロフィールを見る
          */
@@ -15266,6 +15286,10 @@ export interface Locale extends ILocale {
          * 非公開のワールド
          */
         "worldUnavailable": string;
+        /**
+         * このアイテムは利用できません
+         */
+        "itemUnavailable": string;
         /**
          * このインスタンスは利用できません
          */
