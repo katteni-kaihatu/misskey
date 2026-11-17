@@ -17,13 +17,13 @@ describe('XRift cards', () => {
 	test('shows visits, public rooms and a working world link', () => {
 		const view = render(MkXriftPreview, { props: World.args });
 		expect(view.getAllByText('12,345').length).toBeGreaterThan(0);
-		expect(view.getByText('2ルーム公開中')).toBeTruthy();
+		expect(view.getByText('2インスタンス公開中')).toBeTruthy();
 		expect(view.getByRole('link', { name: 'ブラウザで入る' }).getAttribute('href')).toBe(World.args.url);
 	});
 	test('a room has distinct join and world links and elapsed time', () => {
 		const view = render(MkXriftPreview, { props: Room.args });
 		expect(view.getByText('LIVE')).toBeTruthy();
-		expect(view.getByRole('link', { name: 'このルームに参加' }).getAttribute('href')).toBe(Room.args.url);
+		expect(view.getByRole('link', { name: 'このインスタンスに参加' }).getAttribute('href')).toBe(Room.args.url);
 		expect(view.getByRole('link', { name: 'ワールドを見る' }).getAttribute('href')).toBe(World.args.url);
 		expect(view.getByText(/1時間24分/)).toBeTruthy();
 	});
@@ -51,7 +51,7 @@ describe('XRift cards', () => {
 	test('does not present unavailable counts as zero or an active room', () => {
 		const view = render(MkXriftPreview, { props: { ...Room.args, summary: { ...Room.args.summary, xrift: { type: 'instance', state: 'error', creator: null } } } });
 		expect(view.queryByText('LIVE')).toBeNull();
-		expect(view.queryByText('公開中のルームはありません')).toBeNull();
+		expect(view.queryByText('公開中のインスタンスはありません')).toBeNull();
 		expect(view.getByRole('link', { name: 'XRiftで開く' })).toBeTruthy();
 	});
 	test('keeps a usable action for private or missing resources', () => {

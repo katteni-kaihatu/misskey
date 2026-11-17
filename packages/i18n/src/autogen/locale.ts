@@ -12408,7 +12408,7 @@ export interface Locale extends ILocale {
          */
         "xriftRemoveKey": string;
         /**
-         * 有効にすると、公開ワールド・ルーム・プロフィールの情報と画像をこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。
+         * 有効にすると、公開ワールド・インスタンス・プロフィールの情報と画像をこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。
          */
         "xriftTermsNotice": string;
         /**
@@ -15131,7 +15131,7 @@ export interface Locale extends ILocale {
          */
         "world": string;
         /**
-         * ROOM
+         * INSTANCE
          */
         "room": string;
         /**
@@ -15143,7 +15143,7 @@ export interface Locale extends ILocale {
          */
         "live": string;
         /**
-         * {count}ルーム公開中
+         * {count}インスタンス公開中
          */
         "roomsOpen": ParameterizedString<"count">;
         /**
@@ -15159,7 +15159,7 @@ export interface Locale extends ILocale {
          */
         "last7Days": string;
         /**
-         * 公開ルーム
+         * 公開インスタンス
          */
         "publicRooms": string;
         /**
@@ -15191,7 +15191,7 @@ export interface Locale extends ILocale {
          */
         "hoursMinutes": ParameterizedString<"hours" | "minutes">;
         /**
-         * ルームに招待されています
+         * インスタンスに招待されています
          */
         "invitation": string;
         /**
@@ -15203,7 +15203,7 @@ export interface Locale extends ILocale {
          */
         "enterFirst": string;
         /**
-         * このルームに参加
+         * このインスタンスに参加
          */
         "joinRoom": string;
         /**
@@ -15219,7 +15219,7 @@ export interface Locale extends ILocale {
          */
         "open": string;
         /**
-         * 公開中のルームはありません
+         * 公開中のインスタンスはありません
          */
         "noRooms": string;
         /**
@@ -15227,7 +15227,7 @@ export interface Locale extends ILocale {
          */
         "worldUnavailable": string;
         /**
-         * このルームは利用できません
+         * このインスタンスは利用できません
          */
         "roomUnavailable": string;
         /**
