@@ -28,19 +28,20 @@ describe('XRift cards', () => {
 		expect(view.queryByText('Picture Frame')).toBeNull();
 		expect(view.getByRole('link', { name: 'XRiftで開く' }).getAttribute('href')).toBe(Item.args.url);
 	});
-	test('shows visits, public rooms and a working world link', () => {
+	test('shows the world type, visits, branding and a working entry link', () => {
 		const view = render(MkXriftPreview, { props: World.args });
 		expect(view.getByText('ワールド')).toBeTruthy();
-		expect(view.getAllByText('12,345').length).toBeGreaterThan(0);
-		expect(view.getByText('2インスタンス公開中')).toBeTruthy();
-		expect(view.getByRole('link', { name: 'ブラウザで入る' }).getAttribute('href')).toBe(World.args.url);
+		expect(view.getByText('12,345 visits')).toBeTruthy();
+		expect(view.getByRole('img', { name: 'XRift' })).toBeTruthy();
+		expect(view.getByRole('link', { name: 'ワールドに入る' }).getAttribute('href')).toBe(World.args.url);
 	});
-	test('a room has distinct join and world links and elapsed time', () => {
+	test('an instance shows its active state, world context and join action', () => {
 		const view = render(MkXriftPreview, { props: Room.args });
 		expect(view.getByText('インスタンス')).toBeTruthy();
 		expect(view.queryByText('LIVE')).toBeNull();
+		expect(view.getByText('開催中')).toBeTruthy();
 		expect(view.getByRole('link', { name: 'このインスタンスに参加' }).getAttribute('href')).toBe(Room.args.url);
-		expect(view.getByRole('link', { name: 'ワールドを見る' }).getAttribute('href')).toBe(World.args.url);
+		expect(view.getByText('ワールド「Cozy Workspace Cafe」のインスタンスです。URLからそのまま参加できます。')).toBeTruthy();
 		const time = view.getByText('1時間24分前に開始');
 		expect(time.closest('p')?.textContent).toContain('ワールド作者');
 		expect(view.queryByText('12,345 visits')).toBeNull();
@@ -102,7 +103,7 @@ describe('XRift cards', () => {
 	test('hides both the main thumbnail and decorative backdrop for sensitive worlds', () => {
 		const summary = { ...World.args.summary, thumbnail: 'https://media.example/image', sensitive: true };
 		const view = render(MkXriftPreview, { props: { ...World.args, summary } });
-		expect(view.container.querySelectorAll('img')).toHaveLength(1);
+		expect(view.container.querySelectorAll('img[src="https://media.example/image"]')).toHaveLength(0);
 		expect(view.getByRole('img', { name: 'XRift' })).toBeTruthy();
 	});
 });

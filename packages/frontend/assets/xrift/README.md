@@ -10,3 +10,5 @@
 The logo's colors and proportions must remain unchanged. Leave clear space around
 it and use sufficient contrast. Copyright and trademark rights remain with their
 respective owners; this third-party brand asset is not relicensed by this project.
+
+`icon.png` is the unmodified XRift app icon from https://app.xrift.net/favicon.png (retrieved 2026-11-18). It is used at its original proportions in compact brand tabs.

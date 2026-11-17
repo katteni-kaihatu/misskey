@@ -15175,6 +15175,14 @@ export interface Locale extends ILocale {
          */
         "room": string;
         /**
+         * 開催中
+         */
+        "active": string;
+        /**
+         * ワールド「{name}」のインスタンスです。URLからそのまま参加できます。
+         */
+        "instanceDescription": ParameterizedString<"name">;
+        /**
          * プロフィール
          */
         "user": string;
@@ -15243,7 +15251,7 @@ export interface Locale extends ILocale {
          */
         "invitation": string;
         /**
-         * ブラウザで入る
+         * ワールドに入る
          */
         "enter": string;
         /**

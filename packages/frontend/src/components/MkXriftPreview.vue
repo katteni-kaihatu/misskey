@@ -6,6 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<article :class="[$style.card, { [$style.landscape]: type !== 'user', [$style.profileSize]: type === 'user', [$style.profile]: type === 'user' && state === 'available' && !loading, [$style.live]: isLive }]" :aria-busy="loading">
+		<div v-if="type !== 'user' || state !== 'available' || loading" :class="$style.brandCorner" role="img" aria-label="XRift">
+			<img :class="[$style.brand, $style.brandFull]" src="/client-assets/xrift/logo-white.svg" alt="" aria-hidden="true" width="886" height="259"/>
+			<img :class="$style.brandCompact" src="/client-assets/xrift/icon.png" alt="" aria-hidden="true" width="512" height="512"/>
+		</div>
 		<template v-if="type === 'user' && state === 'available' && !loading">
 			<div :class="$style.profileHeading">
 				<div :class="$style.avatar">
@@ -40,7 +44,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template v-else>
 			<div :class="[$style.visual, { [$style.placeholder]: !imageVisible || state !== 'available' || loading }]">
 				<img v-if="imageVisible && state === 'available' && !loading" :src="summary?.thumbnail ?? undefined" :alt="summary?.title ?? ''" loading="lazy" @error="imageFailed = true"/>
-				<span v-if="type === 'world' && state === 'available' && !loading && data?.publicInstances" :class="$style.badge"><span :class="$style.dot"></span>{{ i18n.tsx._xriftPreview.roomsOpen({ count: format(data.publicInstances) }) }}</span>
 				<span v-if="!loading && state !== 'available'" :class="$style.visualIcon" aria-hidden="true"><i :class="['ti', state === 'error' ? 'ti-alert-circle' : type === 'user' ? 'ti-user-off' : 'ti-lock']"></i></span>
 			</div>
 			<div :class="$style.body">
@@ -54,30 +57,23 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</template>
 				<template v-else>
 					<div :class="$style.brandRow">
-						<img :class="$style.brand" src="/client-assets/xrift/logo-white.svg" alt="XRift" width="886" height="259"/>
-						<span :class="$style.type">
+						<span :class="[$style.type, { [$style.activeType]: isLive }]">
 							<i v-if="type === 'world'" class="ti ti-world" aria-hidden="true"></i>
 							<i v-else-if="type === 'instance'" class="ti ti-users" aria-hidden="true"></i>
 							<i v-else-if="type === 'item'" class="ti ti-package" aria-hidden="true"></i>
 							<i v-else class="ti ti-user" aria-hidden="true"></i>
 							<span>{{ typeLabel }}</span>
 						</span>
+						<span v-if="isLive" :class="$style.activeStatus"><span :class="$style.dot"></span>{{ i18n.ts._xriftPreview.active }}</span>
 					</div>
-					<p v-if="isLive" :class="$style.invitation">{{ i18n.ts._xriftPreview.invitation }}</p>
 					<h3 :class="$style.title">{{ heading }}</h3>
-					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive, [$style.worldMeta]: type === 'world' }]">
+					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive }]">
 						<span v-if="data?.creator" :class="$style.creator">{{ data.creator }}</span><span v-if="data?.creator && metaDetail" :class="$style.metaSeparator" aria-hidden="true"> · </span><span v-if="metaDetail" :class="$style.metaDetail">{{ metaDetail }}</span>
 					</p>
 					<p v-if="message" :class="[$style.description, { [$style.stateMessage]: state !== 'available' }]">{{ message }}</p>
 					<div :class="$style.footer">
-						<dl v-if="type === 'world' && state === 'available' && hasStats" :class="$style.stats">
-							<div v-if="data?.totalVisits != null"><dt>{{ i18n.ts._xriftPreview.totalVisits }}</dt><dd>{{ format(data.totalVisits) }}</dd></div>
-							<div v-if="data?.visitsLast7Days != null"><dt>{{ i18n.ts._xriftPreview.last7Days }}</dt><dd>{{ format(data.visitsLast7Days) }}</dd></div>
-							<div v-if="data?.publicInstances != null"><dt>{{ i18n.ts._xriftPreview.publicRooms }}</dt><dd>{{ format(data.publicInstances) }}</dd></div>
-						</dl>
 						<div :class="$style.actions">
 							<a :href="url" target="_blank" rel="nofollow noopener" :class="[$style.button, { [$style.primary]: state === 'available' }]">{{ actionLabel }}</a>
-							<a v-if="isLive && data?.worldUrl" :href="data.worldUrl" target="_blank" rel="nofollow noopener" :class="[$style.button, $style.secondary]">{{ i18n.ts._xriftPreview.viewWorld }}</a>
 						</div>
 					</div>
 				</template>
@@ -132,7 +128,6 @@ const imageFailed = ref(false);
 const imageVisible = computed(() => !hideImages.value && !imageFailed.value && Boolean(props.summary?.thumbnail));
 const format = (value: number): string => value.toLocaleString();
 const typeLabel = computed(() => props.type === 'world' ? i18n.ts._xriftPreview.world : props.type === 'instance' ? i18n.ts._xriftPreview.room : props.type === 'item' ? i18n.ts._xriftPreview.item : i18n.ts._xriftPreview.user);
-const hasStats = computed(() => data.value?.totalVisits != null || data.value?.visitsLast7Days != null || data.value?.publicInstances != null);
 const heading = computed(() => {
 	if (state.value === 'error') return i18n.ts._xriftPreview.error;
 	if (state.value === 'unavailable') return props.type === 'world' ? i18n.ts._xriftPreview.worldUnavailable : props.type === 'instance' ? i18n.ts._xriftPreview.roomUnavailable : props.type === 'item' ? i18n.ts._xriftPreview.itemUnavailable : i18n.ts._xriftPreview.userUnavailable;
@@ -141,6 +136,7 @@ const heading = computed(() => {
 const message = computed(() => {
 	if (state.value === 'error') return i18n.ts._xriftPreview.openDirectly;
 	if (state.value === 'unavailable') return props.type === 'instance' ? i18n.ts._xriftPreview.roomUnavailableDescription : i18n.ts._xriftPreview.unavailableDescription;
+	if (isLive.value && props.summary?.title) return i18n.tsx._xriftPreview.instanceDescription({ name: props.summary.title });
 	if (props.summary?.description?.trim()) return props.summary.description;
 	if (props.type === 'world' && data.value?.publicInstances === 0) return i18n.ts._xriftPreview.noRooms;
 	return null;
@@ -150,7 +146,7 @@ const actionLabel = computed(() => {
 	if (props.type === 'user') return i18n.ts._xriftPreview.viewProfile;
 	if (props.type === 'item') return i18n.ts._xriftPreview.viewItem;
 	if (props.type === 'instance') return isLive.value ? i18n.ts._xriftPreview.joinRoom : i18n.ts._xriftPreview.open;
-	return data.value?.publicInstances === 0 ? i18n.ts._xriftPreview.enterFirst : i18n.ts._xriftPreview.enter;
+	return i18n.ts._xriftPreview.enter;
 });
 const joinedAt = computed(() => data.value?.createdAt ? new Date(data.value.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : null);
 const now = useLowresTime();
@@ -183,13 +179,16 @@ function hideFailedImage(event: Event): void {
 	--xrift-muted: color-mix(in srgb, var(--xrift-fg) 85%, var(--xrift-panel));
 	--xrift-hover: color-mix(in srgb, var(--xrift-fg) 10%, var(--xrift-panel));
 	--xrift-live: #4bb34f;
+	--xrift-active: #8fd694;
+	--xrift-brand: #5b3baf;
 	--xrift-focus: #a6c8ff;
 	container-type: inline-size;
 	color: var(--xrift-fg);
 }
 .card {
+	position: relative;
 	display: grid;
-	grid-template-columns: 42% minmax(0, 1fr);
+	grid-template-columns: 45% minmax(0, 1fr);
 	aspect-ratio: 16 / 9;
 	box-sizing: border-box;
 	overflow: hidden;
@@ -208,25 +207,23 @@ function hideFailedImage(event: Event): void {
 	> img { display: block; width: 100%; height: 100%; object-fit: cover; }
 }
 .visualIcon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--xrift-muted); }
-.placeholder { background: repeating-linear-gradient(135deg, var(--xrift-visual), var(--xrift-visual) 12px, var(--xrift-border) 12px, var(--xrift-border) 13px); }
-.body { position: relative; isolation: isolate; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.placeholder { background: repeating-linear-gradient(135deg, var(--xrift-visual), var(--xrift-visual) 12px, color-mix(in srgb, var(--xrift-fg) 8%, var(--xrift-visual)) 12px, color-mix(in srgb, var(--xrift-fg) 8%, var(--xrift-visual)) 13px); }
+.body { position: relative; isolation: isolate; min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
 .bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.16; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
-.brandRow { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.brandRow { display: flex; align-items: center; gap: 7px; padding-right: 64px; flex-shrink: 0; }
 .brand { display: block; width: 54px; height: auto; flex-shrink: 0; }
+.brandCorner { position: absolute; top: 0; right: 0; z-index: 2; padding: 8px 12px; border-bottom-left-radius: 12px; background: var(--xrift-brand); }
+.brandCompact { display: none; }
 .type { display: inline-flex; align-items: center; min-width: 0; gap: 5px; padding: 4px 8px; border: 1px solid var(--xrift-border); border-radius: 6px; background: color-mix(in srgb, var(--xrift-fg) 15%, transparent); color: var(--xrift-fg); font-size: 12px; font-weight: 750; line-height: 1.2; white-space: nowrap; > i { flex-shrink: 0; } > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; } }
+.activeType { color: var(--xrift-visual); background: var(--xrift-active); border-color: transparent; }
+.activeStatus { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 5px; color: var(--xrift-active); background: color-mix(in srgb, var(--xrift-active) 15%, var(--xrift-visual)); font-size: 10px; font-weight: bold; white-space: nowrap; }
 .title { flex-shrink: 0; margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { flex-shrink: 0; margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .instanceMeta { display: flex; align-items: baseline; gap: 3px; .creator { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .metaDetail { flex-shrink: 0; } }
 .description { min-height: 0; margin: 0; font-size: 0.9em; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.invitation { flex-shrink: 0; margin: 0; font-size: 0.85em; font-weight: bold; }
-.stats {
-	display: flex; flex-shrink: 0; gap: 6px; margin: 0;
-	> div { flex: 1; min-width: 0; padding: 7px; background: var(--xrift-well); border-radius: 6px; }
-	dt { color: var(--xrift-muted); font-size: 0.72em; white-space: nowrap; }
-	dd { margin: 2px 0 0; font-size: 1.2em; font-weight: bold; font-variant-numeric: tabular-nums; }
-}
 .footer { display: flex; flex-shrink: 0; flex-direction: column; gap: 6px; margin-top: auto; }
 .actions { display: flex; flex-shrink: 0; gap: 8px; padding-top: 4px; }
+.actions .button { min-height: 44px; }
 .button {
 	display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 38px; box-sizing: border-box; flex: 1;
 	padding: 8px 12px; border: 1px solid var(--xrift-border); border-radius: 999px; color: inherit;
@@ -235,8 +232,7 @@ function hideFailedImage(event: Event): void {
 	&:focus-visible { outline: 2px solid var(--xrift-focus); outline-offset: 2px; }
 	&.primary { background: var(--xrift-fg); color: var(--xrift-ink); border-color: transparent; &:hover { opacity: 0.85; } }
 }
-.badge { position: absolute; top: 10px; left: 10px; padding: 5px 8px; border-radius: 999px; background: var(--xrift-panel); font-size: 10px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--xrift-live); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .profileSize { max-height: 320px; }
 .card.profile { display: flex; flex-direction: column; aspect-ratio: auto; padding: 20px; gap: 14px; }
 .profileHeading { display: flex; gap: 18px; align-items: center; min-height: 0; }
@@ -258,34 +254,30 @@ function hideFailedImage(event: Event): void {
 .skeletonButton { margin-top: auto; height: 38px; border-radius: 999px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @container (max-width: 640px) {
-	.body { padding: 12px; gap: 5px; }
+	.body { padding: 16px; gap: 8px; }
 	.title { font-size: 1.15em; }
 	.description { font-size: 0.83em; line-height: 1.4; }
-	.invitation { display: none; }
-	.worldMeta .metaDetail, .worldMeta .metaSeparator { display: none; }
-	.stats {
-		gap: 8px;
-		font-size: 0.75em;
-		> div { display: flex; flex: 0 1 auto; align-items: baseline; gap: 4px; padding: 0; background: none; }
-		dt { overflow: hidden; font-size: 1em; text-overflow: ellipsis; }
-		dd { flex-shrink: 0; margin: 0; font-size: 1em; }
-	}
 	.actions { padding-top: 0; }
 }
 @container (max-width: 560px) {
+	.brandCorner { padding: 5px; border-bottom-left-radius: 7px; }
+	.brandFull { display: none; }
+	.brandCompact { display: block; width: 18px; height: 18px; }
+	.brandRow { padding-right: 20px; }
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
 }
 @container (max-width: 420px) {
-	.card { grid-template-columns: 33% minmax(0, 1fr); font-size: 12px; }
-	.body { padding: 12px; gap: 3px; }
+	.card { grid-template-columns: 35% minmax(0, 1fr); font-size: 12px; }
+	.body { padding: 12px; gap: 6px; }
 	.title { font-size: 1.1em; -webkit-line-clamp: 1; }
-	.type { padding: 2px 6px; font-size: 11px; }
+	.brandRow { gap: 5px; }
+	.type { padding: 2px 6px; font-size: 10px; > i { display: none; } }
+	.activeStatus { padding: 3px 5px; gap: 3px; font-size: 9px; }
 	.body .meta { font-size: 0.75em; }
-	.description { font-size: 0.78em; line-height: 1.3; -webkit-line-clamp: 1; }
-	.invitation, .secondary { display: none; }
-	.badge { top: 7px; left: 7px; font-size: 9px; padding: 4px 6px; }
+	.description:not(.stateMessage) { display: none; }
 	.button { min-height: 36px; padding: 7px 8px; }
+	.actions .button { min-height: 40px; }
 	.footer { gap: 4px; }
 	.card.profile { padding: 12px; gap: 12px; }
 	.profileHeading { gap: 10px; }
@@ -297,9 +289,9 @@ function hideFailedImage(event: Event): void {
 	.worldCount { font-size: 0.75em; }
 }
 @container (max-width: 320px) {
-	.body .meta:not(.instanceMeta) { display: none; }
 	.card.live .title { -webkit-line-clamp: 1; }
-	.body { padding: 8px; gap: 1px; }
+	.body { padding: 10px; gap: 4px; }
+	.activeStatus { padding: 3px; font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.worldGrid { scroll-behavior: auto; }
