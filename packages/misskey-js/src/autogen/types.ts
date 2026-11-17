@@ -30021,6 +30021,7 @@ export interface operations {
                      */
                     mode?: 'unified' | 'local-fallback';
                     anchor?: string;
+                    anchorRef?: string;
                     previousSession?: string;
                     previousRevision?: string;
                     retainedRefs?: string[];
