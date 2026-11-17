@@ -71,12 +71,13 @@ describe('XRift cards', () => {
 			preferState.dataSaver = { urlPreviewThumbnail: true };
 			const summary = { ...Profile.args.summary, thumbnail: 'https://media.example/avatar', xrift: { ...Profile.args.summary.xrift, worlds: [{ url: World.args.url, title: 'Cafe', thumbnail: 'https://media.example/image' }] } };
 			const view = render(MkXriftPreview, { props: { ...Profile.args, summary } });
-			expect(view.queryAllByRole('img')).toHaveLength(0);
+			expect(view.queryAllByRole('img')).toEqual([view.getByRole('img', { name: 'XRift' })]);
 		} finally { preferState.dataSaver = saved; }
 	});
 	test('hides both the main thumbnail and decorative backdrop for sensitive worlds', () => {
 		const summary = { ...World.args.summary, thumbnail: 'https://media.example/image', sensitive: true };
 		const view = render(MkXriftPreview, { props: { ...World.args, summary } });
-		expect(view.container.querySelectorAll('img')).toHaveLength(0);
+		expect(view.container.querySelectorAll('img')).toHaveLength(1);
+		expect(view.getByRole('img', { name: 'XRift' })).toBeTruthy();
 	});
 });

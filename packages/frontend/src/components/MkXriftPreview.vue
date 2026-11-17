@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<i v-else class="ti ti-user" aria-hidden="true"></i>
 				</div>
 				<div :class="$style.profileIdentity">
-					<span :class="$style.brand">XRIFT</span>
+					<img :class="$style.brand" src="/client-assets/xrift/logo-white.svg" alt="XRift" width="886" height="259"/>
 					<h3 :class="$style.title">{{ summary?.title }}</h3>
 					<p v-if="joinedAt" :class="$style.meta">{{ i18n.tsx._xriftPreview.joinedAt({ date: joinedAt }) }}</p>
 				</div>
@@ -53,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="[$style.skeleton, $style.skeletonButton]"></div>
 				</template>
 				<template v-else>
-					<div :class="$style.brandRow"><span :class="$style.brand">XRIFT</span><span :class="$style.type">{{ typeLabel }}</span></div>
+					<div :class="$style.brandRow"><img :class="$style.brand" src="/client-assets/xrift/logo-white.svg" alt="XRift" width="886" height="259"/><span :class="$style.type">{{ typeLabel }}</span></div>
 					<p v-if="isLive" :class="$style.invitation">{{ i18n.ts._xriftPreview.invitation }}</p>
 					<h3 :class="$style.title">{{ heading }}</h3>
 					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive }]">
@@ -198,7 +198,7 @@ function hideFailedImage(event: Event): void {
 .body { position: relative; isolation: isolate; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
 .bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.2; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
 .brandRow { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-.brand { font-size: 11px; font-weight: 800; letter-spacing: 0.03em; }
+.brand { display: block; width: 54px; height: auto; flex-shrink: 0; }
 .type { padding: 1px 5px; border: 1px solid var(--xrift-border); border-radius: 3px; font: 700 9px/1.2 monospace; letter-spacing: 0.06em; }
 .title { flex-shrink: 0; margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { flex-shrink: 0; margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -226,7 +226,7 @@ function hideFailedImage(event: Event): void {
 .card.profile { display: flex; flex-direction: column; aspect-ratio: auto; padding: 20px; gap: 14px; }
 .profileHeading { display: flex; gap: 18px; align-items: center; min-height: 0; }
 .avatar { display: grid; place-items: center; width: 72px; height: 72px; flex-shrink: 0; border-radius: 50%; background: var(--xrift-well); color: var(--xrift-muted); overflow: hidden; > img { width: 100%; height: 100%; object-fit: cover; } > i { font-size: 32px; } }
-.profileIdentity { flex: 1; min-width: 0; .brand { color: var(--xrift-muted); } .title { margin: 5px 0; } }
+.profileIdentity { flex: 1; min-width: 0; .title { margin: 5px 0; } }
 .worlds { min-height: 0; overflow: hidden; }
 .worldsHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .worldCount { margin: 0; font-size: 0.8em; color: var(--xrift-muted); }
