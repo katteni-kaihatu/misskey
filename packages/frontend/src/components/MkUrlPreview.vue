@@ -5,6 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkGridspaceNoteLinkPreview v-if="linkedNote" :url="url"/>
+<MkXriftPreview v-else-if="xriftType && (fetching || unknownUrl || summalyResult?.xrift)" :url="url" :type="xriftType" :summary="summalyResult" :loading="fetching" :failed="unknownUrl"/>
 <template v-else-if="player.url && playerEnabled">
 	<div
 		:class="$style.player"
@@ -186,6 +187,8 @@ import MkButton from '@/components/MkButton.vue';
 import { transformPlayerUrl } from '@/utility/url-preview.js';
 import { store } from '@/store.js';
 import { prefer } from '@/preferences.js';
+import MkXriftPreview from '@/components/MkXriftPreview.vue';
+import type { XriftPreview } from 'misskey-js';
 
 const props = withDefaults(defineProps<{
 	url: string;
@@ -207,7 +210,13 @@ const self = maybeRelativeUrl !== props.url;
 const attr = self ? 'to' : 'href';
 const target = self ? null : '_blank';
 const fetching = ref(true);
-const summalyResult = ref<SummalyResult | null>(null);
+type PreviewSummary = SummalyResult & { xrift?: XriftPreview };
+const summalyResult = ref<PreviewSummary | null>(null);
+const xriftType = computed(() => {
+	if (requestUrl.origin !== 'https://app.xrift.net' || requestUrl.username || requestUrl.password) return null;
+	const match = /^\/(world|instance|user)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.exec(requestUrl.pathname);
+	return match ? match[1].toLowerCase() as XriftPreview['type'] : null;
+});
 const title = computed(() => summalyResult.value?.title ?? null);
 const description = computed(() => summalyResult.value?.description ?? null);
 const thumbnail = computed(() => summalyResult.value?.thumbnail ?? null);
@@ -270,29 +279,27 @@ requestUrl.hash = '';
 
 function fetchPreview() {
 	if (catalystImageUrl) return;
-
-	window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`)
+	// Revalidate XRift metadata; the server coalesces and caches provider calls.
+	window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`, xriftType.value ? { cache: 'no-cache' } : undefined)
 		.then(res => {
 			if (!res.ok) {
-				if (_DEV_) {
-					console.warn(`[HTTP${res.status}] Failed to fetch url preview`);
-				}
+				if (_DEV_) console.warn(`[HTTP${res.status}] Failed to fetch url preview`);
 				return null;
 			}
-
 			return res.json();
 		})
-		.then((info: SummalyResult | null) => {
+		.then((info: PreviewSummary | null) => {
+			fetching.value = false;
 			if (!info || info.url == null) {
-				fetching.value = false;
 				unknownUrl.value = true;
 				return;
 			}
-
-			fetching.value = false;
 			unknownUrl.value = false;
-
 			summalyResult.value = info;
+		})
+		.catch(() => {
+			fetching.value = false;
+			unknownUrl.value = true;
 		});
 }
 

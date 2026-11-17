@@ -5,6 +5,7 @@
 
 import { describe, test, assert, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent, type RenderResult } from '@testing-library/vue';
+import type { XriftPreview } from 'misskey-js';
 import type { SummalyResult } from '@misskey-dev/summaly';
 import { preferState } from '../setup.unit.js';
 import { components } from '@/components/index.js';
@@ -21,7 +22,7 @@ describe('MkUrlPreview', () => {
 		fetchMock.mockClear();
 	});
 
-	const renderPreviewBy = async (summary: Partial<SummalyResult>): Promise<RenderResult> => {
+	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: XriftPreview }): Promise<RenderResult> => {
 		if (!summary.player) {
 			summary.player = {
 				url: null,
@@ -57,7 +58,7 @@ describe('MkUrlPreview', () => {
 		return result;
 	};
 
-	const renderAndOpenPreview = async (summary: Partial<SummalyResult>): Promise<HTMLIFrameElement | null> => {
+	const renderAndOpenPreview = async (summary: Partial<SummalyResult> & { xrift?: XriftPreview }): Promise<HTMLIFrameElement | null> => {
 		const mkUrlPreview = await renderPreviewBy(summary);
 		const buttons = mkUrlPreview.getAllByRole('button');
 		buttons[0].click();
@@ -142,6 +143,60 @@ describe('MkUrlPreview', () => {
 			description: 'Mocked description',
 		});
 		mkUrlPreview.getByText('Mocked description');
+	});
+
+	const xriftSummary = {
+		url: 'https://app.xrift.net/world/4b84ca2a-06cc-4351-a2df-adc904eec8e4',
+		title: 'School world',
+		description: 'An afternoon at school.',
+		thumbnail: 'https://example.local/proxied-thumbnail.webp',
+		icon: 'https://example.local/proxied-icon.webp',
+		sitename: 'XRift',
+		xrift: { type: 'world', state: 'available', creator: 'World creator' } as XriftPreview,
+	};
+
+	test('renders an XRift world card with its creator and proxied thumbnail', async () => {
+		const preview = await renderPreviewBy({ ...xriftSummary });
+		preview.getByText('School world');
+		preview.getByText('World creator');
+		preview.getByText('An afternoon at school.');
+		assert.strictEqual(preview.getByRole('img', { name: 'School world' }).getAttribute('src'), xriftSummary.thumbnail);
+		const link = preview.getByRole('link');
+		assert.strictEqual(link.getAttribute('href'), xriftSummary.url);
+		assert.strictEqual(link.getAttribute('target'), '_blank');
+		assert.isNull(preview.container.querySelector('iframe'));
+	});
+
+	test('hides XRift thumbnails when data saver is enabled', async () => {
+		const dataSaver = preferState.dataSaver;
+		try {
+			preferState.dataSaver = { urlPreviewThumbnail: true };
+			const preview = await renderPreviewBy({ ...xriftSummary });
+			assert.isNull(preview.queryByRole('img', { name: 'School world' }));
+			preview.getByText('World creator');
+		} finally {
+			preferState.dataSaver = dataSaver;
+		}
+	});
+	test('revalidates XRift metadata instead of reusing an old browser-cached list', async () => {
+		await renderPreviewBy({ ...xriftSummary });
+		const request = fetchMock.mock.calls.find(([url]) => String(url).startsWith('/url?'));
+		assert.strictEqual(request?.[1]?.cache, 'no-cache');
+	});
+
+	test('hides sensitive XRift thumbnails', async () => {
+		const preview = await renderPreviewBy({ ...xriftSummary, sensitive: true });
+		assert.isNull(preview.queryByRole('img', { name: 'School world' }));
+	});
+
+	test.each(['world', 'instance', 'user'])('falls back to an ordinary %s card without XRift metadata', async type => {
+		const url = xriftSummary.url!.replace('/world/', `/${type}/`);
+		const preview = await renderPreviewBy({ url, title: 'XRift', description: 'Generic OGP' });
+		preview.getByText('Generic OGP');
+		assert.isNull(preview.queryByText('World creator'));
+		assert.isFalse(preview.getByRole('article').hasAttribute('aria-busy'));
+		preview.getByRole('heading', { level: 1, name: 'XRift' });
+		assert.strictEqual(preview.getByRole('link').getAttribute('href'), url);
 	});
 
 	test('Having a player should render a button', async () => {

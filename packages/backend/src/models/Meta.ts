@@ -678,6 +678,12 @@ export class MiMeta {
 	public urlPreviewUserAgent: string | null;
 
 	@Column('varchar', {
+		length: 1024,
+		nullable: true,
+	})
+	public xriftApiKey: string | null;
+
+	@Column('varchar', {
 		length: 3072, array: true, default: '{}',
 	})
 	public urlPreviewSensitiveList: string[];

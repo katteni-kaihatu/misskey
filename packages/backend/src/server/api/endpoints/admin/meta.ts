@@ -544,6 +544,10 @@ export const meta = {
 				type: 'string',
 				optional: false, nullable: true,
 			},
+			xriftApiKeyConfigured: {
+				type: 'boolean',
+				optional: false, nullable: false,
+			},
 			urlPreviewSensitiveList: {
 				type: 'array',
 				optional: false, nullable: false,
@@ -769,6 +773,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				urlPreviewRequireContentLength: instance.urlPreviewRequireContentLength,
 				urlPreviewUserAgent: instance.urlPreviewUserAgent,
 				urlPreviewSummaryProxyUrl: instance.urlPreviewSummaryProxyUrl,
+				xriftApiKeyConfigured: instance.xriftApiKey != null,
 				urlPreviewSensitiveList: instance.urlPreviewSensitiveList,
 				federation: instance.federation,
 				federationHosts: instance.federationHosts,

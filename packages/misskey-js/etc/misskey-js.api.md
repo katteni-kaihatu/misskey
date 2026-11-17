@@ -4260,6 +4260,24 @@ type V2AdminEmojiListResponse = operations['v2___admin___emoji___list']['respons
 // @public (undocumented)
 type VerifyEmailRequest = operations['verify-email']['requestBody']['content']['application/json'];
 
+// @public (undocumented)
+export type XriftPreview = {
+    type: 'world' | 'instance' | 'user';
+    state: 'available' | 'unavailable' | 'error';
+    creator: string | null;
+    worldUrl?: string;
+    totalVisits?: number;
+    visitsLast7Days?: number;
+    publicInstances?: number;
+    createdAt?: string;
+    totalWorlds?: number;
+    worlds?: {
+        url: string;
+        title: string;
+        thumbnail: string | null;
+    }[];
+};
+
 // Warnings were encountered during analysis:
 //
 // src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts

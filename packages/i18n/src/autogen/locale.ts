@@ -12388,6 +12388,34 @@ export interface Locale extends ILocale {
          */
         "title": string;
         /**
+         * XRiftのプレビュー
+         */
+        "xrift": string;
+        /**
+         * XRift APIキー
+         */
+        "xriftApiKey": string;
+        /**
+         * APIキーは設定済みです
+         */
+        "xriftKeyConfigured": string;
+        /**
+         * read:worlds・read:users・read:instances権限のあるAPIキー（xrift_sk_で始まるキー）を入力してください。保存済みのキーは表示されません。未設定の場合は通常のOGPを表示します。
+         */
+        "xriftApiKeyDescription": string;
+        /**
+         * 保存済みのAPIキーを削除する
+         */
+        "xriftRemoveKey": string;
+        /**
+         * 有効にすると、公開ワールド・インスタンス・プロフィールの情報と画像をこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。
+         */
+        "xriftTermsNotice": string;
+        /**
+         * XRift Public APIの仕様
+         */
+        "xriftApiDocs": string;
+        /**
          * URLプレビューを有効にする
          */
         "enable": string;
@@ -15132,5 +15160,135 @@ export interface Locale extends ILocale {
          * 結果画像を保存
          */
         "saveImage": string;
+    };
+    "_xriftPreview": {
+        /**
+         * WORLD
+         */
+        "world": string;
+        /**
+         * INSTANCE
+         */
+        "room": string;
+        /**
+         * USER
+         */
+        "user": string;
+        /**
+         * LIVE
+         */
+        "live": string;
+        /**
+         * {count}インスタンス公開中
+         */
+        "roomsOpen": ParameterizedString<"count">;
+        /**
+         * {count} visits
+         */
+        "visits": ParameterizedString<"count">;
+        /**
+         * 総訪問
+         */
+        "totalVisits": string;
+        /**
+         * 直近7日
+         */
+        "last7Days": string;
+        /**
+         * 公開インスタンス
+         */
+        "publicRooms": string;
+        /**
+         * 公開ワールド
+         */
+        "publicWorlds": string;
+        /**
+         * 前のワールドを表示
+         */
+        "previousWorlds": string;
+        /**
+         * 次のワールドを表示
+         */
+        "nextWorlds": string;
+        /**
+         * {date}からXRift
+         */
+        "joinedAt": ParameterizedString<"date">;
+        /**
+         * 開始から
+         */
+        "started": string;
+        /**
+         * {time}前に開始
+         */
+        "startedAgo": ParameterizedString<"time">;
+        /**
+         * {count}分
+         */
+        "minutes": ParameterizedString<"count">;
+        /**
+         * {hours}時間{minutes}分
+         */
+        "hoursMinutes": ParameterizedString<"hours" | "minutes">;
+        /**
+         * インスタンスに招待されています
+         */
+        "invitation": string;
+        /**
+         * ブラウザで入る
+         */
+        "enter": string;
+        /**
+         * ワールドに入る
+         */
+        "enterFirst": string;
+        /**
+         * このインスタンスに参加
+         */
+        "joinRoom": string;
+        /**
+         * ワールドを見る
+         */
+        "viewWorld": string;
+        /**
+         * プロフィールを見る
+         */
+        "viewProfile": string;
+        /**
+         * XRiftで開く
+         */
+        "open": string;
+        /**
+         * 公開中のインスタンスはありません
+         */
+        "noRooms": string;
+        /**
+         * 非公開のワールド
+         */
+        "worldUnavailable": string;
+        /**
+         * このインスタンスは利用できません
+         */
+        "roomUnavailable": string;
+        /**
+         * ユーザーが見つかりません
+         */
+        "userUnavailable": string;
+        /**
+         * 公開されていないか、削除されました
+         */
+        "unavailableDescription": string;
+        /**
+         * 終了したか、公開されていない可能性があります
+         */
+        "roomUnavailableDescription": string;
+        /**
+         * 情報を取得できませんでした
+         */
+        "error": string;
+        /**
+         * XRiftで直接開いてください
+         */
+        "openDirectly": string;
     };
 }
