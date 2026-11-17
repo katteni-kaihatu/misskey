@@ -4039,6 +4039,8 @@ _xriftPreview:
   last7Days: "直近7日"
   publicRooms: "公開ルーム"
   publicWorlds: "公開ワールド"
+  previousWorlds: "前のワールドを表示"
+  nextWorlds: "次のワールドを表示"
   joinedAt: "{date}からXRift"
   started: "開始から"
   minutes: "{count}分"

@@ -32,6 +32,22 @@ describe('XRift cards', () => {
 		expect(view.getByText('12')).toBeTruthy();
 		expect(view.getByRole('link', { name: 'Cozy Workspace Cafe' }).getAttribute('href')).toBe(World.args.url);
 	});
+	test('profiles without public worlds omit the count and keep the profile action beside the identity', () => {
+		const view = render(MkXriftPreview, { props: { ...Profile.args, summary: { ...Profile.args.summary, xrift: { ...Profile.args.summary.xrift, totalWorlds: 0, worlds: [] } } } });
+		expect(view.queryByText('公開ワールド')).toBeNull();
+		expect(view.queryByText('0')).toBeNull();
+		const name = view.getByRole('heading', { name: 'ワールド作者' });
+		const link = view.getByRole('link', { name: 'プロフィールを見る' });
+		expect(name.parentElement?.parentElement).toBe(link.parentElement);
+	});
+	test('keeps worlds beyond the third in the scrollable list', () => {
+		const worlds = Array.from({ length: 8 }, (_, i) => ({ url: `${World.args.url}?world=${i}`, title: `World ${i}`, thumbnail: null }));
+		const view = render(MkXriftPreview, { props: { ...Profile.args, summary: { ...Profile.args.summary, xrift: { ...Profile.args.summary.xrift, totalWorlds: 8, worlds } } } });
+		expect(view.getByRole('region', { name: '公開ワールド' })).toBeTruthy();
+		expect(view.getByRole('link', { name: 'World 7' })).toBeTruthy();
+		expect(view.getByRole('button', { name: '前のワールドを表示' })).toBeTruthy();
+		expect(view.getByRole('button', { name: '次のワールドを表示' })).toBeTruthy();
+	});
 	test('does not present unavailable counts as zero or an active room', () => {
 		const view = render(MkXriftPreview, { props: { ...Room.args, summary: { ...Room.args.summary, xrift: { type: 'instance', state: 'error', creator: null } } } });
 		expect(view.queryByText('LIVE')).toBeNull();

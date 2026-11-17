@@ -18,7 +18,7 @@ function fixture(overrides: Record<string, unknown> = {}) {
 		[`/worlds/${id}/stats`]: { data: { worldId: id, totalVisits: 12345, visitsLast7Days: 234 } },
 		[`/worlds/${id}/instances?limit=1`]: { data: [], pagination: { total: 2 } },
 		[`/users/${ownerId}`]: { data: { id: ownerId, displayName: 'World creator', userIconUrl: 'https://assets.xrift.net/avatar.png', createdAt: '2026-01-01T00:00:00.000Z' } },
-		[`/users/${ownerId}/worlds?limit=3`]: { data: [world, { ...world, isPublic: false }], pagination: { total: 12 } },
+		[`/users/${ownerId}/worlds?limit=50`]: { data: [world, { ...world, isPublic: false }], pagination: { total: 12 } },
 		[`/instances/${instanceId}`]: { data: { id: instanceId, worldId: id, createdAt: '2026-11-17T00:00:00.000Z' } },
 		[`/worlds/${id}/instances?limit=50&offset=0`]: { data: [{ id: instanceId, worldId: id }], pagination: { total: 1 } },
 		...overrides,
@@ -45,7 +45,7 @@ describe('XRift URL summaries', () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/instance/${instanceId}`, apiKey, fixture());
 		expect(summary).toMatchObject({ title: world.name, xrift: { type: 'instance', state: 'available', worldUrl, createdAt: '2026-11-17T00:00:00.000Z' } });
 	});
-	test('returns a profile and at most three public worlds', async () => {
+	test('returns a profile and its public worlds', async () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/user/${ownerId}`, apiKey, fixture());
 		expect(summary).toMatchObject({ title: 'World creator', thumbnail: 'https://assets.xrift.net/avatar.png', xrift: { type: 'user', totalWorlds: 12, worlds: [{ url: worldUrl, title: world.name }] } });
 		expect(summary?.xrift.worlds).toHaveLength(1);
@@ -54,6 +54,13 @@ describe('XRift URL summaries', () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/instance/${instanceId}`, apiKey, fixture({ [`/worlds/${id}/instances?limit=50&offset=0`]: { data: [], pagination: { total: 0 } } }));
 		expect(summary).toMatchObject({ title: null, thumbnail: null, xrift: { state: 'unavailable' } });
 		expect(summary?.xrift.createdAt).toBeUndefined();
+	});
+	test('returns more than three public worlds, capped at the API page size', async () => {
+		const worlds = Array.from({ length: 51 }, (_, i) => ({ ...world, id: `4b84ca2a-06cc-4351-a2df-${i.toString(16).padStart(12, '0')}`, name: `World ${i}` }));
+		const summary = await fetchXriftSummary(`https://app.xrift.net/user/${ownerId}`, apiKey, fixture({ [`/users/${ownerId}/worlds?limit=50`]: { data: worlds, pagination: { total: 51 } } }));
+		expect(summary?.xrift.totalWorlds).toBe(51);
+		expect(summary?.xrift.worlds).toHaveLength(50);
+		expect(summary?.xrift.worlds?.at(-1)?.title).toBe('World 49');
 	});
 	test.each([
 		'https://example.com/world/' + id, 'https://app.xrift.net.evil.example/world/' + id,

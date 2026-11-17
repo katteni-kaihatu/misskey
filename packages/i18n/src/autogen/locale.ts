@@ -15167,6 +15167,14 @@ export interface Locale extends ILocale {
          */
         "publicWorlds": string;
         /**
+         * 前のワールドを表示
+         */
+        "previousWorlds": string;
+        /**
+         * 次のワールドを表示
+         */
+        "nextWorlds": string;
+        /**
          * {date}からXRift
          */
         "joinedAt": ParameterizedString<"date">;

@@ -115,7 +115,8 @@ export class UrlPreviewService implements OnApplicationShutdown {
 								};
 								await Promise.all([
 									result.xrift.worldUrl && !result.thumbnail ? thumbnailFor(result.xrift.worldUrl).then(image => { result.thumbnail = image; }) : null,
-									...(result.xrift.worlds ?? []).map(async world => { world.thumbnail ??= await thumbnailFor(world.url); }),
+									// Bound extra HTML requests when a profile has many worlds.
+									...(result.xrift.worlds ?? []).slice(0, 6).map(async world => { world.thumbnail ??= await thumbnailFor(world.url); }),
 								]);
 								return result;
 							})

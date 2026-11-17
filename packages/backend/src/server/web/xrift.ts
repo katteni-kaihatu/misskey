@@ -102,10 +102,10 @@ export async function fetchXriftSummary(url: string, apiKey: string | null, getJ
 			summary.title = data.displayName;
 			summary.thumbnail = xriftImageUrl(data.userIconUrl);
 			summary.xrift.createdAt = date(data.createdAt);
-			const worlds = await optional(`/users/${resource.id}/worlds?limit=3`);
+			const worlds = await optional(`/users/${resource.id}/worlds?limit=50`);
 			if (Array.isArray(worlds?.data)) {
 				summary.xrift.totalWorlds = count(object(worlds.pagination)?.total);
-				summary.xrift.worlds = worlds.data.slice(0, 3).flatMap(item => {
+				summary.xrift.worlds = worlds.data.slice(0, 50).flatMap(item => {
 					const world = publicWorld(item);
 					return world ? [{ url: `https://app.xrift.net/world/${world.id}`, title: world.name as string, thumbnail: xriftImageUrl(world.thumbnailUrl) }] : [];
 				});
