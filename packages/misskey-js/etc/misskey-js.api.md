@@ -4270,11 +4270,12 @@ type VerifyEmailRequest = operations['verify-email']['requestBody']['content']['
 
 // @public (undocumented)
 export type XriftPreview = {
-    type: 'world' | 'instance' | 'user';
+    type: 'world' | 'instance' | 'user' | 'item';
     state: 'available' | 'unavailable' | 'error';
     creator: string | null;
     worldUrl?: string;
     totalVisits?: number;
+    acquireCount?: number;
     visitsLast7Days?: number;
     publicInstances?: number;
     createdAt?: string;
