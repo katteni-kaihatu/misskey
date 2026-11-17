@@ -22,10 +22,12 @@ describe('XRift cards', () => {
 	});
 	test('a room has distinct join and world links and elapsed time', () => {
 		const view = render(MkXriftPreview, { props: Room.args });
-		expect(view.getByText('LIVE')).toBeTruthy();
+		expect(view.queryByText('LIVE')).toBeNull();
 		expect(view.getByRole('link', { name: 'このインスタンスに参加' }).getAttribute('href')).toBe(Room.args.url);
 		expect(view.getByRole('link', { name: 'ワールドを見る' }).getAttribute('href')).toBe(World.args.url);
-		expect(view.getByText(/1時間24分/)).toBeTruthy();
+		const time = view.getByText('1時間24分前に開始');
+		expect(time.closest('p')?.textContent).toContain('ワールド作者');
+		expect(view.queryByText('12,345 visits')).toBeNull();
 	});
 	test('profiles show a count and links to their public worlds', () => {
 		const view = render(MkXriftPreview, { props: Profile.args });

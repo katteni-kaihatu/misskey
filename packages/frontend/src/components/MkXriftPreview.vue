@@ -40,10 +40,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template v-else>
 			<div :class="[$style.visual, { [$style.placeholder]: !imageVisible || state !== 'available' || loading }]">
 				<img v-if="imageVisible && state === 'available' && !loading" :src="summary?.thumbnail ?? undefined" :alt="summary?.title ?? ''" loading="lazy" @error="imageFailed = true"/>
-				<span v-if="isLive" :class="[$style.badge, $style.liveBadge]"><span :class="$style.dot"></span>{{ i18n.ts._xriftPreview.live }}</span>
-				<span v-else-if="state === 'available' && !loading && data?.publicInstances" :class="$style.badge"><span :class="$style.dot"></span>{{ i18n.tsx._xriftPreview.roomsOpen({ count: format(data.publicInstances) }) }}</span>
+				<span v-if="type === 'world' && state === 'available' && !loading && data?.publicInstances" :class="$style.badge"><span :class="$style.dot"></span>{{ i18n.tsx._xriftPreview.roomsOpen({ count: format(data.publicInstances) }) }}</span>
 				<span v-if="!loading && state !== 'available'" :class="$style.visualIcon" aria-hidden="true"><i :class="['ti', state === 'error' ? 'ti-alert-circle' : type === 'user' ? 'ti-user-off' : 'ti-lock']"></i></span>
-				<div v-if="isLive && elapsed" :class="$style.elapsed"><small>{{ i18n.ts._xriftPreview.started }}</small><strong>{{ elapsed }}</strong></div>
 			</div>
 			<div :class="$style.body">
 				<img v-if="imageVisible && state === 'available' && !loading" :src="summary?.thumbnail ?? undefined" alt="" aria-hidden="true" :class="$style.bodyBackdrop" loading="lazy" @error="imageFailed = true"/>
@@ -58,8 +56,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="$style.brandRow"><span :class="$style.brand">XRIFT</span><span :class="$style.type">{{ typeLabel }}</span></div>
 					<p v-if="isLive" :class="$style.invitation">{{ i18n.ts._xriftPreview.invitation }}</p>
 					<h3 :class="$style.title">{{ heading }}</h3>
-					<p v-if="state === 'available' && (data?.creator || data?.totalVisits != null)" :class="$style.meta">
-						<span v-if="data.creator">{{ data.creator }}</span><span v-if="data.creator && data.totalVisits != null" aria-hidden="true"> · </span><span v-if="data.totalVisits != null">{{ i18n.tsx._xriftPreview.visits({ count: format(data.totalVisits) }) }}</span>
+					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive }]">
+						<span v-if="data?.creator" :class="$style.creator">{{ data.creator }}</span><span v-if="data?.creator && metaDetail" aria-hidden="true"> · </span><span v-if="metaDetail" :class="$style.metaDetail">{{ metaDetail }}</span>
 					</p>
 					<p v-if="message" :class="[$style.description, { [$style.stateMessage]: state !== 'available' }]">{{ message }}</p>
 					<dl v-if="type === 'world' && state === 'available' && hasStats" :class="$style.stats">
@@ -149,6 +147,9 @@ const elapsed = computed(() => {
 	if (!Number.isFinite(minutes)) return null;
 	return minutes < 60 ? i18n.tsx._xriftPreview.minutes({ count: format(minutes) }) : i18n.tsx._xriftPreview.hoursMinutes({ hours: format(Math.floor(minutes / 60)), minutes: format(minutes % 60) });
 });
+const metaDetail = computed(() => isLive.value && elapsed.value
+	? i18n.tsx._xriftPreview.startedAgo({ time: elapsed.value })
+	: data.value?.totalVisits != null ? i18n.tsx._xriftPreview.visits({ count: format(data.value.totalVisits) }) : null);
 
 function hideFailedImage(event: Event): void {
 	(event.target as HTMLImageElement).hidden = true;
@@ -201,6 +202,7 @@ function hideFailedImage(event: Event): void {
 .type { padding: 1px 5px; border: 1px solid var(--xrift-border); border-radius: 3px; font: 700 9px/1.2 monospace; letter-spacing: 0.06em; }
 .title { flex-shrink: 0; margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { flex-shrink: 0; margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.instanceMeta { display: flex; align-items: baseline; gap: 3px; .creator { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .metaDetail { flex-shrink: 0; } }
 .description { min-height: 0; margin: 0; font-size: 0.9em; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .invitation { flex-shrink: 0; margin: 0; font-size: 0.85em; font-weight: bold; }
 .stats {
@@ -220,8 +222,6 @@ function hideFailedImage(event: Event): void {
 }
 .badge { position: absolute; top: 10px; left: 10px; padding: 5px 8px; border-radius: 999px; background: var(--xrift-panel); font-size: 10px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--xrift-live); }
-.liveBadge { background: var(--xrift-live); color: var(--xrift-ink); .dot { background: currentColor; } }
-.elapsed { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 10px; background: var(--xrift-panel); border-radius: 8px; small { display: block; font-size: 10px; color: var(--xrift-muted); } strong { display: block; margin-top: 3px; font-size: 1.35em; } }
 .profileSize { max-height: 320px; }
 .card.profile { display: flex; flex-direction: column; aspect-ratio: auto; padding: 20px; gap: 14px; }
 .profileHeading { display: flex; gap: 18px; align-items: center; min-height: 0; }
@@ -254,7 +254,7 @@ function hideFailedImage(event: Event): void {
 	.card { grid-template-columns: 33% minmax(0, 1fr); font-size: 12px; }
 	.body { padding: 12px; gap: 6px; }
 	.title { font-size: 1.1em; }
-	.description:not(.stateMessage), .stats, .invitation, .elapsed, .secondary { display: none; }
+	.description:not(.stateMessage), .stats, .invitation, .secondary { display: none; }
 	.badge { top: 7px; left: 7px; font-size: 9px; padding: 4px 6px; }
 	.button { min-height: 36px; padding: 7px 8px; }
 	.actions { padding-top: 4px; }
@@ -268,7 +268,8 @@ function hideFailedImage(event: Event): void {
 	.worldCount { font-size: 0.75em; }
 }
 @container (max-width: 320px) {
-	.meta { display: none; }
+	.meta:not(.instanceMeta) { display: none; }
+	.card.live .title { -webkit-line-clamp: 1; }
 	.body { padding: 10px; gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {

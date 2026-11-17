@@ -4043,6 +4043,7 @@ _xriftPreview:
   nextWorlds: "次のワールドを表示"
   joinedAt: "{date}からXRift"
   started: "開始から"
+  startedAgo: "{time}前に開始"
   minutes: "{count}分"
   hoursMinutes: "{hours}時間{minutes}分"
   invitation: "インスタンスに招待されています"

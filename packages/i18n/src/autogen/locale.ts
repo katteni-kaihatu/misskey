@@ -15183,6 +15183,10 @@ export interface Locale extends ILocale {
          */
         "started": string;
         /**
+         * {time}前に開始
+         */
+        "startedAgo": ParameterizedString<"time">;
+        /**
          * {count}分
          */
         "minutes": ParameterizedString<"count">;
