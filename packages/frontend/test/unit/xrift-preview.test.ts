@@ -7,13 +7,27 @@ import { cleanup, render } from '@testing-library/vue';
 import locales from 'i18n';
 import { updateI18n } from '@/i18n.js';
 import MkXriftPreview from '@/components/MkXriftPreview.vue';
-import { World, Room, Profile } from '@/components/MkXriftPreview.stories.impl.js';
+import { World, Room, Profile, Item } from '@/components/MkXriftPreview.stories.impl.js';
 import { preferState } from '../setup.unit.js';
 
 beforeAll(() => updateI18n(locales['ja-JP']));
 afterEach(cleanup);
 
 describe('XRift cards', () => {
+	test('items display their creator, acquisition count and a marketplace link', () => {
+		const view = render(MkXriftPreview, { props: Item.args });
+		expect(view.getByText('ITEM')).toBeTruthy();
+		expect(view.getByText('42人が入手')).toBeTruthy();
+		expect(view.getByText('Item creator')).toBeTruthy();
+		expect(view.getByRole('link', { name: 'アイテムを見る' }).getAttribute('href')).toBe(Item.args.url);
+		expect(view.container.querySelector('iframe')).toBeNull();
+	});
+	test('unavailable items keep a direct link and hide cached details', () => {
+		const view = render(MkXriftPreview, { props: { ...Item.args, summary: { ...Item.args.summary, xrift: { type: 'item', state: 'unavailable', creator: null } } } });
+		expect(view.getByText('このアイテムは利用できません')).toBeTruthy();
+		expect(view.queryByText('Picture Frame')).toBeNull();
+		expect(view.getByRole('link', { name: 'XRiftで開く' }).getAttribute('href')).toBe(Item.args.url);
+	});
 	test('shows visits, public rooms and a working world link', () => {
 		const view = render(MkXriftPreview, { props: World.args });
 		expect(view.getAllByText('12,345').length).toBeGreaterThan(0);

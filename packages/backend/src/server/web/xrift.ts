@@ -15,11 +15,11 @@ export function getXriftResource(url: string): { type: XriftPreview['type']; id:
 	try {
 		const parsed = new URL(url);
 		if (parsed.origin !== 'https://app.xrift.net' || parsed.username || parsed.password) return null;
-		const match = /^\/(world|instance|user)\/([^/]+)\/?$/.exec(parsed.pathname);
+		const match = /^\/(world|instance|user|marketplace)\/([^/]+)\/?$/.exec(parsed.pathname);
 		if (!match || !uuid.test(match[2])) return null;
-		const type = match[1] as XriftPreview['type'];
+		const type = match[1] === 'marketplace' ? 'item' : match[1] as XriftPreview['type'];
 		const id = match[2].toLowerCase();
-		return { type, id, url: `https://app.xrift.net/${type}/${id}` };
+		return { type, id, url: `https://app.xrift.net/${match[1]}/${id}` };
 	} catch {
 		return null;
 	}
@@ -94,10 +94,19 @@ export async function fetchXriftSummary(url: string, apiKey: string | null, getJ
 	};
 
 	try {
-		const plural = resource.type === 'user' ? 'users' : `${resource.type}s`;
+		const plural = resource.type === 'item' ? 'marketplace/items' : resource.type === 'user' ? 'users' : `${resource.type}s`;
 		const data = object(object(await get(`/${plural}/${resource.id}`))?.data);
 		if (!data || data.id !== resource.id) throw new Error('Invalid XRift resource');
-		if (resource.type === 'user') {
+		if (resource.type === 'item') {
+			if (data.isPublic !== true || data.status !== 'ACTIVE') { summary.xrift.state = 'unavailable'; return summary; }
+			if (typeof data.name !== 'string' || !data.name.trim()) throw new Error('Invalid XRift item');
+			summary.title = data.name;
+			summary.description = typeof data.description === 'string' ? data.description : null;
+			summary.thumbnail = xriftImageUrl(data.thumbnailUrl);
+			const owner = object(data.owner);
+			summary.xrift.creator = typeof owner?.displayName === 'string' ? owner.displayName : null;
+			summary.xrift.acquireCount = count(data.acquireCount);
+		} else if (resource.type === 'user') {
 			if (typeof data.displayName !== 'string' || !data.displayName.trim()) throw new Error('Invalid XRift user');
 			summary.title = data.displayName;
 			summary.thumbnail = xriftImageUrl(data.userIconUrl);

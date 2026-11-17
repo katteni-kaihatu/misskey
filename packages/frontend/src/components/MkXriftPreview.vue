@@ -122,11 +122,11 @@ const hideImages = computed(() => props.summary?.sensitive === true || prefer.s.
 const imageFailed = ref(false);
 const imageVisible = computed(() => !hideImages.value && !imageFailed.value && Boolean(props.summary?.thumbnail));
 const format = (value: number): string => value.toLocaleString();
-const typeLabel = computed(() => props.type === 'world' ? i18n.ts._xriftPreview.world : props.type === 'instance' ? i18n.ts._xriftPreview.room : i18n.ts._xriftPreview.user);
+const typeLabel = computed(() => props.type === 'world' ? i18n.ts._xriftPreview.world : props.type === 'instance' ? i18n.ts._xriftPreview.room : props.type === 'item' ? i18n.ts._xriftPreview.item : i18n.ts._xriftPreview.user);
 const hasStats = computed(() => data.value?.totalVisits != null || data.value?.visitsLast7Days != null || data.value?.publicInstances != null);
 const heading = computed(() => {
 	if (state.value === 'error') return i18n.ts._xriftPreview.error;
-	if (state.value === 'unavailable') return props.type === 'world' ? i18n.ts._xriftPreview.worldUnavailable : props.type === 'instance' ? i18n.ts._xriftPreview.roomUnavailable : i18n.ts._xriftPreview.userUnavailable;
+	if (state.value === 'unavailable') return props.type === 'world' ? i18n.ts._xriftPreview.worldUnavailable : props.type === 'instance' ? i18n.ts._xriftPreview.roomUnavailable : props.type === 'item' ? i18n.ts._xriftPreview.itemUnavailable : i18n.ts._xriftPreview.userUnavailable;
 	return props.summary?.title ?? 'XRift';
 });
 const message = computed(() => {
@@ -138,6 +138,7 @@ const message = computed(() => {
 const actionLabel = computed(() => {
 	if (state.value !== 'available') return i18n.ts._xriftPreview.open;
 	if (props.type === 'user') return i18n.ts._xriftPreview.viewProfile;
+	if (props.type === 'item') return i18n.ts._xriftPreview.viewItem;
 	if (props.type === 'instance') return isLive.value ? i18n.ts._xriftPreview.joinRoom : i18n.ts._xriftPreview.open;
 	return data.value?.publicInstances === 0 ? i18n.ts._xriftPreview.enterFirst : i18n.ts._xriftPreview.enter;
 });
@@ -151,6 +152,7 @@ const elapsed = computed(() => {
 });
 const metaDetail = computed(() => isLive.value && elapsed.value
 	? i18n.tsx._xriftPreview.startedAgo({ time: elapsed.value })
+	: props.type === 'item' && data.value?.acquireCount != null ? i18n.tsx._xriftPreview.acquisitions({ count: format(data.value.acquireCount) })
 	: data.value?.totalVisits != null ? i18n.tsx._xriftPreview.visits({ count: format(data.value.totalVisits) }) : null);
 
 function hideFailedImage(event: Event): void {
