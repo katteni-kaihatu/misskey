@@ -214,8 +214,8 @@ type PreviewSummary = SummalyResult & { xrift?: XriftPreview };
 const summalyResult = ref<PreviewSummary | null>(null);
 const xriftType = computed(() => {
 	if (requestUrl.origin !== 'https://app.xrift.net' || requestUrl.username || requestUrl.password) return null;
-	const match = /^\/(world|instance|user)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.exec(requestUrl.pathname);
-	return match ? match[1].toLowerCase() as XriftPreview['type'] : null;
+	const match = /^\/(world|instance|user|marketplace)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.exec(requestUrl.pathname);
+	return match ? match[1].toLowerCase() === 'marketplace' ? 'item' : match[1].toLowerCase() as XriftPreview['type'] : null;
 });
 const title = computed(() => summalyResult.value?.title ?? null);
 const description = computed(() => summalyResult.value?.description ?? null);

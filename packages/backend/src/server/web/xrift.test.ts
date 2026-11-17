@@ -11,6 +11,8 @@ const instanceId = '89c12f72-5e70-4da9-b029-eb9f725bf492';
 const worldUrl = `https://app.xrift.net/world/${id}`;
 const world = { id, name: 'School world', description: 'An afternoon at school.', isPublic: true, status: 'ACTIVE', ownerId, thumbnailUrl: `https://assets.xrift.net/worlds/${id}/thumbnail.jpg` };
 const apiKey = 'xrift_sk_test';
+const itemUrl = `https://app.xrift.net/marketplace/${id}`;
+const item = { ...world, acquireCount: 15, owner: { displayName: 'Item creator' }, sceneUrl: 'https://untrusted.example/remoteEntry.js' };
 
 function fixture(overrides: Record<string, unknown> = {}) {
 	const routes: Record<string, unknown> = {
@@ -41,6 +43,30 @@ describe('XRift URL summaries', () => {
 			expect(headers).toEqual({ Authorization: `Bearer ${apiKey}` });
 		}
 	});
+	test('maps a public marketplace item without downloading or exposing its executable scene', async () => {
+		const get = fixture({ [`/marketplace/items/${id}`]: { data: item } });
+		const summary = await fetchXriftSummary(`${itemUrl}/?share=1#item`, apiKey, get);
+		expect(summary).toMatchObject({ url: itemUrl, title: item.name, description: item.description, thumbnail: item.thumbnailUrl, xrift: { type: 'item', state: 'available', creator: 'Item creator', acquireCount: 15 }, player: { url: null } });
+		expect(get).toHaveBeenCalledExactlyOnceWith(`https://api.xrift.net/api/public/v1/marketplace/items/${id}`, { Authorization: `Bearer ${apiKey}` });
+		expect(JSON.stringify(summary)).not.toContain('remoteEntry');
+	});
+	test.each([
+		{ ...item, isPublic: false }, { ...item, status: 'PENDING' },
+		{ ...item, status: undefined }, { ...item, isPublic: undefined },
+	])('does not expose non-public or unreviewed marketplace items', async data => {
+		const summary = await fetchXriftSummary(itemUrl, apiKey, fixture({ [`/marketplace/items/${id}`]: { data } }));
+		expect(summary).toMatchObject({ title: null, thumbnail: null, xrift: { type: 'item', state: 'unavailable' } });
+	});
+	test.each([404, 403, 429, 500])('returns a safe item state for HTTP %i', async statusCode => {
+		const summary = await fetchXriftSummary(itemUrl, apiKey, fixture({ [`/marketplace/items/${id}`]: Object.assign(new Error('xrift_sk_secret'), { statusCode }) }));
+		expect(summary?.xrift.state).toBe(statusCode === 404 ? 'unavailable' : 'error');
+		expect(JSON.stringify(summary)).not.toContain('xrift_sk_secret');
+	});
+	test('omits invalid optional item data', async () => {
+		const summary = await fetchXriftSummary(itemUrl, apiKey, fixture({ [`/marketplace/items/${id}`]: { data: { ...item, acquireCount: -1, thumbnailUrl: 'https://other.example/image.png', description: null, owner: null } } }));
+		expect(summary).toMatchObject({ title: item.name, description: null, thumbnail: null, xrift: { creator: null } });
+		expect(summary?.xrift.acquireCount).toBeUndefined();
+	});
 	test('joins an instance to its public world', async () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/instance/${instanceId}`, apiKey, fixture());
 		expect(summary).toMatchObject({ title: world.name, xrift: { type: 'instance', state: 'available', worldUrl, createdAt: '2026-11-17T00:00:00.000Z' } });
@@ -66,6 +92,7 @@ describe('XRift URL summaries', () => {
 		'https://example.com/world/' + id, 'https://app.xrift.net.evil.example/world/' + id,
 		'https://app.xrift.net@evil.example/world/' + id, 'https://user:password@app.xrift.net/world/' + id,
 		'https://app.xrift.net:444/world/' + id, 'http://app.xrift.net/world/' + id,
+		'https://app.xrift.net/marketplace/items/' + id, itemUrl + '/extra',
 		'https://app.xrift.net/world/not-a-uuid', worldUrl + '/extra', 'https://app.xrift.net/worlds', 'invalid',
 	])('does not request XRift data for %s', async url => {
 		const get = fixture();
