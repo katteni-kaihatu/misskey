@@ -262,12 +262,16 @@ function hideFailedImage(event: Event): void {
 	.actions { padding-top: 0; }
 }
 @container (max-width: 560px) {
+	.description:not(.stateMessage) { -webkit-line-clamp: 1; }
 	.brandCorner { padding: 6px 8px; border-bottom-left-radius: 7px; }
 	.brandFull { width: 44px; }
 	.brandRow { gap: 5px; padding-right: 44px; }
 	.type { padding: 3px 6px; gap: 4px; font-size: 11px; }
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
+}
+@container (max-width: 480px) {
+	.description:not(.stateMessage) { display: none; }
 }
 @container (max-width: 420px) {
 	.card { grid-template-columns: 35% minmax(0, 1fr); font-size: 12px; }
@@ -279,7 +283,6 @@ function hideFailedImage(event: Event): void {
 	.brandRow { padding-right: 20px; }
 	.type { padding: 2px 6px; font-size: 10px; > i { display: none; } }
 	.body .meta { font-size: 0.75em; }
-	.description:not(.stateMessage) { display: none; }
 	.button { min-height: 36px; padding: 7px 8px; }
 	.actions .button { min-height: 40px; }
 	.footer { gap: 4px; }
