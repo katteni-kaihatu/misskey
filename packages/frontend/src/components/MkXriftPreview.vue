@@ -64,7 +64,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<i v-else class="ti ti-user" aria-hidden="true"></i>
 							<span>{{ typeLabel }}</span>
 						</span>
-						<span v-if="isLive" :class="$style.activeStatus"><span :class="$style.dot"></span>{{ i18n.ts._xriftPreview.active }}</span>
 					</div>
 					<h3 :class="$style.title">{{ heading }}</h3>
 					<p v-if="state === 'available' && (data?.creator || metaDetail)" :class="[$style.meta, { [$style.instanceMeta]: isLive }]">
@@ -216,7 +215,6 @@ function hideFailedImage(event: Event): void {
 .brandCompact { display: none; }
 .type { display: inline-flex; align-items: center; min-width: 0; gap: 5px; padding: 4px 8px; border: 1px solid var(--xrift-border); border-radius: 6px; background: color-mix(in srgb, var(--xrift-fg) 15%, transparent); color: var(--xrift-fg); font-size: 12px; font-weight: 750; line-height: 1.2; white-space: nowrap; > i { flex-shrink: 0; } > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; } }
 .activeType { color: var(--xrift-visual); background: var(--xrift-active); border-color: transparent; }
-.activeStatus { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 5px; color: var(--xrift-active); background: color-mix(in srgb, var(--xrift-active) 15%, var(--xrift-visual)); font-size: 10px; font-weight: bold; white-space: nowrap; }
 .title { flex-shrink: 0; margin: 0; font-size: 1.35em; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { flex-shrink: 0; margin: 0; color: var(--xrift-muted); font-size: 0.83em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .instanceMeta { display: flex; align-items: baseline; gap: 3px; .creator { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .metaDetail { flex-shrink: 0; } }
@@ -232,7 +230,6 @@ function hideFailedImage(event: Event): void {
 	&:focus-visible { outline: 2px solid var(--xrift-focus); outline-offset: 2px; }
 	&.primary { background: var(--xrift-fg); color: var(--xrift-ink); border-color: transparent; &:hover { opacity: 0.85; } }
 }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .profileSize { max-height: 320px; }
 .card.profile { display: flex; flex-direction: column; aspect-ratio: auto; padding: 20px; gap: 14px; }
 .profileHeading { display: flex; gap: 18px; align-items: center; min-height: 0; }
@@ -270,7 +267,6 @@ function hideFailedImage(event: Event): void {
 	.brandFull { width: 44px; }
 	.brandRow { gap: 5px; padding-right: 44px; }
 	.type { padding: 3px 6px; gap: 4px; font-size: 11px; }
-	.activeStatus { padding: 3px 5px; gap: 3px; font-size: 9px; }
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
 }
@@ -283,7 +279,6 @@ function hideFailedImage(event: Event): void {
 	.brandCompact { display: block; width: 18px; height: auto; }
 	.brandRow { padding-right: 20px; }
 	.type { padding: 2px 6px; font-size: 10px; > i { display: none; } }
-	.activeStatus { padding: 3px 5px; gap: 3px; font-size: 9px; }
 	.body .meta { font-size: 0.75em; }
 	.description:not(.stateMessage) { display: none; }
 	.button { min-height: 36px; padding: 7px 8px; }
@@ -301,7 +296,6 @@ function hideFailedImage(event: Event): void {
 @container (max-width: 320px) {
 	.card.live .title { -webkit-line-clamp: 1; }
 	.body { padding: 10px; gap: 4px; }
-	.activeStatus { padding: 3px; font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.worldGrid { scroll-behavior: auto; }
