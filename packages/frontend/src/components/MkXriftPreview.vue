@@ -266,10 +266,11 @@ function hideFailedImage(event: Event): void {
 	.actions { padding-top: 0; }
 }
 @container (max-width: 560px) {
-	.brandCorner { padding: 5px; border-bottom-left-radius: 7px; }
-	.brandFull { display: none; }
-	.brandCompact { display: block; width: 18px; height: auto; }
-	.brandRow { padding-right: 20px; }
+	.brandCorner { padding: 6px 8px; border-bottom-left-radius: 7px; }
+	.brandFull { width: 44px; }
+	.brandRow { gap: 5px; padding-right: 44px; }
+	.type { padding: 3px 6px; gap: 4px; font-size: 11px; }
+	.activeStatus { padding: 3px 5px; gap: 3px; font-size: 9px; }
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
 }
@@ -277,7 +278,10 @@ function hideFailedImage(event: Event): void {
 	.card { grid-template-columns: 35% minmax(0, 1fr); font-size: 12px; }
 	.body { padding: 12px; gap: 6px; }
 	.title { font-size: 1.1em; -webkit-line-clamp: 1; }
-	.brandRow { gap: 5px; }
+	.brandCorner { padding: 5px; }
+	.brandFull { display: none; }
+	.brandCompact { display: block; width: 18px; height: auto; }
+	.brandRow { padding-right: 20px; }
 	.type { padding: 2px 6px; font-size: 10px; > i { display: none; } }
 	.activeStatus { padding: 3px 5px; gap: 3px; font-size: 9px; }
 	.body .meta { font-size: 0.75em; }
