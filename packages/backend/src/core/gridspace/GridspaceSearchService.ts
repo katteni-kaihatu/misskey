@@ -93,8 +93,7 @@ export class GridspaceSearchService {
 	public userQuery(viewer: { id: string } | null) {
 		const query = this.db.getRepository(MiUser).createQueryBuilder('user')
 			.where('user.isDeleted = false AND user.isSuspended = false');
-		// A relation of patterns avoids estimating hundreds of ILIKE constants for every actor.
-		if (this.meta.blockedHosts.length) query.andWhere('(user.host IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(CAST(:blocked AS text[])) AS blocked_host(pattern) WHERE user.host ILIKE blocked_host.pattern))', { blocked: this.meta.blockedHosts.flatMap(host => [host, `%.${host}`]) });
+		if (this.meta.blockedHosts.length) query.andWhere('(user.host IS NULL OR user.host NOT ILIKE ALL(ARRAY[:...blocked]))', { blocked: this.meta.blockedHosts.flatMap(host => [host, `%.${host}`]) });
 		if (viewer) {
 			this.queries.generateBlockQueryForUsers(query, viewer);
 			this.queries.generateMutedUserQueryForUsers(query, viewer);
@@ -104,7 +103,7 @@ export class GridspaceSearchService {
 		return query.orderBy('user.id', 'DESC');
 	}
 
-	public noteQuery(viewer: { id: string } | null, options: SearchOptions, source: boolean, authenticated = viewer != null, channelId?: string, authorScoped = options.userId != null, includeSensitiveChannels = false) {
+	public noteQuery(viewer: { id: string } | null, options: SearchOptions, source: boolean, authenticated = viewer != null, channelId?: string, authorScoped = options.userId != null, includeSensitiveChannels = false, singleNoteId?: string) {
 		const query = this.db.getRepository(MiNote).createQueryBuilder('note')
 			.innerJoinAndSelect('note.user', 'user')
 			.leftJoinAndSelect('note.channel', 'channel')
@@ -112,6 +111,11 @@ export class GridspaceSearchService {
 			.leftJoinAndSelect('note.renote', 'renote').leftJoinAndSelect('renote.user', 'renoteUser')
 			.where('user.isDeleted = false')
 			.setParameter('gridspaceAuthorScoped', authorScoped);
+		if (singleNoteId != null) {
+			if (!/^[a-zA-Z0-9]{1,32}$/.test(singleNoteId)) throw new GridspaceSearchError('UNAVAILABLE');
+			query.andWhere('note.id = :singleNoteId', { singleNoteId });
+			query.setParameter('singleNoteTime', this.ids.parse(singleNoteId).date.getTime());
+		}
 		// For an explicit author, use the author index before matching text. Common
 		// one-character terms can otherwise materialize millions of PGroonga hits.
 		if (options.query) query.andWhere(authorScoped
@@ -120,7 +124,7 @@ export class GridspaceSearchService {
 		this.queries.generateBaseNoteFilteringQuery(query, viewer);
 		// These settings can hide an otherwise public note. Filter before matching/paging,
 		// so neither an ID nor a continuation token reveals a match in hidden text.
-		filterNoteVisibility(query, this.noteTime, viewer, source, authenticated);
+		filterNoteVisibility(query, singleNoteId == null ? this.noteTime : ':singleNoteTime::bigint', viewer, source, authenticated);
 		if (source) {
 			query.andWhere("note.userHost IS NULL AND note.channelId IS NULL AND note.visibility IN ('public', 'home')");
 		} else {
