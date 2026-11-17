@@ -9,9 +9,10 @@ import type { SummalyResult } from '@misskey-dev/summaly';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
+import { preferState } from '../setup.unit.js';
 
 describe('MkUrlPreview', () => {
-	const renderPreviewBy = async (summary: Partial<SummalyResult>): Promise<RenderResult> => {
+	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: { creator: string | null } }): Promise<RenderResult> => {
 		if (!summary.player) {
 			summary.player = {
 				url: null,
@@ -68,6 +69,52 @@ describe('MkUrlPreview', () => {
 			description: 'Mocked description',
 		});
 		mkUrlPreview.getByText('Mocked description');
+	});
+
+	const xriftSummary = {
+		url: 'https://app.xrift.net/world/4b84ca2a-06cc-4351-a2df-adc904eec8e4',
+		title: 'School world',
+		description: 'An afternoon at school.',
+		thumbnail: 'https://example.local/proxied-thumbnail.webp',
+		icon: 'https://example.local/proxied-icon.webp',
+		sitename: 'XRift',
+		xrift: { creator: 'World creator' },
+	};
+
+	test('renders an XRift world card with its creator and proxied thumbnail', async () => {
+		const preview = await renderPreviewBy({ ...xriftSummary });
+		preview.getByText('School world');
+		preview.getByText('World creator');
+		preview.getByText('An afternoon at school.');
+		assert.strictEqual(preview.getByRole('img', { name: 'School world' }).getAttribute('src'), xriftSummary.thumbnail);
+		const link = preview.getByRole('link');
+		assert.strictEqual(link.getAttribute('href'), xriftSummary.url);
+		assert.strictEqual(link.getAttribute('target'), '_blank');
+		assert.isNull(preview.container.querySelector('iframe'));
+	});
+
+	test('hides XRift thumbnails when data saver is enabled', async () => {
+		const dataSaver = preferState.dataSaver;
+		try {
+			preferState.dataSaver = { urlPreviewThumbnail: true };
+			const preview = await renderPreviewBy({ ...xriftSummary });
+			assert.isNull(preview.queryByRole('img', { name: 'School world' }));
+			preview.getByText('World creator');
+		} finally {
+			preferState.dataSaver = dataSaver;
+		}
+	});
+
+	test('hides sensitive XRift thumbnails', async () => {
+		const preview = await renderPreviewBy({ ...xriftSummary, sensitive: true });
+		assert.isNull(preview.queryByRole('img', { name: 'School world' }));
+	});
+
+	test('falls back to an ordinary card without XRift metadata', async () => {
+		const preview = await renderPreviewBy({ url: xriftSummary.url, title: 'XRift', description: 'Generic OGP' });
+		preview.getByText('Generic OGP');
+		assert.isNull(preview.queryByText('World creator'));
+		assert.strictEqual(preview.getByRole('link').getAttribute('href'), xriftSummary.url);
 	});
 
 	test('Having a player should render a button', async () => {

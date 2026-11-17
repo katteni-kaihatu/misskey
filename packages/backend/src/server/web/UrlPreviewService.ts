@@ -18,11 +18,15 @@ import { bindThis } from '@/decorators.js';
 import { ApiError } from '@/server/api/error.js';
 import { MiMeta } from '@/models/Meta.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { createHash } from 'node:crypto';
+import { fetchXriftSummary, getXriftWorldUrl } from './xrift.js';
 
 @Injectable()
 export class UrlPreviewService implements OnApplicationShutdown {
 	private logger: Logger;
 	private summaryCache: MemoryKVCache<SummalyResult>;
+	private xriftSummaryCache = new MemoryKVCache<SummalyResult | null>(1000 * 60 * 5, 100);
+	private xriftInFlight = new Map<string, Promise<SummalyResult | null>>();
 	private readonly summalyDefaultUserAgent: string;
 
 	constructor(
@@ -84,6 +88,29 @@ export class UrlPreviewService implements OnApplicationShutdown {
 			: `Getting preview of ${url}@${lang} ...`);
 
 		try {
+			const apiKey = this.meta.xriftApiKey;
+			const worldUrl = getXriftWorldUrl(url);
+			let xrift: SummalyResult | null | undefined;
+			if (worldUrl && apiKey) {
+				const keyVersion = createHash('sha256').update(apiKey).digest('hex');
+				const cacheKey = `${worldUrl}@${keyVersion}`;
+				try {
+					xrift = await this.xriftSummaryCache.fetchMaybe(cacheKey, () => {
+						const pending = this.xriftInFlight.get(cacheKey);
+						if (pending) return pending;
+						const request = fetchXriftSummary(worldUrl, apiKey, (apiUrl, headers) => this.httpRequestService.getJson(apiUrl, 'application/json', headers))
+							.catch(() => {
+								this.logger.warn('Failed to get XRift world preview');
+								return null;
+							})
+							.finally(() => this.xriftInFlight.delete(cacheKey));
+						this.xriftInFlight.set(cacheKey, request);
+						return request;
+					});
+				} catch {
+					this.logger.warn('Failed to get XRift world preview');
+				}
+			}
 			const fetcher = async () => {
 				const result = await (
 					this.meta.urlPreviewSummaryProxyUrl
@@ -102,7 +129,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 				return result;
 			};
 
-			const summary = deepClone(await this.summaryCache.fetchMaybe(`${url}@${lang ?? '_DEFAULT_'}`, fetcher));
+			const summary = deepClone(xrift ?? await this.summaryCache.fetchMaybe(`${url}@${lang ?? '_DEFAULT_'}`, fetcher));
 
 			if (summary == null) {
 				throw new Error('Invalid summary');
@@ -117,8 +144,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 				summary.sensitive = this.utilityService.isKeyWordIncluded(summary.url, this.meta.urlPreviewSensitiveList);
 			}
 
-			// Cache 1day
-			reply.header('Cache-Control', 'max-age=86400, immutable');
+			reply.header('Cache-Control', worldUrl ? 'max-age=300' : 'max-age=86400, immutable');
 
 			return summary;
 		} catch (err) {
@@ -173,6 +199,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 	@bindThis
 	public dispose(): void {
 		this.summaryCache.dispose();
+		this.xriftSummaryCache.dispose();
 	}
 
 	@bindThis

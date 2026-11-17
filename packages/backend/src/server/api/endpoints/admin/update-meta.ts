@@ -190,6 +190,7 @@ export const paramDef = {
 		urlPreviewRequireContentLength: { type: 'boolean' },
 		urlPreviewUserAgent: { type: 'string', nullable: true },
 		urlPreviewSummaryProxyUrl: { type: 'string', nullable: true },
+		xriftApiKey: { type: 'string', nullable: true, maxLength: 1024, pattern: '^$|^xrift_sk_[A-Za-z0-9_-]+$' },
 		urlPreviewSensitiveList: {
 			type: 'array', nullable: true,
 			items: {
@@ -745,6 +746,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				set.urlPreviewSummaryProxyUrl = value === '' ? null : value;
 			}
 
+			if (ps.xriftApiKey !== undefined) {
+				set.xriftApiKey = ps.xriftApiKey || null;
+			}
+
 			if (Array.isArray(ps.urlPreviewSensitiveList)) {
 				set.urlPreviewSensitiveList = ps.urlPreviewSensitiveList.filter(Boolean);
 			}
@@ -804,8 +809,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const after = await this.metaService.fetch(true);
 
 			this.moderationLogService.log(me, 'updateServerSettings', {
-				before,
-				after,
+				before: { ...before, xriftApiKey: before.xriftApiKey ? '[redacted]' : null },
+				after: { ...after, xriftApiKey: after.xriftApiKey ? '[redacted]' : null },
 			});
 		});
 	}

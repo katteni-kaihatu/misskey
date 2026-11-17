@@ -187,6 +187,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</SearchMarker>
 
 							<template v-if="urlPreviewForm.state.urlPreviewEnabled">
+								<SearchMarker :keywords="['XRift', 'API']" :label="i18n.ts._urlPreviewSetting.xrift">
+									<MkXriftSettings v-model:configured="xriftApiKeyConfigured"/>
+								</SearchMarker>
+
 								<SearchMarker :keywords="['allow', 'redirect']">
 									<MkSwitch v-model="urlPreviewForm.state.urlPreviewAllowRedirect">
 										<template #label><SearchLabel>{{ i18n.ts._urlPreviewSetting.allowRedirect }}</SearchLabel><span v-if="urlPreviewForm.modifiedStates.urlPreviewAllowRedirect" class="_modified">{{ i18n.ts.modified }}</span></template>
@@ -385,7 +389,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
@@ -401,8 +405,10 @@ import MkFolder from '@/components/MkFolder.vue';
 import { useForm } from '@/composables/use-form.js';
 import MkFormFooter from '@/components/MkFormFooter.vue';
 import MkRadios from '@/components/MkRadios.vue';
+import MkXriftSettings from '@/components/MkXriftSettings.vue';
 
 const meta = await misskeyApi('admin/meta');
+const xriftApiKeyConfigured = ref(meta.xriftApiKeyConfigured);
 
 const proxyAccount = await misskeyApi('users/show', { userId: meta.proxyAccountId });
 

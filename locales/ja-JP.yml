@@ -3294,6 +3294,13 @@ _offlineScreen:
 
 _urlPreviewSetting:
   title: "URLプレビューの設定"
+  xrift: "XRiftのワールドプレビュー"
+  xriftApiKey: "XRift APIキー"
+  xriftKeyConfigured: "APIキーは設定済みです"
+  xriftApiKeyDescription: "read:worlds権限のあるAPIキー（xrift_sk_で始まるキー）を入力してください。保存済みのキーは表示されません。未設定の場合は通常のOGPを表示します。"
+  xriftRemoveKey: "保存済みのAPIキーを削除する"
+  xriftTermsNotice: "有効にすると、公開ワールドの情報とサムネイルをこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。"
+  xriftApiDocs: "XRift Public APIの仕様"
   enable: "URLプレビューを有効にする"
   allowRedirect: "プレビュー先のリダイレクトを許可"
   allowRedirectDescription: "入力されたURLがリダイレクトされる場合に、そのリダイレクト先をたどってプレビューを表示するかどうかを設定します。無効にするとサーバーリソースの節約になりますが、リダイレクト先の内容は表示されなくなります。"

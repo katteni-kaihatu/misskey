@@ -12388,6 +12388,34 @@ export interface Locale extends ILocale {
          */
         "title": string;
         /**
+         * XRiftのワールドプレビュー
+         */
+        "xrift": string;
+        /**
+         * XRift APIキー
+         */
+        "xriftApiKey": string;
+        /**
+         * APIキーは設定済みです
+         */
+        "xriftKeyConfigured": string;
+        /**
+         * read:worlds権限のあるAPIキー（xrift_sk_で始まるキー）を入力してください。保存済みのキーは表示されません。未設定の場合は通常のOGPを表示します。
+         */
+        "xriftApiKeyDescription": string;
+        /**
+         * 保存済みのAPIキーを削除する
+         */
+        "xriftRemoveKey": string;
+        /**
+         * 有効にすると、公開ワールドの情報とサムネイルをこのサーバーの利用者に表示します。利用前にXRiftの利用規約と、取得データの再表示・キャッシュに関する許諾を確認してください。APIキーの発行だけで再配布が許可されるとは限りません。
+         */
+        "xriftTermsNotice": string;
+        /**
+         * XRift Public APIの仕様
+         */
+        "xriftApiDocs": string;
+        /**
          * URLプレビューを有効にする
          */
         "enable": string;

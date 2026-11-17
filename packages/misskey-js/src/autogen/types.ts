@@ -10722,6 +10722,7 @@ export interface operations {
                         urlPreviewRequireContentLength: boolean;
                         urlPreviewUserAgent: string | null;
                         urlPreviewSummaryProxyUrl: string | null;
+                        xriftApiKeyConfigured: boolean;
                         urlPreviewSensitiveList: string[];
                         /** @enum {string} */
                         federation: 'all' | 'specified' | 'none';
@@ -14243,6 +14244,7 @@ export interface operations {
                     urlPreviewRequireContentLength?: boolean;
                     urlPreviewUserAgent?: string | null;
                     urlPreviewSummaryProxyUrl?: string | null;
+                    xriftApiKey?: string | null;
                     urlPreviewSensitiveList?: string[] | null;
                     /** @enum {string} */
                     federation?: 'all' | 'none' | 'specified';
