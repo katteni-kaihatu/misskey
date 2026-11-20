@@ -5022,6 +5022,7 @@ export type components = {
                 userId: string | null;
             } | null;
             gridspaceReactions?: boolean;
+            gridspaceQuote?: string;
             gridspaceShared?: boolean;
             noRelay?: boolean;
             localOnly?: boolean;
@@ -5058,6 +5059,7 @@ export type components = {
             user: components['schemas']['UserLite'];
             /** Format: id */
             replyId: string | null;
+            gridspaceQuote?: string | null;
             /** Format: id */
             renoteId: string | null;
             reply?: components['schemas']['Note'] | null;
@@ -27155,6 +27157,8 @@ export interface operations {
                             collectionAt?: string;
                             canDelete?: boolean;
                             canSelfRenote?: boolean;
+                            canQuoteOutside?: boolean;
+                            gridspaceQuote?: string;
                             author: {
                                 name: string | null;
                                 username: string;
@@ -27244,6 +27248,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -27552,6 +27558,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -27641,6 +27649,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -27734,6 +27744,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -27823,6 +27835,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -28205,6 +28219,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -28294,6 +28310,8 @@ export interface operations {
                                         collectionAt?: string;
                                         canDelete?: boolean;
                                         canSelfRenote?: boolean;
+                                        canQuoteOutside?: boolean;
+                                        gridspaceQuote?: string;
                                         author: {
                                             name: string | null;
                                             username: string;
@@ -28387,6 +28405,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -28476,6 +28496,8 @@ export interface operations {
                                         collectionAt?: string;
                                         canDelete?: boolean;
                                         canSelfRenote?: boolean;
+                                        canQuoteOutside?: boolean;
+                                        gridspaceQuote?: string;
                                         author: {
                                             name: string | null;
                                             username: string;
@@ -28874,6 +28896,8 @@ export interface operations {
                             collectionAt?: string;
                             canDelete?: boolean;
                             canSelfRenote?: boolean;
+                            canQuoteOutside?: boolean;
+                            gridspaceQuote?: string;
                             author: {
                                 name: string | null;
                                 username: string;
@@ -28963,6 +28987,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -29375,6 +29401,8 @@ export interface operations {
                             collectionAt?: string;
                             canDelete?: boolean;
                             canSelfRenote?: boolean;
+                            canQuoteOutside?: boolean;
+                            gridspaceQuote?: string;
                             author: {
                                 name: string | null;
                                 username: string;
@@ -29464,6 +29492,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -30315,6 +30345,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -30404,6 +30436,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -30520,6 +30554,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -30609,6 +30645,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -30800,6 +30838,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -30889,6 +30929,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -31005,6 +31047,8 @@ export interface operations {
                                 collectionAt?: string;
                                 canDelete?: boolean;
                                 canSelfRenote?: boolean;
+                                canQuoteOutside?: boolean;
+                                gridspaceQuote?: string;
                                 author: {
                                     name: string | null;
                                     username: string;
@@ -31094,6 +31138,8 @@ export interface operations {
                                     collectionAt?: string;
                                     canDelete?: boolean;
                                     canSelfRenote?: boolean;
+                                    canQuoteOutside?: boolean;
+                                    gridspaceQuote?: string;
                                     author: {
                                         name: string | null;
                                         username: string;
@@ -36681,6 +36727,7 @@ export interface operations {
                     cw?: string | null;
                     /** @default false */
                     localOnly?: boolean;
+                    gridspaceQuote?: string | null;
                     /**
                      * @description Skip direct relay delivery while keeping the selected visibility and normal federation.
                      * @default false
@@ -36936,6 +36983,7 @@ export interface operations {
                     replyId?: string | null;
                     /** Format: misskey:id */
                     renoteId?: string | null;
+                    gridspaceQuote?: string | null;
                     /** Format: misskey:id */
                     channelId?: string | null;
                     text?: string | null;
@@ -37174,6 +37222,7 @@ export interface operations {
                     replyId?: string | null;
                     /** Format: misskey:id */
                     renoteId?: string | null;
+                    gridspaceQuote?: string | null;
                     /** Format: misskey:id */
                     channelId?: string | null;
                     text?: string | null;
