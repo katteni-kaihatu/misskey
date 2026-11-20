@@ -15203,6 +15203,14 @@ export interface Locale extends ILocale {
          */
         "room": string;
         /**
+         * {current}/{max}人
+         */
+        "participants": ParameterizedString<"current" | "max">;
+        /**
+         * {count}人
+         */
+        "currentParticipants": ParameterizedString<"count">;
+        /**
          * 開催中
          */
         "active": string;

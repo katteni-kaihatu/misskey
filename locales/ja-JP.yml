@@ -4048,6 +4048,8 @@ _xriftPreview:
   world: "ワールド"
   item: "アイテム"
   room: "インスタンス"
+  participants: "{current}/{max}人"
+  currentParticipants: "{count}人"
   active: "開催中"
   instanceDescription: "ワールド「{name}」のインスタンスです。URLからそのまま参加できます。"
   user: "プロフィール"

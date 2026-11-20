@@ -162,6 +162,8 @@ export class UrlPreviewService implements OnApplicationShutdown {
 			summary.thumbnail = this.wrap(summary.thumbnail);
 			if (xrift && 'xrift' in summary) {
 				for (const world of (summary as XriftSummary).xrift.worlds ?? []) world.thumbnail = this.wrap(world.thumbnail);
+				const preview = (summary as XriftSummary).xrift;
+				if (preview.participantAvatars) preview.participantAvatars = preview.participantAvatars.map(avatar => this.wrap(avatar));
 			}
 
 			if (summary.sensitive !== true) {

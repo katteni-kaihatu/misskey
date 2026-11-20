@@ -8,6 +8,9 @@ export type XriftPreview = {
 	acquireCount?: number;
 	visitsLast7Days?: number;
 	publicInstances?: number;
+	currentUsers?: number;
+	maxCapacity?: number;
+	participantAvatars?: (string | null)[];
 	createdAt?: string;
 	totalWorlds?: number;
 	worlds?: { url: string; title: string; thumbnail: string | null }[];
