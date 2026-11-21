@@ -22,6 +22,8 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createHash } from 'node:crypto';
 import { fetchXriftSummary, getXriftResource, xriftImageUrl } from './xrift.js';
 import type { XriftSummary } from './xrift.js';
+import { fetchResoniteSummary, getResoniteResource } from './resonite.js';
+import type { ResoniteSummary } from './resonite.js';
 
 @Injectable()
 export class UrlPreviewService implements OnApplicationShutdown {
@@ -30,6 +32,8 @@ export class UrlPreviewService implements OnApplicationShutdown {
 	private xriftSummaryCache = new MemoryKVCache<XriftSummary | null>(1000 * 60 * 5, 100);
 	private xriftInFlight = new Map<string, Promise<XriftSummary | null>>();
 	private xriftRateLimit: { keyVersion: string; until: number } | null = null;
+	private resoniteSummaryCache = new MemoryKVCache<ResoniteSummary | null>(60_000, 100);
+	private resoniteInFlight = new Map<string, Promise<ResoniteSummary | null>>();
 	private readonly summalyDefaultUserAgent: string;
 
 	constructor(
@@ -91,6 +95,15 @@ export class UrlPreviewService implements OnApplicationShutdown {
 			: `Getting preview of ${url}@${lang} ...`);
 
 		try {
+			const resoniteResource = getResoniteResource(url);
+			const resonite = resoniteResource ? await this.resoniteSummaryCache.fetchMaybe(resoniteResource.url, () => {
+				const pending = this.resoniteInFlight.get(resoniteResource.url);
+				if (pending) return pending;
+				const request = fetchResoniteSummary(resoniteResource.url, apiUrl => this.fetchResoniteJson(apiUrl))
+					.finally(() => this.resoniteInFlight.delete(resoniteResource.url));
+				this.resoniteInFlight.set(resoniteResource.url, request);
+				return request;
+			}) : null;
 			const apiKey = this.meta.xriftApiKey;
 			const resource = getXriftResource(url);
 			let xrift: XriftSummary | null | undefined;
@@ -150,7 +163,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 				return result;
 			};
 
-			const summary = deepClone(xrift ?? await this.summaryCache.fetchMaybe(`${url}@${lang ?? '_DEFAULT_'}`, fetcher));
+			const summary = deepClone(resonite ?? xrift ?? await this.summaryCache.fetchMaybe(`${url}@${lang ?? '_DEFAULT_'}`, fetcher));
 
 			if (summary == null) {
 				throw new Error('Invalid summary');
@@ -170,7 +183,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 				summary.sensitive = this.utilityService.isKeyWordIncluded(summary.url, this.meta.urlPreviewSensitiveList);
 			}
 
-			reply.header('Cache-Control', resource ? 'max-age=300' : 'max-age=86400, immutable');
+			reply.header('Cache-Control', resoniteResource ? 'max-age=60' : resource ? 'max-age=300' : 'max-age=86400, immutable');
 
 			return summary;
 		} catch (err) {
@@ -186,6 +199,18 @@ export class UrlPreviewService implements OnApplicationShutdown {
 				}),
 			};
 		}
+	}
+
+	private async fetchResoniteJson(url: string): Promise<unknown> {
+		const response = await this.httpRequestService.send(url, {
+			// Public world records include asset manifests even though we only keep metadata.
+			method: 'GET', headers: { Accept: 'application/json' }, timeout: 5000, size: 4 * 1024 * 1024, redirect: 'error',
+		}, { throwErrorWhenResponseNotOk: false });
+		if (!response.ok) {
+			await response.text().catch(() => undefined);
+			throw new StatusError('Resonite request failed', response.status);
+		}
+		return response.json();
 	}
 
 	private async fetchXriftJson(url: string, headers: Record<string, string>, keyVersion: string): Promise<unknown> {
@@ -244,6 +269,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 	public dispose(): void {
 		this.summaryCache.dispose();
 		this.xriftSummaryCache.dispose();
+		this.resoniteSummaryCache.dispose();
 	}
 
 	@bindThis
