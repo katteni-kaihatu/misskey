@@ -1,0 +1,5 @@
+[
+  { "role": "G", "name": "Multi Note GridSpace (test)", "origin": "https://multi-note-g-20261121.kokopi.me", "port": 13110, "dbPort": 15532, "redisPort": 16479 },
+  { "role": "R", "name": "Multi Note resonite.love (test)", "origin": "https://multi-note-r-20261121.kokopi.me", "port": 13111, "dbPort": 25532, "dbName": "multi_note_r", "redisPort": 26479 },
+  { "role": "E", "name": "Multi Note external Misskey (test)", "origin": "https://multi-note-e-20261121.kokopi.me", "port": 13112, "dbPort": 35532, "redisPort": 36479 }
+]

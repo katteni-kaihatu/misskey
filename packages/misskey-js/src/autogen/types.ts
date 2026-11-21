@@ -2473,6 +2473,15 @@ export type paths = {
          */
         post: operations['gridspace___content'];
     };
+    '/gridspace/delete-reply': {
+        /**
+         * gridspace/delete-reply
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:gridspace-reply*
+         */
+        post: operations['gridspace___delete-reply'];
+    };
     '/gridspace/drive': {
         /**
          * gridspace/drive
@@ -2550,6 +2559,46 @@ export type paths = {
          *     **Credential required**: *No*
          */
         post: operations['gridspace___member'];
+    };
+    '/gridspace/multi-note/channel-update': {
+        /**
+         * gridspace/multi-note/channel-update
+         * @description Updates this actor's channel following or favorite.
+         *
+         *     **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
+         *     **Credential required**: *Yes*
+         */
+        post: operations['gridspace___multi-note___channel-update'];
+    };
+    '/gridspace/multi-note/channels': {
+        /**
+         * gridspace/multi-note/channels
+         * @description Returns supported channels on the paired server.
+         *
+         *     **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
+         *     **Credential required**: *Yes*
+         */
+        post: operations['gridspace___multi-note___channels'];
+    };
+    '/gridspace/multi-note/remove': {
+        /**
+         * gridspace/multi-note/remove
+         * @description Removes one channel placement.
+         *
+         *     **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
+         *     **Credential required**: *Yes*
+         */
+        post: operations['gridspace___multi-note___remove'];
+    };
+    '/gridspace/multi-note/retry': {
+        /**
+         * gridspace/multi-note/retry
+         * @description Retries outstanding deliveries for this actor's original note.
+         *
+         *     **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.
+         *     **Credential required**: *Yes*
+         */
+        post: operations['gridspace___multi-note___retry'];
     };
     '/gridspace/note-link': {
         /**
@@ -3479,6 +3528,15 @@ export type paths = {
          *     **Credential required**: *Yes* / **Permission**: *write:notes*
          */
         post: operations['notes___create'];
+    };
+    '/notes/create-status': {
+        /**
+         * notes/create-status
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:notes*
+         */
+        post: operations['notes___create-status'];
     };
     '/notes/delete': {
         /**
@@ -4969,6 +5027,22 @@ export type components = {
             reply?: components['schemas']['Note'] | null;
             renote?: components['schemas']['Note'] | null;
             isHidden?: boolean;
+            includeDefault?: boolean;
+            /** @enum {string} */
+            multiNoteKind?: 'root' | 'conversation-reply';
+            channelPlacementsUnavailable?: boolean;
+            channelPlacements?: {
+                origin: string;
+                channelId: string;
+                canonicalUri: string;
+                name: string;
+                color: string;
+                placementId?: string;
+                canRemove?: boolean;
+                canRetry?: boolean;
+                /** @enum {string} */
+                state: 'active' | 'pending' | 'failed' | 'removed';
+            }[];
             /** @enum {string} */
             visibility: 'public' | 'home' | 'followers' | 'specified';
             mentions?: string[];
@@ -5541,6 +5615,8 @@ export type components = {
             bannerUrl: string | null;
             /** Format: id */
             bannerId: string | null;
+            hasPlacementPins?: boolean;
+            pinnedNoteUris?: string[];
             pinnedNoteIds: string[];
             color: string;
             isArchived: boolean;
@@ -6088,6 +6164,8 @@ export type components = {
         };
         MetaDetailedOnly: {
             features?: {
+                multiNote: boolean;
+                multiNotePeer: boolean;
                 registration: boolean;
                 emailRequiredForSignup: boolean;
                 localTimeline: boolean;
@@ -17261,6 +17339,7 @@ export interface operations {
                     /** Format: misskey:id */
                     bannerId?: string | null;
                     isArchived?: boolean | null;
+                    pinnedNoteUris?: string[];
                     pinnedNoteIds?: string[];
                     color?: string;
                     isSensitive?: boolean | null;
@@ -25653,6 +25732,7 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
+                    conversationUri?: string;
                     /**
                      * @default prepare
                      * @enum {string}
@@ -26176,6 +26256,83 @@ export interface operations {
             };
         };
     };
+    'gridspace___delete-reply': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    canonicalUri: string;
+                    requestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        deleted: boolean;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     gridspace___drive: {
         requestBody: {
             content: {
@@ -26539,6 +26696,7 @@ export interface operations {
                         timeline: {
                             version: number;
                             enabled: boolean;
+                            channelPlacements?: boolean;
                             kinds: string[];
                         };
                         enabled: boolean;
@@ -26887,6 +27045,335 @@ export interface operations {
             };
         };
     };
+    'gridspace___multi-note___channel-update': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    channelId: string;
+                    /** @enum {string} */
+                    action: 'follow' | 'unfollow' | 'favorite' | 'unfavorite';
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        isFollowing: boolean;
+                        isFavorited: boolean;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'gridspace___multi-note___channels': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    channelId?: string;
+                    before?: string;
+                    query?: string;
+                    /**
+                     * @default nameAndDescription
+                     * @enum {string}
+                     */
+                    queryType?: 'nameOnly' | 'nameAndDescription';
+                    /** @enum {string} */
+                    list?: 'featured' | 'following' | 'favorite' | 'favorites' | 'owned' | 'search';
+                    /** @default 12 */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        origin: string;
+                        next: string | null;
+                        channels: {
+                            id: string;
+                            name: string;
+                            description: string | null;
+                            bannerUrl: string | null;
+                            color: string;
+                            isArchived: boolean;
+                            isSensitive: boolean;
+                            isFollowing: boolean;
+                            notesCount: number;
+                            isFavorited: boolean;
+                            isOwned: boolean;
+                            usersCount: number;
+                            createdAt: string;
+                            lastNotedAt: string | null;
+                            allowRenoteToExternal: boolean;
+                        }[];
+                        enabled: boolean;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'gridspace___multi-note___remove': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    canonicalUri: string;
+                    channelOrigin: string;
+                    channelId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'gridspace___multi-note___retry': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    canonicalUri: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     'gridspace___note-link': {
         requestBody: {
             content: {
@@ -26912,6 +27399,23 @@ export interface operations {
                             cw: string | null;
                             visibility: string;
                             localOnly: boolean;
+                            channelPlacements?: {
+                                origin: string;
+                                channelId: string;
+                                canonicalUri: string;
+                                name: string;
+                                color: string;
+                                placementId?: string;
+                                canRemove?: boolean;
+                                canRetry?: boolean;
+                                /** @enum {string} */
+                                state: 'active' | 'pending' | 'failed' | 'removed';
+                            }[];
+                            channelPlacementsUnavailable?: boolean;
+                            conversationUri?: string;
+                            /** @enum {string} */
+                            multiNoteKind?: 'root' | 'conversation-reply';
+                            includeDefault?: boolean;
                             channelId?: string | null;
                             channel?: {
                                 id: string;
@@ -26981,6 +27485,8 @@ export interface operations {
                                 size: number;
                                 comment: string | null;
                                 isSensitive: boolean;
+                                url?: string;
+                                thumbnailUrl?: string | null;
                             }[];
                             poll: {
                                 choices: {
@@ -27000,6 +27506,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -27069,6 +27592,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -27307,6 +27832,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -27376,6 +27918,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -27395,6 +27939,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -27464,6 +28025,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -27487,6 +28050,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -27556,6 +28136,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -27575,6 +28157,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -27644,6 +28243,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -27956,6 +28557,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -28025,6 +28643,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -28044,6 +28664,23 @@ export interface operations {
                                         cw: string | null;
                                         visibility: string;
                                         localOnly: boolean;
+                                        channelPlacements?: {
+                                            origin: string;
+                                            channelId: string;
+                                            canonicalUri: string;
+                                            name: string;
+                                            color: string;
+                                            placementId?: string;
+                                            canRemove?: boolean;
+                                            canRetry?: boolean;
+                                            /** @enum {string} */
+                                            state: 'active' | 'pending' | 'failed' | 'removed';
+                                        }[];
+                                        channelPlacementsUnavailable?: boolean;
+                                        conversationUri?: string;
+                                        /** @enum {string} */
+                                        multiNoteKind?: 'root' | 'conversation-reply';
+                                        includeDefault?: boolean;
                                         channelId?: string | null;
                                         channel?: {
                                             id: string;
@@ -28113,6 +28750,8 @@ export interface operations {
                                             size: number;
                                             comment: string | null;
                                             isSensitive: boolean;
+                                            url?: string;
+                                            thumbnailUrl?: string | null;
                                         }[];
                                         poll: {
                                             choices: {
@@ -28136,6 +28775,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -28205,6 +28861,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -28224,6 +28882,23 @@ export interface operations {
                                         cw: string | null;
                                         visibility: string;
                                         localOnly: boolean;
+                                        channelPlacements?: {
+                                            origin: string;
+                                            channelId: string;
+                                            canonicalUri: string;
+                                            name: string;
+                                            color: string;
+                                            placementId?: string;
+                                            canRemove?: boolean;
+                                            canRetry?: boolean;
+                                            /** @enum {string} */
+                                            state: 'active' | 'pending' | 'failed' | 'removed';
+                                        }[];
+                                        channelPlacementsUnavailable?: boolean;
+                                        conversationUri?: string;
+                                        /** @enum {string} */
+                                        multiNoteKind?: 'root' | 'conversation-reply';
+                                        includeDefault?: boolean;
                                         channelId?: string | null;
                                         channel?: {
                                             id: string;
@@ -28293,6 +28968,8 @@ export interface operations {
                                             size: number;
                                             comment: string | null;
                                             isSensitive: boolean;
+                                            url?: string;
+                                            thumbnailUrl?: string | null;
                                         }[];
                                         poll: {
                                             choices: {
@@ -28559,6 +29236,7 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
+                    conversationUri?: string;
                     /**
                      * @default prepare
                      * @enum {string}
@@ -28620,6 +29298,23 @@ export interface operations {
                             cw: string | null;
                             visibility: string;
                             localOnly: boolean;
+                            channelPlacements?: {
+                                origin: string;
+                                channelId: string;
+                                canonicalUri: string;
+                                name: string;
+                                color: string;
+                                placementId?: string;
+                                canRemove?: boolean;
+                                canRetry?: boolean;
+                                /** @enum {string} */
+                                state: 'active' | 'pending' | 'failed' | 'removed';
+                            }[];
+                            channelPlacementsUnavailable?: boolean;
+                            conversationUri?: string;
+                            /** @enum {string} */
+                            multiNoteKind?: 'root' | 'conversation-reply';
+                            includeDefault?: boolean;
                             channelId?: string | null;
                             channel?: {
                                 id: string;
@@ -28689,6 +29384,8 @@ export interface operations {
                                 size: number;
                                 comment: string | null;
                                 isSensitive: boolean;
+                                url?: string;
+                                thumbnailUrl?: string | null;
                             }[];
                             poll: {
                                 choices: {
@@ -28708,6 +29405,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -28777,6 +29491,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -29067,6 +29783,7 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
+                    conversationUri?: string;
                     /**
                      * @default home
                      * @enum {string}
@@ -29119,6 +29836,23 @@ export interface operations {
                             cw: string | null;
                             visibility: string;
                             localOnly: boolean;
+                            channelPlacements?: {
+                                origin: string;
+                                channelId: string;
+                                canonicalUri: string;
+                                name: string;
+                                color: string;
+                                placementId?: string;
+                                canRemove?: boolean;
+                                canRetry?: boolean;
+                                /** @enum {string} */
+                                state: 'active' | 'pending' | 'failed' | 'removed';
+                            }[];
+                            channelPlacementsUnavailable?: boolean;
+                            conversationUri?: string;
+                            /** @enum {string} */
+                            multiNoteKind?: 'root' | 'conversation-reply';
+                            includeDefault?: boolean;
                             channelId?: string | null;
                             channel?: {
                                 id: string;
@@ -29188,6 +29922,8 @@ export interface operations {
                                 size: number;
                                 comment: string | null;
                                 isSensitive: boolean;
+                                url?: string;
+                                thumbnailUrl?: string | null;
                             }[];
                             poll: {
                                 choices: {
@@ -29207,6 +29943,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -29276,6 +30029,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -29354,6 +30109,7 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
+                    conversationUri?: string;
                     /**
                      * @default prepare
                      * @enum {string}
@@ -29509,6 +30265,7 @@ export interface operations {
         requestBody: {
             content: {
                 'multipart/form-data': {
+                    conversationUri?: string;
                     noteId?: string;
                     channelId?: string;
                     expectedActorUri?: string;
@@ -29988,6 +30745,8 @@ export interface operations {
                 'application/json': {
                     /** @enum {string} */
                     kind: 'home' | 'social' | 'profile' | 'search' | 'mentions' | 'direct' | 'channel' | 'favorites' | 'antenna' | 'clip';
+                    channelOrigin?: string;
+                    pinnedOnly?: boolean;
                     channelId?: string;
                     clipId?: string;
                     antennaId?: string;
@@ -30057,6 +30816,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -30126,6 +30902,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -30145,6 +30923,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -30214,6 +31009,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -30226,6 +31023,7 @@ export interface operations {
                                     } | null;
                                 } | null;
                             };
+                            readOnly?: boolean;
                             validForMs: number | null;
                             nextPolicyCheckAt: string | null;
                         }[];
@@ -30260,6 +31058,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -30329,6 +31144,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -30348,6 +31165,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -30417,6 +31251,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -30429,6 +31265,7 @@ export interface operations {
                                     } | null;
                                 } | null;
                             };
+                            readOnly?: boolean;
                             validForMs: number | null;
                             nextPolicyCheckAt: string | null;
                         }[];
@@ -30538,6 +31375,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -30607,6 +31461,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -30626,6 +31482,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -30695,6 +31568,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -30707,6 +31582,7 @@ export interface operations {
                                     } | null;
                                 } | null;
                             };
+                            readOnly?: boolean;
                             validForMs: number | null;
                             nextPolicyCheckAt: string | null;
                         }[];
@@ -30741,6 +31617,23 @@ export interface operations {
                                 cw: string | null;
                                 visibility: string;
                                 localOnly: boolean;
+                                channelPlacements?: {
+                                    origin: string;
+                                    channelId: string;
+                                    canonicalUri: string;
+                                    name: string;
+                                    color: string;
+                                    placementId?: string;
+                                    canRemove?: boolean;
+                                    canRetry?: boolean;
+                                    /** @enum {string} */
+                                    state: 'active' | 'pending' | 'failed' | 'removed';
+                                }[];
+                                channelPlacementsUnavailable?: boolean;
+                                conversationUri?: string;
+                                /** @enum {string} */
+                                multiNoteKind?: 'root' | 'conversation-reply';
+                                includeDefault?: boolean;
                                 channelId?: string | null;
                                 channel?: {
                                     id: string;
@@ -30810,6 +31703,8 @@ export interface operations {
                                     size: number;
                                     comment: string | null;
                                     isSensitive: boolean;
+                                    url?: string;
+                                    thumbnailUrl?: string | null;
                                 }[];
                                 poll: {
                                     choices: {
@@ -30829,6 +31724,23 @@ export interface operations {
                                     cw: string | null;
                                     visibility: string;
                                     localOnly: boolean;
+                                    channelPlacements?: {
+                                        origin: string;
+                                        channelId: string;
+                                        canonicalUri: string;
+                                        name: string;
+                                        color: string;
+                                        placementId?: string;
+                                        canRemove?: boolean;
+                                        canRetry?: boolean;
+                                        /** @enum {string} */
+                                        state: 'active' | 'pending' | 'failed' | 'removed';
+                                    }[];
+                                    channelPlacementsUnavailable?: boolean;
+                                    conversationUri?: string;
+                                    /** @enum {string} */
+                                    multiNoteKind?: 'root' | 'conversation-reply';
+                                    includeDefault?: boolean;
                                     channelId?: string | null;
                                     channel?: {
                                         id: string;
@@ -30898,6 +31810,8 @@ export interface operations {
                                         size: number;
                                         comment: string | null;
                                         isSensitive: boolean;
+                                        url?: string;
+                                        thumbnailUrl?: string | null;
                                     }[];
                                     poll: {
                                         choices: {
@@ -30910,6 +31824,7 @@ export interface operations {
                                     } | null;
                                 } | null;
                             };
+                            readOnly?: boolean;
                             validForMs: number | null;
                             nextPolicyCheckAt: string | null;
                         }[];
@@ -36443,6 +37358,14 @@ export interface operations {
                     renoteId?: string | null;
                     /** Format: misskey:id */
                     channelId?: string | null;
+                    includeDefault?: boolean;
+                    clientRequestId?: string;
+                    channelIds?: string[];
+                    channelTargets?: {
+                        origin: string;
+                        /** Format: misskey:id */
+                        channelId: string;
+                    }[];
                     text?: string | null;
                     fileIds?: string[];
                     mediaIds?: string[];
@@ -36505,6 +37428,75 @@ export interface operations {
             };
             /** @description Too many requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'notes___create-status': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    clientRequestId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        /** @enum {string} */
+                        status: 'missing' | 'created' | 'deleted';
+                        createdNote: components['schemas']['Note'] | null;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
                 headers: {
                     [name: string]: unknown;
                 };

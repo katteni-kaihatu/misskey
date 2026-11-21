@@ -6,7 +6,8 @@
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-export const sites = [
+const multiNote = process.env.GRIDSPACE_LAB_PROFILE === 'multi-note';
+export const sites = multiNote ? JSON.parse(readFileSync(new URL('./multi-note-sites.json', import.meta.url), 'utf8')) : [
 	{ role: 'G', origin: 'https://grid-space-misskey.kokopi.me', name: 'GridSpace (test)' },
 	{ role: 'R', origin: 'https://resonite-love-misskey.kokopi.me', name: 'resonite.love (test)' },
 	{ role: 'E', origin: 'https://gridspace-e-dev.kokopi.me', name: 'External Misskey (test)' },
@@ -16,9 +17,10 @@ export function loadSite(repository, index) {
 	const repo = resolve(repository);
 	const config = JSON.parse(readFileSync(resolve(repo, '.config/gridspace-lab.yml'), 'utf8'));
 	const site = sites[index];
-	if (config.url !== site.origin || config.port !== 13000 + index || config.db.host !== '127.0.0.1' || config.db.db !== 'misskey' || config.db.port !== 15432 + index * 10000) {
+	if (config.url !== site.origin || config.port !== (site.port ?? 13000 + index) || config.db.host !== '127.0.0.1' || config.db.db !== (site.dbName ?? 'misskey') || config.db.port !== (site.dbPort ?? 15432 + index * 10000)) {
 		throw new Error(`Refusing to run fixture operations outside the dedicated ${site.role} lab configuration.`);
 	}
+	if (multiNote && (config.redis.host !== '127.0.0.1' || config.redis.port !== site.redisPort)) throw new Error('Unexpected Multi Note Redis configuration.');
 	return { ...site, repo, config, accountsPath: resolve(repo, '.config/gridspace-lab-accounts.json') };
 }
 
@@ -29,7 +31,8 @@ export function savePrivateJson(path, value) {
 }
 
 export async function api(site, endpoint, params = {}, token) {
-	const response = await fetch(`${site.origin}/api/${endpoint}`, {
+	const origin = multiNote && process.env.GRIDSPACE_LAB_LOOPBACK === '1' && site.config ? `http://127.0.0.1:${site.config.port}` : site.origin;
+	const response = await fetch(`${origin}/api/${endpoint}`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ ...params, ...(token ? { i: token } : {}) }),

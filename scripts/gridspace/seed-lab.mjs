@@ -9,11 +9,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { api, loadSite, savePrivateJson, sites } from './lab.mjs';
 
-const [peerRepo, externalRepo] = process.argv.slice(2);
+const [peerRepo, externalRepo, role] = process.argv.slice(2);
 if (!peerRepo || !externalRepo) throw new Error('Usage: node scripts/gridspace/seed-lab.mjs <resonite-repository> <external-repository>');
+if (role && !sites.some(site => site.role === role)) throw new Error('Choose G, R or E as the fixture role.');
 const labs = [fileURLToPath(new URL('../../', import.meta.url)), peerRepo, externalRepo].map(loadSite);
 
 for (const site of labs) {
+	if (role && site.role !== role) continue;
 	const state = existsSync(site.accountsPath) ? JSON.parse(readFileSync(site.accountsPath, 'utf8')) : { origin: site.origin, accounts: {} };
 	assert.equal(state.origin, site.origin);
 	for (const name of ['admin', 'author', 'reader', 'locked']) {

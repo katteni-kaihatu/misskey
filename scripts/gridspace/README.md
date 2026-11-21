@@ -8,6 +8,41 @@
 | R: れぞらぶ | `https://resonite-love-misskey.kokopi.me` | 13001 |
 | E: 通常の外部サーバー | `https://gridspace-e-dev.kokopi.me` | 13002 |
 
+### Multi Note の独立した試験環境
+
+G と R には両フォークの開発用 worktree、E には Multi Note を実装していない Misskey の worktree を用意する。次のコマンドは G のルートで実行する。各 worktree の `.node-version` と `package.json` で指定した Node と pnpm を使い、それぞれで `pnpm install --frozen-lockfile` を実行しておく。
+
+```powershell
+$repoR = (Resolve-Path ../path-to-R).Path
+$repoE = (Resolve-Path ../path-to-E).Path
+node scripts/gridspace/multi-note-lab.mjs setup $repoR $repoE
+docker compose --env-file .config/multi-note-compose.env -f .config/multi-note-compose.json up -d --wait
+```
+
+`setup` は初回だけ実行する。3台の公開 URL、HTTP・DB・Redis のポートは `multi-note-sites.json` に記載している。生成した Compose ファイルのプロジェクト名は `gridspace-multi-note`。各サイトに専用の DB と Redis を用意し、DB パスワードは個別に生成する。G と R だけが連携用の鍵を共有する。
+
+各 worktree で `run-lab.ps1` の `build`、`migrate`、`start` を順に実行する。E では G 側のスクリプトに `-Repository $repoE` を渡す。長時間動く `start` はサイトごとにターミナルを分ける。
+
+```powershell
+./scripts/gridspace/run-lab.ps1 -Repository $repoR -Action build
+./scripts/gridspace/run-lab.ps1 -Repository $repoR -Action migrate
+./scripts/gridspace/run-lab.ps1 -Repository $repoR -Action start
+```
+
+3台の起動後、公開前に G で `node scripts/gridspace/multi-note-lab.mjs seed` を実行する。ローカル接続で各サイトの管理者とテスト利用者を作成し、一般登録を停止して、連合先を他の2台に限定する。続いて次の3つを別のターミナルで実行する。各トンネルは接続前にサイトの URL、登録・連合設定と、登録済みの SSH ホスト鍵を確認する。
+
+```powershell
+node scripts/gridspace/multi-note-lab.mjs tunnel G
+node scripts/gridspace/multi-note-lab.mjs tunnel R
+node scripts/gridspace/multi-note-lab.mjs tunnel E
+```
+
+ブラウザから `https://multi-note-g-20261121.kokopi.me`、`https://multi-note-r-20261121.kokopi.me`、`https://multi-note-e-20261121.kokopi.me` を開く。終了時は各トンネルとアプリのターミナルで Ctrl-C を押し、G で `docker compose --env-file .config/multi-note-compose.env -f .config/multi-note-compose.json stop` を実行する。次回は同じ Compose ファイルと既存の設定を使って再開できる。
+
+両サイトの最新コードでビルドと migration を終え、3台を起動した後、G で `node scripts/gridspace/test-multi-note.mjs` を実行する。両方向の掲載、再送、返信・反応・投票・添付・通知、外部連合、削除・退会を実際の HTTP で確認する。テスト用アカウントと結果は Git 管理外の `.config/multi-note-acceptance.json` と `.config/multi-note-acceptance-results.json` に保存する。検証範囲と既存の型検査エラーは [検証記録](../../plans/multi-note-validation.md) を参照する。
+
+公開センシティブチャンネルへの掲載は `node scripts/gridspace/test-multi-note-sensitive.mjs` で確認する。両方向の候補・作成・一覧・ピン、投稿者のCW保持と未指定時の非強制、返信・反応・投票、プロフィールの表示条件、ブロック・アーカイブ・削除を検証する。専用アカウントと結果は Git 管理外の `.config/multi-note-sensitive-fixtures.json` と `.config/multi-note-sensitive-results.json` に保存する。
+
 ## 現在の実装範囲
 
 実装済みなのは、明示的に有効化する peer API と署名つきの互換性確認である。`POST /gridspace/v1/handshake` は送信元、宛先、コミュニティ、キー ID、時刻、nonce、メソッド、パス、送信された本文のバイト列を検証する。nonce は Redis で一度だけ受け付ける。Redis が利用できない場合は処理しない。

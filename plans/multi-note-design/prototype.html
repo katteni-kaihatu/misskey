@@ -1,0 +1,1109 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!DOCTYPE html>
+<html lang="ja" data-color-scheme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複数チャンネル掲載 UI 試作（段階1・デザイン検証用、本番送信なし）</title>
+<style>
+	:root {
+		--MI_THEME-accent: #86b300;
+		--MI_THEME-fg: #1b1b1b;
+		--MI_THEME-fgOnAccent: #ffffff;
+		--MI_THEME-divider: rgba(0,0,0,0.1);
+		--MI_THEME-warn: #d59900;
+		--MI_THEME-buttonGradateA: #86b300;
+		--MI_THEME-buttonGradateB: #8acf00;
+		--panel-bg: #ffffff;
+		--page-bg: #eef0f2;
+		--muted: #6b7280;
+		--danger: #d9342b;
+		--chip-bg: rgba(0,0,0,0.08);
+		--disabled-bg: rgba(0,0,0,0.04);
+	}
+	html[data-color-scheme="dark"] {
+		--MI_THEME-fg: #e8e8e8;
+		--MI_THEME-divider: rgba(255,255,255,0.14);
+		--panel-bg: #212226;
+		--page-bg: #17181b;
+		--muted: #9aa0a6;
+		--chip-bg: rgba(255,255,255,0.12);
+		--disabled-bg: rgba(255,255,255,0.05);
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		font-family: "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+		background: var(--page-bg);
+		color: var(--MI_THEME-fg);
+	}
+	.toolbar {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		flex-wrap: wrap;
+		padding: 12px 16px;
+		background: var(--panel-bg);
+		border-bottom: 1px solid var(--MI_THEME-divider);
+		position: sticky;
+		top: 0;
+		z-index: 50;
+	}
+	.toolbar h1 {
+		font-size: 14px;
+		margin: 0 12px 0 0;
+		font-weight: bold;
+		color: var(--muted);
+	}
+	.toolbar button {
+		font-size: 12px;
+		padding: 6px 10px;
+		border-radius: 6px;
+		border: 1px solid var(--MI_THEME-divider);
+		background: var(--panel-bg);
+		color: var(--MI_THEME-fg);
+		cursor: pointer;
+	}
+	.toolbar button.active {
+		background: var(--MI_THEME-accent);
+		color: var(--MI_THEME-fgOnAccent);
+		border-color: var(--MI_THEME-accent);
+	}
+	.stage {
+		display: flex;
+		justify-content: center;
+		padding: 32px 16px;
+	}
+	.viewport {
+		width: 560px;
+		max-width: 100%;
+		transition: width .2s ease;
+	}
+	.viewport.narrow { width: 360px; }
+
+	/* ---- post form ---- */
+	.postform {
+		background: var(--panel-bg);
+		border-radius: 12px;
+		border: 1px solid var(--MI_THEME-divider);
+		overflow: hidden;
+		container-type: inline-size;
+	}
+	.pf-header {
+		display: flex;
+		align-items: center;
+		min-height: 50px;
+		gap: 4px;
+		padding: 0 8px;
+	}
+	.pf-header-left {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex: 1;
+		min-width: 0;
+		padding-left: 8px;
+	}
+	.pf-avatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 100%;
+		background: linear-gradient(135deg, #86b300, #4a7a00);
+		flex-shrink: 0;
+	}
+	.pf-header-right {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.pf-btn {
+		border: none;
+		background: transparent;
+		color: var(--MI_THEME-fg);
+		padding: 8px;
+		border-radius: 6px;
+		font-size: 13px;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		white-space: nowrap;
+	}
+	.pf-btn:hover { background: var(--disabled-bg); }
+	.pf-btn:disabled { opacity: .5; cursor: not-allowed; }
+	.pf-submit {
+		margin: 8px 8px 8px 4px;
+		padding: 0 16px;
+		line-height: 34px;
+		font-weight: bold;
+		border-radius: 6px;
+		border: none;
+		min-width: 84px;
+		color: var(--MI_THEME-fgOnAccent);
+		background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
+		cursor: pointer;
+	}
+	.pf-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+	/* ---- destination row ---- */
+	.dest-row {
+		padding: 8px 20px 0 20px;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex-wrap: wrap;
+	}
+	.dest-label {
+		font-size: 12px;
+		color: var(--muted);
+		flex-shrink: 0;
+	}
+	/* 「通常の投稿」は固定のチェック項目（×ではなくON/OFFトグル）。チャンネルチップとは見た目を区別する */
+	.dest-default-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		border: 1px solid var(--MI_THEME-divider);
+		background: transparent;
+		color: var(--muted);
+		border-radius: 999px;
+		font-size: 12.5px;
+		padding: 5px 12px 5px 8px;
+		cursor: pointer;
+		min-height: 30px;
+	}
+	.dest-default-toggle.on {
+		border-color: var(--MI_THEME-accent);
+		color: var(--MI_THEME-fg);
+		background: rgba(134,179,0,0.12);
+	}
+	.dest-default-toggle .mark {
+		width: 16px;
+		height: 16px;
+		border-radius: 4px;
+		border: 2px solid var(--muted);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		line-height: 1;
+		color: var(--MI_THEME-fgOnAccent);
+		flex-shrink: 0;
+	}
+	.dest-default-toggle.on .mark {
+		background: var(--MI_THEME-accent);
+		border-color: var(--MI_THEME-accent);
+	}
+	.dest-default-toggle:disabled { opacity: .55; cursor: not-allowed; }
+	.dest-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0;
+		background: var(--chip-bg);
+		border-radius: 999px;
+		padding: 5px 2px 5px 12px;
+		font-size: 12.5px;
+	}
+	.dest-chip .origin {
+		font-size: 10px;
+		color: var(--muted);
+		margin-right: 2px;
+	}
+	/* タップ領域は44x44pxを確保し、見た目は小さい丸のままにする（デスクトップ/モバイル共通、×は常時表示） */
+	.dest-chip .dest-remove {
+		border: none;
+		background: transparent;
+		color: inherit;
+		cursor: pointer;
+		padding: 0;
+		width: 44px;
+		height: 44px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin: -8px -8px -8px 0;
+	}
+	.dest-chip .dest-remove:disabled { cursor: not-allowed; opacity: .5; }
+	.dest-chip .dest-remove .glyph {
+		width: 20px;
+		height: 20px;
+		border-radius: 100%;
+		background: rgba(0,0,0,0.14);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		line-height: 1;
+		pointer-events: none;
+	}
+	.dest-chip .dest-remove:focus-visible {
+		outline: 2px solid var(--MI_THEME-accent);
+		outline-offset: 2px;
+	}
+	.dest-add-btn {
+		border: 1px solid var(--MI_THEME-divider);
+		background: transparent;
+		color: var(--MI_THEME-fg);
+		border-radius: 999px;
+		font-size: 12.5px;
+		padding: 6px 12px;
+		cursor: pointer;
+	}
+	.dest-status {
+		padding: 4px 20px 10px 20px;
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.dest-status.warn { color: var(--MI_THEME-warn); }
+	.dest-conflict {
+		margin: 0 20px 12px 20px;
+		padding: 8px 12px;
+		border-radius: 8px;
+		background: rgba(217,52,43,0.1);
+		color: var(--danger);
+		font-size: 12.5px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.dest-conflict button {
+		border: none;
+		background: var(--danger);
+		color: #fff;
+		padding: 6px 10px;
+		border-radius: 6px;
+		font-size: 12px;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.pf-targetnote, .pf-info {
+		margin: 0 20px 12px 20px;
+		padding: 8px 12px;
+		border-radius: 8px;
+		background: var(--disabled-bg);
+		font-size: 12.5px;
+	}
+	.pf-info.danger { background: rgba(217,52,43,0.1); color: var(--danger); }
+	.pf-info.success { background: rgba(134,179,0,0.12); color: #4a7a00; }
+	html[data-color-scheme="dark"] .pf-info.success { color: #b6e35a; }
+	/* 投稿詳細への試作用リンク（href="#" + preventDefault、実際の送信・遷移はしない） */
+	.note-detail-link {
+		display: inline-block;
+		margin-top: 6px;
+		color: inherit;
+		font-weight: bold;
+		text-decoration: underline;
+	}
+	.pf-visibility.fed-off { opacity: .85; }
+
+	.pf-cw {
+		display: block;
+		width: 100%;
+		border: none;
+		background: transparent;
+		color: var(--MI_THEME-fg);
+		padding: 0 20px 8px 20px;
+		font-size: 14px;
+		border-bottom: .5px solid var(--MI_THEME-divider);
+	}
+	.pf-cw:focus-visible { outline: 2px solid var(--MI_THEME-accent); outline-offset: -2px; }
+	.pf-text {
+		display: block;
+		width: 100%;
+		min-height: 90px;
+		border: none;
+		background: transparent;
+		color: var(--MI_THEME-fg);
+		padding: 10px 20px;
+		font-size: 15px;
+		font-family: inherit;
+		resize: vertical;
+	}
+	.pf-text:focus-visible { outline: 2px solid var(--MI_THEME-accent); outline-offset: -2px; }
+	.pf-text:disabled { opacity: .5; }
+
+	.pf-footer {
+		display: flex;
+		gap: 2px;
+		padding: 4px 12px 12px 12px;
+	}
+	.pf-footer button {
+		border: none;
+		background: transparent;
+		color: var(--muted);
+		width: 36px;
+		height: 36px;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 15px;
+	}
+	.pf-footer button:hover { background: var(--disabled-bg); }
+
+	@container (max-width: 420px) {
+		.pf-header-right .label-text { display: none; }
+		.dest-row, .dest-status { padding-left: 14px; padding-right: 14px; }
+		.pf-cw, .pf-text { padding-left: 14px; padding-right: 14px; }
+	}
+
+	/* ---- sheet / dialog ---- */
+	.overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.45);
+		display: none;
+		align-items: center;
+		justify-content: center;
+		z-index: 100;
+	}
+	.overlay.open { display: flex; }
+	.sheet {
+		background: var(--panel-bg);
+		width: 420px;
+		max-width: calc(100vw - 24px);
+		max-height: 80vh;
+		border-radius: 14px;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.viewport.narrow ~ .overlay .sheet,
+	body.force-mobile-sheet .sheet {
+		width: 100%;
+		max-width: 100%;
+		border-radius: 16px 16px 0 0;
+		align-self: flex-end;
+		max-height: 86vh;
+	}
+	body.force-mobile-sheet .overlay { align-items: flex-end; justify-content: stretch; }
+	.sheet-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 16px;
+		border-bottom: 1px solid var(--MI_THEME-divider);
+		font-weight: bold;
+		font-size: 14px;
+	}
+	.sheet-header button {
+		border: none;
+		background: transparent;
+		font-size: 16px;
+		cursor: pointer;
+		color: var(--muted);
+	}
+	/* 「通常の投稿」はシート最上部に常設の固定行として置く。チャンネル候補リストとは区切り線で分ける */
+	.sheet-default-row {
+		padding: 10px 16px;
+		border-bottom: 1px solid var(--MI_THEME-divider);
+		flex-shrink: 0;
+	}
+	.sheet-search {
+		padding: 12px 16px;
+	}
+	.sheet-search input {
+		width: 100%;
+		padding: 9px 12px;
+		border-radius: 8px;
+		border: 1px solid var(--MI_THEME-divider);
+		background: var(--disabled-bg);
+		color: var(--MI_THEME-fg);
+		font-size: 14px;
+	}
+	.sheet-search input:focus { outline: 2px solid var(--MI_THEME-accent); outline-offset: 1px; }
+	.sheet-body {
+		overflow-y: auto;
+		flex: 1;
+		padding-bottom: 8px;
+	}
+	.sheet-section-title {
+		font-size: 11.5px;
+		font-weight: bold;
+		color: var(--muted);
+		padding: 10px 16px 4px 16px;
+	}
+	.sheet-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 9px 16px;
+		cursor: pointer;
+		width: 100%;
+		background: transparent;
+		border: none;
+		text-align: left;
+		color: var(--MI_THEME-fg);
+	}
+	.sheet-row:hover:not(.disabled) { background: var(--disabled-bg); }
+	.sheet-row:focus-visible { outline: 2px solid var(--MI_THEME-accent); outline-offset: -2px; }
+	.sheet-row.disabled { cursor: not-allowed; opacity: .55; }
+	/* 候補行は単一のフォーカス可能要素（role=checkbox）。button の中に別の input は置かない */
+	.row-check {
+		margin-top: 2px;
+		width: 18px;
+		height: 18px;
+		border-radius: 4px;
+		border: 2px solid var(--muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		font-size: 12px;
+		line-height: 1;
+		color: var(--MI_THEME-fgOnAccent);
+		box-sizing: border-box;
+	}
+	.row-check.checked {
+		background: var(--MI_THEME-accent);
+		border-color: var(--MI_THEME-accent);
+	}
+	.sheet-row .row-main { min-width: 0; flex: 1; }
+	.sheet-row .row-title { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
+	.sheet-row .row-origin {
+		font-size: 10px;
+		padding: 1px 6px;
+		border-radius: 4px;
+		background: var(--chip-bg);
+		color: var(--muted);
+		flex-shrink: 0;
+	}
+	.sheet-row .row-desc { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+	.sheet-row .row-reason { font-size: 11.5px; color: var(--MI_THEME-warn); margin-top: 2px; }
+	.sheet-row.remote .row-reason { color: var(--muted); }
+	.sheet-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 16px;
+		border-top: 1px solid var(--MI_THEME-divider);
+		font-size: 12.5px;
+	}
+	.sheet-footer .count { color: var(--muted); }
+	.sheet-footer button {
+		border: none;
+		background: var(--MI_THEME-accent);
+		color: var(--MI_THEME-fgOnAccent);
+		padding: 8px 16px;
+		border-radius: 8px;
+		font-weight: bold;
+		font-size: 13px;
+		cursor: pointer;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px; height: 1px;
+		overflow: hidden;
+		clip: rect(0,0,0,0);
+		white-space: nowrap;
+	}
+
+	.note {
+		margin-top: 16px;
+		font-size: 11.5px;
+		color: var(--muted);
+		text-align: center;
+	}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+	<h1>デザイン試作 / 「通常の投稿」＋複数チャンネル掲載（段階1）</h1>
+	<button id="btn-desktop" class="active" onclick="setViewport(false)">デスクトップ幅</button>
+	<button id="btn-mobile" onclick="setViewport(true)">狭い画面</button>
+	<button id="btn-theme" onclick="toggleTheme()">ライト/ダーク切替</button>
+	<button onclick="toggleFederation()" id="btn-fed">連合: ON</button>
+	<button onclick="demoPermissionRevoked()">デモ: 権限失効で再選択不可に</button>
+	<button onclick="resetDemo()">リセット（新規投稿欄）</button>
+	<button onclick="resetDemo(true)">リセット（チャンネル画面から開く）</button>
+</div>
+
+<div class="stage">
+<div class="viewport" id="viewport">
+
+	<div class="postform" id="postform">
+		<div class="pf-header">
+			<div class="pf-header-left">
+				<div class="pf-avatar" aria-hidden="true"></div>
+			</div>
+			<div class="pf-header-right">
+				<!-- 公開範囲ボタンは投稿先の組み合わせに関わらず常に表示・操作可能（チャンネル選択有無で非表示にはしない） -->
+				<button class="pf-btn pf-visibility" id="visibility-btn" onclick="cycleVisibility()">
+					<span aria-hidden="true" id="visibility-icon">🌐</span><span class="label-text" id="visibility-label">パブリック</span>
+				</button>
+				<button class="pf-btn" aria-label="連合しない設定（未使用）">
+					<span aria-hidden="true">🚀</span>
+				</button>
+				<button class="pf-btn" aria-label="その他の設定">⋯</button>
+				<button class="pf-submit" id="submit-btn" aria-label="投稿する" onclick="submitPost()">投稿</button>
+			</div>
+		</div>
+
+		<div class="dest-row" id="dest-row" aria-live="off">
+			<!-- JS が内容を描画 -->
+		</div>
+		<div class="dest-status" id="dest-status" aria-live="polite"></div>
+		<div id="conflict-area"></div>
+
+		<div id="result-area"></div>
+
+		<textarea class="pf-cw" id="cw-input" placeholder="注釈（CW）" style="display:none;" aria-label="注釈（CW）"></textarea>
+		<textarea class="pf-text" id="text-input" placeholder="いまどうしてる？" aria-label="本文" data-testid="post-form-text"></textarea>
+
+		<div class="pf-footer">
+			<button aria-label="添付" title="添付">📎</button>
+			<button aria-label="アンケート" title="アンケート">📊</button>
+			<button aria-label="CW" title="CW" onclick="toggleCw()">👁</button>
+			<button aria-label="ハッシュタグ" title="ハッシュタグ">#</button>
+			<button aria-label="絵文字" title="絵文字">🙂</button>
+		</div>
+	</div>
+
+	<p class="note">これはデザイン試作です。実際には投稿・送信されません。</p>
+</div>
+</div>
+
+<!-- 投稿先シート -->
+<div class="overlay" id="sheet-overlay" role="presentation" onclick="if(event.target===this) closeSheet()">
+	<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+		<div class="sheet-header">
+			<span id="sheet-title">投稿先を選ぶ</span>
+			<button aria-label="閉じる" onclick="closeSheet()">✕</button>
+		</div>
+		<!-- 「通常の投稿」は最上部に固定で常設する。チャンネル候補とは区切り線で分離する -->
+		<div class="sheet-default-row" id="sheet-default-row"></div>
+		<div class="sheet-search">
+			<label class="sr-only" for="sheet-search-input">チャンネルを検索</label>
+			<input type="text" id="sheet-search-input" placeholder="チャンネルを検索" oninput="renderSheet()">
+		</div>
+		<div class="sheet-body" id="sheet-body"></div>
+		<div class="sheet-footer">
+			<span class="count" id="sheet-count" aria-live="polite">通常の投稿を選択中</span>
+			<button onclick="closeSheet()">投稿欄へ戻る</button>
+		</div>
+	</div>
+</div>
+
+<div id="live-region" class="sr-only" aria-live="assertive"></div>
+
+<script>
+	// ---- 試作用のダミーデータ（実装者向け: 実際には channels/my-favorites, channels/followed,
+	// channels/search, gridspace/channels のAPI応答に対応する） ----
+	// チャンネル数の固定上限は設けない（旧版の MAX_DESTINATIONS=5 は撤去済み）。
+
+	const CHANNELS = [
+		{ id: 'A', name: '#雑談ラウンジ', origin: 'local', originLabel: 'れぞらぶ', desc: 'なんでも話せる場所', section: 'favorite', selectable: true },
+		{ id: 'B', name: '#開発メモ', origin: 'local', originLabel: 'れぞらぶ', desc: '進行中の開発の共有', section: 'favorite', selectable: true },
+		{ id: 'D', name: '#イラスト部屋', origin: 'local', originLabel: 'れぞらぶ', desc: '作品の投稿と感想', section: 'followed', selectable: true },
+		{ id: 'E', name: '#朝の挨拶', origin: 'local', originLabel: 'れぞらぶ', desc: '毎朝の一言', section: 'recent', selectable: true },
+		{ id: 'H', name: '#ゲーム実況', origin: 'local', originLabel: 'れぞらぶ', desc: '候補が多い場合の検索確認用', section: 'recent', selectable: true },
+		{ id: 'I', name: '#読書部屋', origin: 'local', originLabel: 'れぞらぶ', desc: '候補が多い場合の検索確認用', section: 'followed', selectable: true },
+		{ id: 'F', name: '#旧イベント告知', origin: 'local', originLabel: 'れぞらぶ', desc: '終了した告知用チャンネル', section: 'favorite', selectable: false, reason: 'アーカイブされたチャンネルには掲載できません。' },
+		{ id: 'G', name: '#限定サークル', origin: 'local', originLabel: 'れぞらぶ', desc: '承認制のチャンネル', section: 'followed', selectable: false, reason: 'このチャンネルへの投稿権限がありません。' },
+		{ id: 'C', name: '#ぐりすぺ広場', origin: 'remote', originLabel: 'ぐりすぺ', desc: '連携先のチャンネル（将来像）', section: 'search', selectable: false, remote: true, reason: '連携先への掲載は準備中です。' },
+	];
+
+	const VISIBILITIES = [
+		{ key: 'public', icon: '🌐', label: 'パブリック' },
+		{ key: 'home', icon: '🏠', label: 'ホーム' },
+		{ key: 'followers', icon: '🔒', label: 'フォロワー' },
+		{ key: 'specified', icon: '✉️', label: '指定' },
+	];
+
+	let includeDefault = true; // 「通常の投稿」ON/OFF
+	let selected = []; // チャンネルIDの配列
+	let visibility = 'public';
+	let federationEnabled = true; // 既存の連合ON/OFF設定（通常の投稿に適用される想定）
+	let permissionRevokedIds = [];
+	let postState = 'idle'; // idle | posting | success | failed
+
+	function findChannel(id) {
+		return CHANNELS.find(c => c.id === id);
+	}
+
+	function isSelectable(ch) {
+		if (permissionRevokedIds.includes(ch.id)) return false;
+		return ch.selectable;
+	}
+
+	function effectiveReason(ch) {
+		if (permissionRevokedIds.includes(ch.id)) return 'このチャンネルへの投稿権限が失効しました。再度選択できません。';
+		return ch.reason;
+	}
+
+	// 投稿先が0件(通常の投稿OFF かつ チャンネル0件)になる操作は許可しない
+	function wouldBeEmptyWithoutDefault() {
+		return selected.length === 0;
+	}
+	function wouldBeEmptyWithoutChannel(id) {
+		return !includeDefault && selected.length === 1 && selected.includes(id);
+	}
+
+	function toggleDefault() {
+		if (postState === 'posting') return;
+		if (includeDefault && wouldBeEmptyWithoutDefault()) {
+			announce('投稿先が必要です。通常の投稿かチャンネルを少なくとも1つ選んでください。');
+			return;
+		}
+		includeDefault = !includeDefault;
+	}
+
+	function toggleSelect(id) {
+		const ch = findChannel(id);
+		if (selected.includes(id)) {
+			if (wouldBeEmptyWithoutChannel(id)) {
+				announce('投稿先が必要です。通常の投稿かチャンネルを少なくとも1つ選んでください。');
+				return;
+			}
+			selected = selected.filter(x => x !== id);
+			return;
+		}
+		if (!isSelectable(ch)) return;
+		selected.push(id);
+	}
+
+	function cycleVisibility() {
+		if (postState === 'posting') return;
+		const idx = VISIBILITIES.findIndex(v => v.key === visibility);
+		visibility = VISIBILITIES[(idx + 1) % VISIBILITIES.length].key;
+		renderAll();
+		announce(`公開範囲を${VISIBILITIES.find(v => v.key === visibility).label}に変更しました。`);
+	}
+
+	function setVisibilityPublic() {
+		visibility = 'public';
+		renderAll();
+		announce('公開範囲をパブリックに変更しました。');
+	}
+
+	function toggleFederation() {
+		federationEnabled = !federationEnabled;
+		document.getElementById('btn-fed').textContent = `連合: ${federationEnabled ? 'ON' : 'OFF'}`;
+		renderAll();
+	}
+
+	function hasChannelSelection() {
+		return selected.length > 0;
+	}
+
+	function visibilityConflict() {
+		return hasChannelSelection() && visibility !== 'public';
+	}
+
+	function canSubmit() {
+		if (postState === 'posting') return false;
+		if (!includeDefault && selected.length === 0) return false; // 投稿先0件
+		if (visibilityConflict()) return false;
+		return true;
+	}
+
+	// ---- 投稿先行の描画 ----
+	function renderDestRow() {
+		const row = document.getElementById('dest-row');
+		const status = document.getElementById('dest-status');
+		row.innerHTML = '';
+
+		const label = document.createElement('span');
+		label.className = 'dest-label';
+		label.textContent = '投稿先';
+		row.appendChild(label);
+
+		const defaultToggle = document.createElement('button');
+		defaultToggle.type = 'button';
+		defaultToggle.className = 'dest-default-toggle' + (includeDefault ? ' on' : '');
+		defaultToggle.innerHTML = `<span class="mark" aria-hidden="true">${includeDefault ? '✓' : ''}</span><span>通常の投稿</span>`;
+		defaultToggle.setAttribute('role', 'checkbox');
+		defaultToggle.setAttribute('aria-checked', String(includeDefault));
+		defaultToggle.disabled = postState === 'posting';
+		if (includeDefault && wouldBeEmptyWithoutDefault()) {
+			defaultToggle.setAttribute('aria-label', '通常の投稿（投稿先が必要なため解除できません）');
+		} else {
+			defaultToggle.setAttribute('aria-label', '通常の投稿');
+		}
+		defaultToggle.onclick = () => { toggleDefault(); renderAll(); };
+		row.appendChild(defaultToggle);
+
+		for (const id of selected) {
+			const ch = findChannel(id);
+			const chip = document.createElement('span');
+			chip.className = 'dest-chip';
+			chip.innerHTML = `<span>${ch.name}</span><span class="origin">${ch.originLabel}</span>`;
+			const removeBtn = document.createElement('button');
+			removeBtn.type = 'button';
+			removeBtn.className = 'dest-remove';
+			const isLastOnly = wouldBeEmptyWithoutChannel(id);
+			removeBtn.disabled = postState === 'posting';
+			removeBtn.setAttribute('aria-label', isLastOnly
+				? `${ch.name}（${ch.originLabel}）は唯一の投稿先のため外せません`
+				: `${ch.name}（${ch.originLabel}）への掲載をやめる`);
+			removeBtn.innerHTML = '<span class="glyph" aria-hidden="true">×</span>';
+			removeBtn.onclick = () => {
+				if (isLastOnly) {
+					announce('投稿先が必要です。通常の投稿かチャンネルを少なくとも1つ選んでください。');
+					return;
+				}
+				toggleSelect(id);
+				renderAll();
+				announce(`${ch.name} を投稿先から外しました。`);
+			};
+			chip.appendChild(removeBtn);
+			row.appendChild(chip);
+		}
+
+		const addBtn = document.createElement('button');
+		addBtn.className = 'dest-add-btn';
+		addBtn.textContent = selected.length > 0 ? 'チャンネルを変更' : 'チャンネルを追加';
+		addBtn.setAttribute('aria-haspopup', 'dialog');
+		addBtn.setAttribute('aria-label', selected.length > 0 ? `チャンネルを変更（現在${selected.length}件選択中）` : 'チャンネルを追加');
+		addBtn.disabled = postState === 'posting';
+		addBtn.onclick = openSheet;
+		row.appendChild(addBtn);
+
+		status.textContent = buildStatusText();
+		status.classList.remove('warn');
+	}
+
+	function buildStatusText() {
+		const n = selected.length;
+		if (includeDefault && n === 0) {
+			return ''; // 既定状態（通常の投稿のみ）は新規の状態文を出さない
+		}
+		if (includeDefault && n > 0) {
+			return `通常の投稿と${n}件のチャンネルに掲載します。通常の投稿は${federationEnabled ? '連合します' : '連合しません'}。チャンネル掲載はローカルのみです。`;
+		}
+		// チャンネルのみ（既存互換で localOnly=true）
+		return `${n}件のチャンネルに掲載します。連合はしません。`;
+	}
+
+	function renderConflict() {
+		const area = document.getElementById('conflict-area');
+		area.innerHTML = '';
+		if (!visibilityConflict()) return;
+		const box = document.createElement('div');
+		box.className = 'dest-conflict';
+		box.setAttribute('role', 'alert');
+		box.innerHTML = `<span>公開範囲をパブリックに切り替えてください。チャンネルへの掲載にはパブリックが必要です。</span>`;
+		const btn = document.createElement('button');
+		btn.textContent = 'パブリックに切り替える';
+		btn.onclick = () => { setVisibilityPublic(); };
+		box.appendChild(btn);
+		area.appendChild(box);
+	}
+
+	function renderVisibilityButton() {
+		const icon = document.getElementById('visibility-icon');
+		const label = document.getElementById('visibility-label');
+		const v = VISIBILITIES.find(x => x.key === visibility);
+		icon.textContent = v.icon;
+		label.textContent = v.label;
+		document.getElementById('visibility-btn').setAttribute('aria-label', `公開範囲: ${v.label}（タップで切替）`);
+	}
+
+	// ---- 投稿先シート ----
+	let sheetOpener = null;
+
+	function openSheet() {
+		if (postState === 'posting') return;
+		sheetOpener = this && this.focus ? this : document.activeElement;
+		document.getElementById('sheet-overlay').classList.add('open');
+		renderSheetDefaultRow();
+		renderSheet();
+		setTimeout(() => document.getElementById('sheet-search-input').focus(), 0);
+	}
+	function closeSheet() {
+		document.getElementById('sheet-overlay').classList.remove('open');
+		renderAll();
+		const opener = document.querySelector('.dest-add-btn');
+		opener?.focus();
+		sheetOpener = null;
+	}
+
+	// Escで閉じる。Tabはシート内に閉じ込める（モーダル外のDOMへフォーカスを出さない）
+	document.addEventListener('keydown', (e) => {
+		const overlay = document.getElementById('sheet-overlay');
+		if (!overlay.classList.contains('open')) return;
+
+		if (e.key === 'Escape') {
+			e.preventDefault();
+			closeSheet();
+			return;
+		}
+
+		if (e.key === 'Tab') {
+			const focusable = Array.from(overlay.querySelectorAll('button, input, [tabindex]'))
+				.filter(el => !el.disabled && el.offsetParent !== null);
+			if (focusable.length === 0) return;
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (e.shiftKey && document.activeElement === first) {
+				e.preventDefault();
+				last.focus();
+			} else if (!e.shiftKey && document.activeElement === last) {
+				e.preventDefault();
+				first.focus();
+			}
+		}
+	});
+
+	const SECTION_LABEL = { favorite: 'お気に入り', followed: 'フォロー中', recent: '最近使った', search: '検索結果' };
+
+	// 「通常の投稿」の固定行。シート最上部に常設し、チャンネル候補とは区切り線で分離する。
+	function renderSheetDefaultRow() {
+		const wrap = document.getElementById('sheet-default-row');
+		wrap.innerHTML = '';
+		const disabled = wouldBeEmptyWithoutDefault();
+		const row = document.createElement('button');
+		row.type = 'button';
+		row.className = 'sheet-row';
+		row.style.padding = '2px 0';
+		row.setAttribute('role', 'checkbox');
+		row.setAttribute('aria-checked', String(includeDefault));
+		row.setAttribute('aria-label', disabled && includeDefault
+			? '通常の投稿、通常タイムラインに掲載します、投稿先が必要なため解除できません'
+			: '通常の投稿、通常タイムラインに掲載します');
+
+		const mark = document.createElement('span');
+		mark.className = 'row-check' + (includeDefault ? ' checked' : '');
+		mark.setAttribute('aria-hidden', 'true');
+		mark.textContent = includeDefault ? '✓' : '';
+
+		const main = document.createElement('div');
+		main.className = 'row-main';
+		main.innerHTML = `
+			<div class="row-title"><span>通常の投稿</span></div>
+			<div class="row-desc">通常タイムラインに掲載します。</div>
+			${disabled && includeDefault ? '<div class="row-reason">投稿先が必要です。チャンネルを選ぶまで解除できません。</div>' : ''}
+		`;
+
+		row.appendChild(mark);
+		row.appendChild(main);
+		row.onclick = () => {
+			if (disabled && includeDefault) {
+				announce('投稿先が必要です。通常の投稿かチャンネルを少なくとも1つ選んでください。');
+				return;
+			}
+			toggleDefault();
+			renderSheetDefaultRow();
+			renderSheet();
+		};
+		wrap.appendChild(row);
+	}
+
+	function renderSheet() {
+		const body = document.getElementById('sheet-body');
+		const query = document.getElementById('sheet-search-input').value.trim();
+		body.innerHTML = '';
+
+		let sections = ['favorite', 'followed', 'recent'];
+		let list = CHANNELS;
+		if (query) {
+			sections = ['search'];
+			list = CHANNELS.filter(c => c.name.includes(query) || c.desc.includes(query));
+		}
+
+		for (const section of sections) {
+			const items = query ? list : CHANNELS.filter(c => c.section === section);
+			if (items.length === 0) continue;
+			const title = document.createElement('div');
+			title.className = 'sheet-section-title';
+			title.textContent = query ? `検索結果（"${query}"）` : SECTION_LABEL[section];
+			body.appendChild(title);
+
+			for (const ch of items) {
+				body.appendChild(renderSheetRow(ch));
+			}
+		}
+
+		if (query && list.length === 0) {
+			const empty = document.createElement('div');
+			empty.className = 'sheet-section-title';
+			empty.textContent = '該当するチャンネルがありません。';
+			body.appendChild(empty);
+		}
+
+		const countEl = document.getElementById('sheet-count');
+		countEl.textContent = selected.length > 0
+			? (includeDefault ? `通常の投稿＋${selected.length}件のチャンネルを選択中` : `${selected.length}件のチャンネルを選択中`)
+			: '通常の投稿を選択中';
+	}
+
+	// 候補行は単一のフォーカス可能要素（role="checkbox" + aria-checked）として実装する。
+	// button の内側に別の input[type=checkbox] を置く入れ子構造は、無効なDOMかつ
+	// 二重操作(行クリックとチェックボックスクリックの両方が反応する)を招くため避ける。
+	// チャンネル数に上限はないため「上限到達」による選択不可は発生しない。
+	function renderSheetRow(ch) {
+		const isChecked = selected.includes(ch.id);
+		const selectable = isSelectable(ch);
+		const lastOnlyDestination = isChecked && wouldBeEmptyWithoutChannel(ch.id);
+		const disabledNow = !isChecked && !selectable;
+		const reason = effectiveReason(ch);
+		const reasonText = lastOnlyDestination ? '唯一の投稿先のため解除できません。'
+			: isChecked && !selectable ? `${reason} 選択を解除できます。`
+			: disabledNow ? reason : '';
+
+		const row = document.createElement('button');
+		row.type = 'button';
+		row.className = 'sheet-row' + (disabledNow ? ' disabled' : '') + (ch.remote ? ' remote' : '');
+		row.setAttribute('role', 'checkbox');
+		row.setAttribute('aria-checked', String(isChecked));
+		row.dataset.channelId = ch.id;
+		if (disabledNow) row.setAttribute('aria-disabled', 'true');
+		row.setAttribute('aria-label', `${ch.name}、${ch.originLabel}${reasonText ? '、' + reasonText + (disabledNow ? '、選択不可' : '') : ''}`);
+
+		const mark = document.createElement('span');
+		mark.className = 'row-check' + (isChecked ? ' checked' : '');
+		mark.setAttribute('aria-hidden', 'true');
+		mark.textContent = isChecked ? '✓' : '';
+
+		const main = document.createElement('div');
+		main.className = 'row-main';
+		main.innerHTML = `
+			<div class="row-title"><span>${ch.name}</span><span class="row-origin">${ch.originLabel}</span></div>
+			<div class="row-desc">${ch.desc}</div>
+			${reasonText ? `<div class="row-reason">${reasonText}</div>` : ''}
+		`;
+
+		row.appendChild(mark);
+		row.appendChild(main);
+
+		row.onclick = () => {
+			if (disabledNow) {
+				announce(`${ch.name} は選択できません。${reasonText}`);
+				return;
+			}
+			if (lastOnlyDestination) {
+				announce('投稿先が必要です。通常の投稿かチャンネルを少なくとも1つ選んでください。');
+				return;
+			}
+			toggleSelect(ch.id);
+			renderSheetDefaultRow();
+			renderSheet();
+			const refocus = document.querySelector(`.sheet-row[data-channel-id="${ch.id}"]`);
+			if (refocus) refocus.focus();
+		};
+
+		return row;
+	}
+
+	// ---- 送信フロー ----
+	function submitPost() {
+		if (!canSubmit()) return;
+
+		// 送信直前に投稿先の権限失効を再検査する。失効分があれば本文・選択を保持したまま送信をブロックする。
+		const revoked = selected.filter(id => permissionRevokedIds.includes(id));
+		if (revoked.length > 0) {
+			const names = revoked.map(id => findChannel(id).name).join('、');
+			const result = document.getElementById('result-area');
+			result.innerHTML = `<div class="pf-info danger">投稿先（${names}）への投稿権限が失効しているため、投稿できません。投稿先から外すか、再認可してから投稿してください。本文と選択内容は保持しています。</div>`;
+			announce(`投稿できません。投稿先の権限が失効しています: ${names}`);
+			return;
+		}
+
+		postState = 'posting';
+		renderAll();
+		announce('投稿を送信しています。');
+
+		setTimeout(() => {
+			const result = document.getElementById('result-area');
+			postState = 'success';
+			const chipsHtml = [];
+			if (includeDefault) chipsHtml.push(`<span class="dest-chip"><span>通常の投稿</span></span>`);
+			for (const id of selected) chipsHtml.push(`<span class="dest-chip"><span>${findChannel(id).name}</span></span>`);
+			const summary = includeDefault && selected.length > 0
+				? `通常の投稿と${selected.length}件のチャンネルに掲載しました。`
+				: includeDefault
+					? ''
+					: `${selected.length}件のチャンネルに掲載しました。`;
+			// 試作用のダミーリンク。href="#" + preventDefault で、実際の投稿詳細への遷移や送信は発生しない。1件だけ表示する。
+			result.innerHTML = `<div class="pf-info success">投稿しました。${summary}
+				<div><a href="#" class="note-detail-link" onclick="event.preventDefault()">投稿を見る（試作内のダミーリンク）</a></div>
+				<div style="margin-top:6px;">${chipsHtml.join(' ')}</div>
+			</div>`;
+			document.getElementById('text-input').value = '';
+			announce(`投稿が完了しました。${summary}`);
+			// 送信成功後は既定状態（通常の投稿ON・チャンネル0件）に戻す
+			includeDefault = true;
+			selected = [];
+			renderAll();
+		}, 900);
+	}
+
+	function demoPermissionRevoked() {
+		if (!selected.length) {
+			toggleSelect('A');
+			toggleSelect('B');
+		}
+		permissionRevokedIds = [...selected];
+		const names = permissionRevokedIds.map(id => findChannel(id).name).join('、');
+		const result = document.getElementById('result-area');
+		result.innerHTML = `<div class="pf-info danger">選択していた投稿先（${names}）への投稿権限が失効しました。本文と選択は保持しています。設定で再認可してください。</div>`;
+		announce(`投稿先の権限が失効しました: ${names}`);
+		renderAll();
+	}
+
+	function resetDemo(fromChannelScreen) {
+		if (fromChannelScreen) {
+			// チャンネル画面から開いた場合の既存互換入口: 「通常の投稿」はOFF、そのチャンネルのみ選択済み
+			includeDefault = false;
+			selected = ['A'];
+		} else {
+			includeDefault = true;
+			selected = [];
+		}
+		permissionRevokedIds = [];
+		visibility = 'public';
+		federationEnabled = true;
+		document.getElementById('btn-fed').textContent = '連合: ON';
+		postState = 'idle';
+		document.getElementById('result-area').innerHTML = '';
+		document.getElementById('text-input').value = '';
+		document.getElementById('cw-input').value = '';
+		document.getElementById('cw-input').style.display = 'none';
+		renderAll();
+	}
+
+	function toggleCw() {
+		const cw = document.getElementById('cw-input');
+		cw.style.display = cw.style.display === 'none' ? 'block' : 'none';
+	}
+
+	function renderAll() {
+		renderVisibilityButton();
+		renderDestRow();
+		renderConflict();
+		const submitBtn = document.getElementById('submit-btn');
+		const ok = canSubmit();
+		submitBtn.disabled = !ok;
+		submitBtn.textContent = postState === 'posting' ? '…' : '投稿';
+		submitBtn.setAttribute('aria-label', ok ? '投稿する' : '投稿する（投稿先または公開範囲の確認が必要です）');
+		document.getElementById('text-input').disabled = postState === 'posting';
+	}
+
+	function announce(msg) {
+		const live = document.getElementById('live-region');
+		live.textContent = '';
+		setTimeout(() => { live.textContent = msg; }, 30);
+	}
+
+	function setViewport(narrow) {
+		document.getElementById('viewport').classList.toggle('narrow', narrow);
+		document.body.classList.toggle('force-mobile-sheet', narrow);
+		document.getElementById('btn-desktop').classList.toggle('active', !narrow);
+		document.getElementById('btn-mobile').classList.toggle('active', narrow);
+	}
+
+	function toggleTheme() {
+		const html = document.documentElement;
+		html.dataset.colorScheme = html.dataset.colorScheme === 'dark' ? 'light' : 'dark';
+	}
+
+	renderAll();
+</script>
+</body>
+</html>
