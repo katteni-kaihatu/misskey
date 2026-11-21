@@ -43,6 +43,15 @@ Names are rendered as escaped text spans with allowlisted colors, not provider
 HTML. Dark or transparent colors are brightened for readability on the card.
 The supplied logo assets retain their original colors and proportions.
 
+Resonite thumbnails use the full image-proxy URL without `preview=1`. Images
+at least 512 pixels wide with a 2:1 aspect ratio are displayed as 360° panoramas,
+rotating once every three minutes. The corner control pauses or resumes rotation;
+dragging or the left/right arrow keys adjusts the view manually. Reduced-motion
+and Misskey animation preferences start the view paused. Rendering stops and GPU
+resources are released outside the viewport or while the page is hidden.
+Other images and browsers without WebGL retain a static thumbnail. Panorama
+textures are capped at 2048 pixels wide and rendering at 15 frames per second.
+
 References checked on 2026-11-22:
 
 - [Resonite API](https://wiki.resonite.com/API)
@@ -61,6 +70,9 @@ Backend adapter and URL service tests cover public filtering, malformed links,
 unsafe images, rich names, nested-session counts, failures, cache coalescing and
 anonymous requests. Frontend tests cover native/Web actions, full/ended states,
 privacy settings and integration through `MkUrlPreview`.
+Panorama tests cover visibility, cleanup, motion preferences, controls and static
+fallback. Browser checks also verify rotation, pause, offscreen recovery and
+small-screen controls with a real equirectangular thumbnail.
 
 `docs/screenshots/resonite-link-previews.png` uses explicit fixture data. Live
 verification was performed against public worlds and sessions without credentials.

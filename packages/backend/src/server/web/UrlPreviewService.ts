@@ -53,11 +53,11 @@ export class UrlPreviewService implements OnApplicationShutdown {
 	}
 
 	@bindThis
-	private wrap(url?: string | null): string | null {
+	private wrap(url?: string | null, preview = true): string | null {
 		return url != null
 			? `${this.config.mediaProxy}/preview.webp?${query({
 				url,
-				preview: '1',
+				preview: preview ? '1' : undefined,
 			})}`
 			: null;
 	}
@@ -172,7 +172,7 @@ export class UrlPreviewService implements OnApplicationShutdown {
 			this.logger.succ(`Got preview of ${url}: ${summary.title}`);
 
 			summary.icon = this.wrap(summary.icon);
-			summary.thumbnail = this.wrap(summary.thumbnail);
+			summary.thumbnail = this.wrap(summary.thumbnail, !resonite);
 			if (xrift && 'xrift' in summary) {
 				for (const world of (summary as XriftSummary).xrift.worlds ?? []) world.thumbnail = this.wrap(world.thumbnail);
 				const preview = (summary as XriftSummary).xrift;

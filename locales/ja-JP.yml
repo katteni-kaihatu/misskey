@@ -4086,6 +4086,10 @@ _xriftPreview:
   error: "情報を取得できませんでした"
   openDirectly: "XRiftで直接開いてください"
 
+_panorama:
+  pause: "パノラマの回転を停止"
+  resume: "パノラマの回転を再開"
+
 _resonitePreview:
   world: "ワールド"
   session: "セッション"

@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<img :class="$style.symbol" src="/client-assets/resonite/symbol.svg" alt="" aria-hidden="true"/>
 		</div>
 		<div :class="[$style.visual, { [$style.placeholder]: !imageVisible }]">
-			<img v-if="imageVisible" :src="summary?.thumbnail ?? undefined" :alt="summary?.title ?? ''" loading="lazy" @error="imageFailed = true"/>
+			<MkPanorama v-if="imageVisible" :class="$style.panorama" :src="summary!.thumbnail!" :alt="summary?.title ?? ''" @error="imageFailed = true"/>
 			<i v-if="!loading && state !== 'available'" :class="['ti', state === 'error' ? 'ti-alert-circle' : 'ti-world-off', $style.stateIcon]" aria-hidden="true"></i>
 			<span v-if="availableSession && data?.currentUsers != null" :class="$style.occupancy"><i class="ti ti-users" aria-hidden="true"></i>{{ data.maxUsers != null ? i18n.tsx._resonitePreview.participants({ current: format(data.currentUsers), max: format(data.maxUsers) }) : i18n.tsx._resonitePreview.currentParticipants({ count: format(data.currentUsers) }) }}</span>
 		</div>
@@ -55,6 +55,7 @@ import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import { getResoniteLink } from '@/utility/resonite-link.js';
 import { readableResoniteColor } from '@/utility/resonite-text.js';
+import MkPanorama from '@/components/MkPanorama.vue';
 
 const props = defineProps<{
 	url: string;
@@ -114,6 +115,7 @@ const primaryLabel = computed(() => (full.value || state.value === 'ended') && w
 .wordmark { display: block; width: 94px; height: auto; }
 .symbol { display: none; }
 .visual { position: relative; min-width: 0; min-height: 0; background: var(--resonite-dark); > img { width: 100%; height: 100%; object-fit: cover; display: block; } }
+.panorama { --panorama-fg: var(--resonite-fg); --panorama-bg: var(--resonite-dark); }
 .placeholder { background: repeating-linear-gradient(135deg, var(--resonite-dark), var(--resonite-dark) 12px, color-mix(in srgb, var(--resonite-fg) 7%, var(--resonite-dark)) 12px, color-mix(in srgb, var(--resonite-fg) 7%, var(--resonite-dark)) 13px); }
 .stateIcon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: var(--resonite-muted); }
 .occupancy { position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--resonite-border); border-radius: 999px; background: var(--resonite-dark); font-size: 12px; font-weight: bold; }
