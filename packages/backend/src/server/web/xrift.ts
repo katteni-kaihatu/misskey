@@ -135,6 +135,11 @@ export async function fetchXriftSummary(url: string, apiKey: string | null, getJ
 			if (!world) { summary.xrift.state = 'unavailable'; return summary; }
 			await fillWorld(world);
 			summary.xrift.createdAt = date(data.createdAt);
+			summary.xrift.currentUsers = count(data.currentUsers);
+			summary.xrift.maxCapacity = count(data.maxCapacity);
+			if (Array.isArray(data.participants)) {
+				summary.xrift.participantAvatars = data.participants.slice(0, 2).map(participant => xriftImageUrl(object(participant)?.userIconUrl));
+			}
 		} else {
 			const world = publicWorld(data, resource.id);
 			if (!world) { summary.xrift.state = 'unavailable'; return summary; }

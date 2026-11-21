@@ -2,6 +2,28 @@
 
 Implementation is maintained on `feat/multi-note` in both feature worktrees. The user authorized local commits on 2026-11-21. No production deployment, push or PR was performed.
 
+## Production integration — 2026-11-21
+
+Integrated the production tags `2026.11.0-grid-space.31.72` (`003b639fd4`) and `2026.11.0-resonite-love.31.71` (`bb8fdb38a3`) into the two feature branches. The production APIs still reported those versions at the final recheck. Both pre-merge feature heads remain available as backup branches. [Integration record](multi-note-production-integration.md) and [independent compatibility audit](multi-note-production-feature-audit.md) describe the seven cross-feature regressions and their fixes.
+
+- **PASS:** Full frontend suites: G **740 tests / 91 files**, R **706 / 87**. G's broader backend run passed **561 / 55**. Isolated PostgreSQL/Redis E2E passed **17 cases on each fork**, including relay opt-out, follower and relay queue separation, durable replay, canonical source normalization and a destination archive race held across insertion.
+- **PASS:** Both full SDK generation pipelines, backend source typechecks, full builds, final frontend/asset builds, changed-file lint, SPDX and locale safety. G's final shipping wrapper exceeded Windows' command-length limit for the 174 backend paths; all other packages passed in the wrapper, and the same 174 paths were linted successfully from the backend package root in batches of 40. Evidence: `.config/multi-note-production-{shipping-final,backend-lint-batches}.log`. R's wrapper passed directly. No repository-wide lint success is claimed.
+- **BASELINE:** Fresh full frontend typechecks have **63 diagnostics in each fork**, against **65** from independent frozen-lockfile reconstructions of the exact production commits. There are zero new diagnostics and two resolved diagnostics. Sixty-one messages match exactly; two existing WidgetZou visibility errors differ only in the SDK type's abbreviated field count. The final reset fix was typechecked again in both forks. Full frontend typecheck is not reported as PASS.
+- **PASS:** Four PostgreSQL archives were restored independently and their table/migration/user/note/channel counts matched. Each fork's four production migrations passed up/down/up on a disposable restore. Forward migration of the existing lab databases produced G **380** and R **379** history entries; both have **zero pending DDL**. Published migration blobs match the production tags. No migration was added by the integration fixes.
+- **PASS:** Public-host checks total **141**: `test-multi-note-production.mjs` **57**, existing acceptance **48**, sensitive channels **20**, and mirror placements with real WebSocket delivery **16**. They verify both directions, actual E follower delivery and ActivityPub audiences, persisted delivery flags, all five scoped reference actions, cross-server favorite destinations and single receipt replay, source visibility after removal/block/deletion, clips and emoji sync. Relay exclusion itself is asserted directly in the isolated queue E2E; external follower arrival alone is not used to prove relay exclusion.
+
+The four completed live result records are `.config/multi-note-production-d1e872b9e7.json`, `multi-note-acceptance-results.json` (`0a7a50434e`), `multi-note-sensitive-results.json` (`498d80c6dd`) and `multi-note-mirror-placements-results.json` (`fb19b9f2`). Each has completed=true and only passing rows. Original user source `attcxa5eys17005v` and mirror `attcxa5ey3sg006h` retain their two source placements.
+
+Browser tests used the existing disposable picker accounts and then restored `mn_ui_2111` on both origins. They verified the three delivery options, combined favorites and origin chips, G default-plus-local-plus-peer posting with relay opt-out, R channel-only posting absent from the ordinary home, canonical peer reading, N on a peer placement channel, the five renote actions and actual scoped quote submission.
+
+The final browser check exposed a reset interaction absent from the original 141 server checks: the old signed upper bound excluded a newly placed quote. The client now distinguishes a fresh reset from expired-cursor restoration, reads the current head through the old tail, and keeps off-top queueing and authorization checks. After both client rebuilds and app restarts, the open G view of an R channel received the new-note banner. Releasing it displayed the new scoped quote plus all three prior rows without page reload. The quote preview remained readable. Final client and regression-test files match across forks; server/API/migration code did not change in this last fix.
+
+Screenshots are ignored local evidence: `.config/multi-note-production-{g-delivery,r-delivery,g-post,reference-menu,live-quote}.jpg`. Final client entries are G `nXfLIZWlg-vItnXTnq.js` and R `hHdd32NwJ-DTciJ1fj.js`; public HTML and asset HTTP 200 were verified. G, R and E remain running at their existing kokopi.me URLs.
+
+The frontend type baseline above remains unresolved. The checks do not claim exhaustive testing of every production feature or deferred D1–D5 behavior. GridSpace-only XRift/URL preview tests passed separately (49 cases), while a live upstream XRift API success was not required or claimed.
+
+Changelog candidate: Integrate production changes with Multi Note, preserving delivery modes, channel references and live timeline refresh.
+
 ## Scope and review
 
 One canonical original can use the default distribution route, multiple local/peer channels, or channel routes alone. Existing public-channel viewing and Drive URL rules apply. The required/deferred boundary is [M1–M8 / D1–D5](multi-note-placement-protocol.md).

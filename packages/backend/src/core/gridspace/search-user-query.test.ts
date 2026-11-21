@@ -30,9 +30,10 @@ test('user host filtering matches the previous predicate, including wildcard and
 		}) as GridspaceSearchService;
 		const query = service.userQuery(null);
 		const [sql, params] = query.getQueryAndParameters();
-		expect(params).toEqual([blockedHosts.flatMap(host => [host, `%.${host}`])]);
+		const patterns = blockedHosts.flatMap(host => [host, `%.${host}`]);
+		expect(params).toEqual(patterns);
 		const actual = await runner.query(sql, params);
-		const old = await runner.query('SELECT id FROM search_user WHERE "isDeleted"=false AND "isSuspended"=false AND (host IS NULL OR host NOT ILIKE ALL($1::text[])) ORDER BY id DESC', params);
+		const old = await runner.query('SELECT id FROM search_user WHERE "isDeleted"=false AND "isSuspended"=false AND (host IS NULL OR host NOT ILIKE ALL($1::text[])) ORDER BY id DESC', [patterns]);
 		expect(actual.map((row: { user_id: string }) => row.user_id)).toEqual(old.map((row: { id: string }) => row.id));
 		expect(actual.map((row: { user_id: string }) => row.user_id).sort()).toEqual(['0', '1', '6']);
 	} finally { await runner.rollbackTransaction(); await runner.release(); }

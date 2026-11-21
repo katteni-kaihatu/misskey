@@ -45,6 +45,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="[$style.visual, { [$style.placeholder]: !imageVisible || state !== 'available' || loading }]">
 				<img v-if="imageVisible && state === 'available' && !loading" :src="summary?.thumbnail ?? undefined" :alt="summary?.title ?? ''" loading="lazy" @error="imageFailed = true"/>
 				<span v-if="!loading && state !== 'available'" :class="$style.visualIcon" aria-hidden="true"><i :class="['ti', state === 'error' ? 'ti-alert-circle' : type === 'user' ? 'ti-user-off' : 'ti-lock']"></i></span>
+				<div v-if="isLive && data?.currentUsers != null" :class="$style.occupancy">
+					<span v-if="!hideImages && data.currentUsers > 0 && data.participantAvatars?.length" :class="$style.participantAvatars" aria-hidden="true">
+						<span v-for="(avatar, index) in data.participantAvatars" :key="index" :class="$style.participantAvatar">
+							<img v-if="avatar" :src="avatar" alt="" loading="lazy" @error="hideFailedImage"/>
+							<i class="ti ti-user" :class="{ [$style.avatarFallback]: avatar }"></i>
+						</span>
+					</span>
+					<span>{{ data.maxCapacity != null ? i18n.tsx._xriftPreview.participants({ current: format(data.currentUsers), max: format(data.maxCapacity) }) : i18n.tsx._xriftPreview.currentParticipants({ count: format(data.currentUsers) }) }}</span>
+				</div>
 			</div>
 			<div :class="$style.body">
 				<img v-if="imageVisible && state === 'available' && !loading" :src="summary?.thumbnail ?? undefined" alt="" aria-hidden="true" :class="$style.bodyBackdrop" loading="lazy" @error="imageFailed = true"/>
@@ -205,6 +214,11 @@ function hideFailedImage(event: Event): void {
 	> img { display: block; width: 100%; height: 100%; object-fit: cover; }
 }
 .visualIcon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--xrift-muted); }
+.occupancy { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 24px); box-sizing: border-box; padding: 5px 9px; border: 1px solid var(--xrift-border); border-radius: 999px; background: var(--xrift-visual); font-size: 12px; font-weight: bold; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.participantAvatars { display: flex; align-items: center; padding-left: 5px; }
+.participantAvatar { display: grid; place-items: center; width: 22px; height: 22px; margin-left: -5px; overflow: hidden; border: 1px solid var(--xrift-visual); border-radius: 50%; background: var(--xrift-active); color: var(--xrift-visual); > img { width: 100%; height: 100%; object-fit: cover; } > img[hidden] { display: none; } }
+.avatarFallback { display: none; }
+.participantAvatar > img[hidden] + .avatarFallback { display: block; }
 .placeholder { background: repeating-linear-gradient(135deg, var(--xrift-visual), var(--xrift-visual) 12px, color-mix(in srgb, var(--xrift-fg) 8%, var(--xrift-visual)) 12px, color-mix(in srgb, var(--xrift-fg) 8%, var(--xrift-visual)) 13px); }
 .body { position: relative; isolation: isolate; min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
 .bodyBackdrop { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.16; filter: blur(3px); mask-image: linear-gradient(to right, black, transparent 95%); pointer-events: none; }
@@ -262,6 +276,7 @@ function hideFailedImage(event: Event): void {
 	.actions { padding-top: 0; }
 }
 @container (max-width: 560px) {
+	.description:not(.stateMessage) { -webkit-line-clamp: 1; }
 	.brandCorner { padding: 6px 8px; border-bottom-left-radius: 7px; }
 	.brandFull { width: 44px; }
 	.brandRow { gap: 5px; padding-right: 44px; }
@@ -269,8 +284,13 @@ function hideFailedImage(event: Event): void {
 	.card.profile { padding: 14px; gap: 10px; }
 	.avatar { width: 60px; height: 60px; }
 }
+@container (max-width: 480px) {
+	.description:not(.stateMessage) { display: none; }
+}
 @container (max-width: 420px) {
 	.card { grid-template-columns: 35% minmax(0, 1fr); font-size: 12px; }
+	.occupancy { left: 6px; bottom: 6px; gap: 3px; max-width: calc(100% - 12px); padding: 3px 6px; font-size: 10px; }
+	.participantAvatar { width: 16px; height: 16px; }
 	.body { padding: 12px; gap: 6px; }
 	.title { font-size: 1.1em; -webkit-line-clamp: 1; }
 	.brandCorner { padding: 5px; }
@@ -279,7 +299,6 @@ function hideFailedImage(event: Event): void {
 	.brandRow { padding-right: 20px; }
 	.type { padding: 2px 6px; font-size: 10px; > i { display: none; } }
 	.body .meta { font-size: 0.75em; }
-	.description:not(.stateMessage) { display: none; }
 	.button { min-height: 36px; padding: 7px 8px; }
 	.actions .button { min-height: 40px; }
 	.footer { gap: 4px; }

@@ -21,7 +21,7 @@ function fixture(overrides: Record<string, unknown> = {}) {
 		[`/worlds/${id}/instances?limit=1`]: { data: [], pagination: { total: 2 } },
 		[`/users/${ownerId}`]: { data: { id: ownerId, displayName: 'World creator', userIconUrl: 'https://assets.xrift.net/avatar.png', createdAt: '2026-01-01T00:00:00.000Z' } },
 		[`/users/${ownerId}/worlds?limit=50`]: { data: [world, { ...world, isPublic: false }], pagination: { total: 12 } },
-		[`/instances/${instanceId}`]: { data: { id: instanceId, worldId: id, createdAt: '2026-11-17T00:00:00.000Z' } },
+		[`/instances/${instanceId}`]: { data: { id: instanceId, worldId: id, currentUsers: 8, maxCapacity: 20, participants: [{ id: ownerId, userIconUrl: 'https://assets.xrift.net/avatar.png' }, { id, userIconUrl: 'https://evil.example/avatar.png' }], createdAt: '2026-11-17T00:00:00.000Z' } },
 		[`/worlds/${id}/instances?limit=50&offset=0`]: { data: [{ id: instanceId, worldId: id }], pagination: { total: 1 } },
 		...overrides,
 	};
@@ -69,7 +69,15 @@ describe('XRift URL summaries', () => {
 	});
 	test('joins an instance to its public world', async () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/instance/${instanceId}`, apiKey, fixture());
-		expect(summary).toMatchObject({ title: world.name, xrift: { type: 'instance', state: 'available', worldUrl, createdAt: '2026-11-17T00:00:00.000Z' } });
+		expect(summary).toMatchObject({ title: world.name, xrift: { type: 'instance', state: 'available', worldUrl, currentUsers: 8, maxCapacity: 20, participantAvatars: ['https://assets.xrift.net/avatar.png', null], createdAt: '2026-11-17T00:00:00.000Z' } });
+		expect(JSON.stringify(summary)).not.toContain('evil.example');
+	});
+	test('omits invalid instance counts and keeps zero participants', async () => {
+		const instance = { id: instanceId, worldId: id, currentUsers: 0, maxCapacity: -1, participants: [], createdAt: '2026-11-17T00:00:00.000Z' };
+		const summary = await fetchXriftSummary(`https://app.xrift.net/instance/${instanceId}`, apiKey, fixture({ [`/instances/${instanceId}`]: { data: instance } }));
+		expect(summary?.xrift.currentUsers).toBe(0);
+		expect(summary?.xrift.maxCapacity).toBeUndefined();
+		expect(summary?.xrift.participantAvatars).toEqual([]);
 	});
 	test('returns a profile and its public worlds', async () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/user/${ownerId}`, apiKey, fixture());
@@ -80,6 +88,7 @@ describe('XRift URL summaries', () => {
 		const summary = await fetchXriftSummary(`https://app.xrift.net/instance/${instanceId}`, apiKey, fixture({ [`/worlds/${id}/instances?limit=50&offset=0`]: { data: [], pagination: { total: 0 } } }));
 		expect(summary).toMatchObject({ title: null, thumbnail: null, xrift: { state: 'unavailable' } });
 		expect(summary?.xrift.createdAt).toBeUndefined();
+		expect(summary?.xrift.currentUsers).toBeUndefined();
 	});
 	test('returns more than three public worlds, capped at the API page size', async () => {
 		const worlds = Array.from({ length: 51 }, (_, i) => ({ ...world, id: `4b84ca2a-06cc-4351-a2df-${i.toString(16).padStart(12, '0')}`, name: `World ${i}` }));
