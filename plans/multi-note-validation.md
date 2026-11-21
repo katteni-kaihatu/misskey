@@ -2,6 +2,19 @@
 
 Implementation is maintained on `feat/multi-note` in both feature worktrees. The user authorized local commits on 2026-11-21. No production deployment, push or PR was performed.
 
+## Channel color bands — 2026-11-21
+
+Restored the left color band for Multi Note in both clients. The existing narrow bar is divided vertically into at most three distinct colors from active placements. Channel origin and ID define a stable order across originals, mirrors and delegated views. Hexadecimal case and shorthand normalize before deduplication. Pending, removed, failed, unavailable and colorless placements contribute no color. Legacy channel posts retain one color. Timeline, detailed and scoped reference cards use the shared renderer; native hidden notes do not forward their placement colors.
+
+- **PASS:** The three nearest frontend suites pass **31 cases per fork**, covering legacy rendering, native/mirror/detail/delegated/reference propagation, three-color cap, duplicate normalization, reordered API rows and placement updates/removal. Both changed-file lint/SPDX/locale checks and independent Vue review pass.
+- **BASELINE:** Full frontend typecheck remains at exactly **63 pre-existing diagnostics per fork**. Normalizing diagnostic locations produces the same complete messages as the preceding integration revision; comparison evidence is `.config/multi-note-channel-colors-types-comparison.json`. No new type diagnostic remains.
+- **PASS:** Both frontend and asset builds and task app restarts completed. Public HTML serves the final bundles G `nXfLIZWlg-DhrTidsv.js` and R `hHdd32NwJ-YDCHQ-JQ.js`. No backend/API/schema/locale input changed, so SDK generation and migrations were not needed for this change.
+- **PASS:** Four new fixture channels and seven original notes were used without changing existing posts or channels. Browser checks confirm G's timeline shows one, two and capped three-color bars; G detail, the R mirror and R guest conversation show the same red/blue/green selection for four active colors. R native legacy/two/four cases show one/two/three colors. The detailed bar stays 5px wide and its three segments have equal heights to pixel rounding. Browser accounts remained `mn_ui_2111`.
+
+Private fixtures and build/test logs are under `.config/multi-note-channel-colors-*`. Screenshots include `g-detail.jpg`, `g-timeline.jpg`, `r-mirror.jpg` and `r-guest.jpg` with that prefix. The R guest screenshot cleanly shows the three-color band. Full frontend tests were not rerun for this visual-only change; the nearest suites, full type comparison, builds and real browser surfaces were used instead.
+
+Changelog candidate: Display up to three active channel colors in the note's left band.
+
 ## Production integration — 2026-11-21
 
 Integrated the production tags `2026.11.0-grid-space.31.72` (`003b639fd4`) and `2026.11.0-resonite-love.31.71` (`bb8fdb38a3`) into the two feature branches. The production APIs still reported those versions at the final recheck. Both pre-merge feature heads remain available as backup branches. [Integration record](multi-note-production-integration.md) and [independent compatibility audit](multi-note-production-feature-audit.md) describe the seven cross-feature regressions and their fixes.
