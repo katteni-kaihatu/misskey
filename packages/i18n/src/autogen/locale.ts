@@ -15351,16 +15351,6 @@ export interface Locale extends ILocale {
          */
         "openDirectly": string;
     };
-    "_panorama": {
-        /**
-         * パノラマの回転を停止
-         */
-        "pause": string;
-        /**
-         * パノラマの回転を再開
-         */
-        "resume": string;
-    };
     "_resonitePreview": {
         /**
          * ワールド

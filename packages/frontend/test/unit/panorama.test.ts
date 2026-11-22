@@ -2,10 +2,8 @@
  * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/vue';
-import locales from 'i18n';
-import { updateI18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import MkPanorama from '@/components/MkPanorama.vue';
 
@@ -22,7 +20,6 @@ let prefersReducedMotion: boolean;
 let frames: Map<number, FrameRequestCallback>;
 let frameId: number;
 
-beforeAll(() => updateI18n(locales['ja-JP']));
 beforeEach(() => {
 	vi.clearAllMocks();
 	documentState = 'visible';
@@ -43,7 +40,7 @@ beforeEach(() => {
 	});
 	vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} });
 });
-afterEach(() => { cleanup(); prefer.s.animation = true; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); prefer.s.animation = true; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 async function load(width = 1024, height = 512) {
 	const view = render(MkPanorama, { props: { src: '/panorama.webp', alt: 'World panorama' } });
@@ -53,13 +50,28 @@ async function load(width = 1024, height = 512) {
 	return view;
 }
 
+async function readyPanorama() {
+	const view = await load();
+	intersect(true);
+	await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
+	const target = view.getByRole('group', { name: 'World panorama' });
+	let captured: number | null = null;
+	Object.defineProperties(target, {
+		setPointerCapture: { value: (id: number) => { captured = id; } },
+		hasPointerCapture: { value: (id: number) => captured === id },
+		releasePointerCapture: { value: () => { captured = null; } },
+		clientWidth: { value: 300 },
+	});
+	return { view, target };
+}
+
 describe('inline panoramas', () => {
 	test('loads the renderer only while a panorama is visible and releases it offscreen', async () => {
 		const view = await load();
 		expect(mocks.create).not.toHaveBeenCalled();
 		intersect(true);
 		await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
-		expect(view.getByRole('button', { name: 'パノラマの回転を停止' })).toBeTruthy();
+		expect(view.queryByRole('button')).toBeNull();
 		expect(frames.size).toBe(1);
 		intersect(false);
 		await waitFor(() => expect(mocks.dispose).toHaveBeenCalledTimes(1));
@@ -78,26 +90,83 @@ describe('inline panoramas', () => {
 		expect(view.queryByRole('button')).toBeNull();
 		expect(view.getByRole('img', { name: 'World panorama' })).toBeTruthy();
 	});
-	test('can pause and resume rotation without dropping the view', async () => {
-		const view = await load();
-		intersect(true);
-		await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
-		await fireEvent.click(view.getByRole('button', { name: 'パノラマの回転を停止' }));
+	test('pauses immediately while held, then resumes three seconds after release', async () => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await fireEvent.pointerDown(target, { pointerId: 1, button: 0 });
+		expect(frames.size).toBe(0);
+		await vi.advanceTimersByTimeAsync(5000);
 		expect(frames.size).toBe(0);
 		expect(mocks.dispose).not.toHaveBeenCalled();
-		await fireEvent.click(view.getByRole('button', { name: 'パノラマの回転を再開' }));
+		await fireEvent.pointerUp(target, { pointerId: 1 });
+		await vi.advanceTimersByTimeAsync(2999);
+		expect(frames.size).toBe(0);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(frames.size).toBe(1);
+	});
+	test('dragging pans manually and another press resets the resume delay', async () => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await fireEvent.pointerDown(target, { pointerId: 1, button: 0, clientX: 100 });
+		await fireEvent.pointerMove(target, { pointerId: 1, clientX: 200 });
+		expect(mocks.render).toHaveBeenLastCalledWith(-Math.PI / 6);
+		await fireEvent.pointerUp(target, { pointerId: 1 });
+		await vi.advanceTimersByTimeAsync(2000);
+		await fireEvent.pointerDown(target, { pointerId: 2, button: 0 });
+		await vi.advanceTimersByTimeAsync(4000);
+		expect(frames.size).toBe(0);
+		await fireEvent.pointerUp(target, { pointerId: 2 });
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(frames.size).toBe(1);
+	});
+	test.each(['pointercancel', 'lostpointercapture'])('%s releases the hold without leaving rotation stuck', async event => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await fireEvent.pointerDown(target, { pointerId: 1, button: 0 });
+		await fireEvent(target, new PointerEvent(event, { pointerId: 1 }));
+		await vi.advanceTimersByTimeAsync(3000);
 		expect(frames.size).toBe(1);
 	});
 	test('reduced motion starts paused and keyboard panning stays manual', async () => {
 		prefersReducedMotion = true;
-		const view = await load();
-		intersect(true);
-		await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 		expect(frames.size).toBe(0);
-		expect(view.getByRole('button', { name: 'パノラマの回転を再開' })).toBeTruthy();
-		await fireEvent.keyDown(view.getByRole('group', { name: 'World panorama' }), { key: 'ArrowRight' });
+		await fireEvent.keyDown(target, { key: 'ArrowRight' });
 		expect(mocks.render).toHaveBeenLastCalledWith(0.15);
+		await vi.advanceTimersByTimeAsync(3000);
 		expect(frames.size).toBe(0);
+	});
+	test('keyboard panning also resumes after three seconds', async () => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await fireEvent.keyDown(target, { key: 'ArrowLeft' });
+		expect(mocks.render).toHaveBeenLastCalledWith(-0.15);
+		expect(frames.size).toBe(0);
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(frames.size).toBe(1);
+	});
+	test.each([' ', 'Enter'])('holding %s pauses without changing the view', async key => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		const renders = mocks.render.mock.calls.length;
+		await fireEvent.keyDown(target, { key });
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(frames.size).toBe(0);
+		expect(mocks.render).toHaveBeenCalledTimes(renders);
+		await fireEvent.keyUp(target, { key });
+		await vi.advanceTimersByTimeAsync(2999);
+		expect(frames.size).toBe(0);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(frames.size).toBe(1);
+	});
+	test('losing focus releases a held key', async () => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await fireEvent.keyDown(target, { key: ' ' });
+		await fireEvent.blur(target);
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(frames.size).toBe(1);
 	});
 	test('hidden documents release GPU resources', async () => {
 		await load();
@@ -109,17 +178,25 @@ describe('inline panoramas', () => {
 		expect(frames.size).toBe(0);
 	});
 	test('respects the Misskey animation preference initially and when it changes', async () => {
-		prefer.s.animation = false;
-		const view = await load();
-		intersect(true);
-		await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
+		prefer.r.animation.value = false;
+		await readyPanorama();
 		expect(frames.size).toBe(0);
-		await fireEvent.click(view.getByRole('button', { name: 'パノラマの回転を再開' }));
-		expect(frames.size).toBe(1);
 		prefer.r.animation.value = true;
 		await Promise.resolve();
+		expect(frames.size).toBe(1);
 		prefer.r.animation.value = false;
 		await waitFor(() => expect(frames.size).toBe(0));
+	});
+	test('unmounting clears a pending resume timer', async () => {
+		const { view, target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await fireEvent.pointerDown(target, { pointerId: 1, button: 0 });
+		await fireEvent.pointerUp(target, { pointerId: 1 });
+		expect(vi.getTimerCount()).toBe(1);
+		view.unmount();
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(frames.size).toBe(0);
 	});
 	test('WebGL failures keep the accessible still image', async () => {
 		mocks.create.mockImplementation(() => { throw new Error('WebGL unavailable'); });
