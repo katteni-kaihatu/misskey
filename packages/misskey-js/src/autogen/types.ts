@@ -20785,6 +20785,7 @@ export interface operations {
                     clipId: string;
                     /** Format: misskey:id */
                     noteId: string;
+                    noteUri?: string;
                 };
             };
         };
@@ -31180,6 +31181,7 @@ export interface operations {
                     kind: 'home' | 'social' | 'profile' | 'search' | 'mentions' | 'direct' | 'channel' | 'favorites' | 'antenna' | 'clip';
                     channelOrigin?: string;
                     pinnedOnly?: boolean;
+                    clipOrigin?: string;
                     channelId?: string;
                     clipId?: string;
                     antennaId?: string;
