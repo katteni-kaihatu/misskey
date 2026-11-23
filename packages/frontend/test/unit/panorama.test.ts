@@ -61,6 +61,7 @@ async function readyPanorama() {
 		hasPointerCapture: { value: (id: number) => captured === id },
 		releasePointerCapture: { value: () => { captured = null; } },
 		clientWidth: { value: 300 },
+		clientHeight: { value: 200 },
 	});
 	return { view, target };
 }
@@ -104,12 +105,12 @@ describe('inline panoramas', () => {
 		await vi.advanceTimersByTimeAsync(1);
 		expect(frames.size).toBe(1);
 	});
-	test('dragging pans manually and another press resets the resume delay', async () => {
+	test('diagonal dragging pans both axes and another press resets the resume delay', async () => {
 		const { target } = await readyPanorama();
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-		await fireEvent.pointerDown(target, { pointerId: 1, button: 0, clientX: 100 });
-		await fireEvent.pointerMove(target, { pointerId: 1, clientX: 200 });
-		expect(mocks.render).toHaveBeenLastCalledWith(-Math.PI / 6);
+		await fireEvent.pointerDown(target, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+		await fireEvent.pointerMove(target, { pointerId: 1, clientX: 200, clientY: 150 });
+		expect(mocks.render).toHaveBeenLastCalledWith(-Math.PI / 6, Math.PI / 8);
 		await fireEvent.pointerUp(target, { pointerId: 1 });
 		await vi.advanceTimersByTimeAsync(2000);
 		await fireEvent.pointerDown(target, { pointerId: 2, button: 0 });
@@ -118,6 +119,30 @@ describe('inline panoramas', () => {
 		await fireEvent.pointerUp(target, { pointerId: 2 });
 		await vi.advanceTimersByTimeAsync(3000);
 		expect(frames.size).toBe(1);
+	});
+	test('limits vertical panning before the view flips and preserves it during rotation', async () => {
+		const { target } = await readyPanorama();
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		const limit = 85 * Math.PI / 180;
+		await fireEvent.pointerDown(target, { pointerId: 1, button: 0, clientY: 100 });
+		await fireEvent.pointerMove(target, { pointerId: 1, clientY: 10000 });
+		expect(mocks.render).toHaveBeenLastCalledWith(0, limit);
+		await fireEvent.pointerMove(target, { pointerId: 1, clientY: -10000 });
+		expect(mocks.render).toHaveBeenLastCalledWith(0, -limit);
+		await fireEvent.pointerUp(target, { pointerId: 1 });
+		await vi.advanceTimersByTimeAsync(3000);
+		for (const time of [0, 100]) {
+			const [id, callback] = frames.entries().next().value!;
+			frames.delete(id);
+			callback(time);
+		}
+		expect(mocks.render).toHaveBeenLastCalledWith(expect.any(Number), -limit);
+	});
+	test.each([['ArrowUp', 0.15], ['ArrowDown', -0.15]])('%s pans vertically', async (key, pitch) => {
+		const { target } = await readyPanorama();
+		await fireEvent.keyDown(target, { key });
+		expect(mocks.render).toHaveBeenLastCalledWith(0, pitch);
+		expect(frames.size).toBe(0);
 	});
 	test.each(['pointercancel', 'lostpointercapture'])('%s releases the hold without leaving rotation stuck', async event => {
 		const { target } = await readyPanorama();
@@ -133,7 +158,7 @@ describe('inline panoramas', () => {
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 		expect(frames.size).toBe(0);
 		await fireEvent.keyDown(target, { key: 'ArrowRight' });
-		expect(mocks.render).toHaveBeenLastCalledWith(0.15);
+		expect(mocks.render).toHaveBeenLastCalledWith(0.15, 0);
 		await vi.advanceTimersByTimeAsync(3000);
 		expect(frames.size).toBe(0);
 	});
@@ -141,7 +166,7 @@ describe('inline panoramas', () => {
 		const { target } = await readyPanorama();
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 		await fireEvent.keyDown(target, { key: 'ArrowLeft' });
-		expect(mocks.render).toHaveBeenLastCalledWith(-0.15);
+		expect(mocks.render).toHaveBeenLastCalledWith(-0.15, 0);
 		expect(frames.size).toBe(0);
 		await vi.advanceTimersByTimeAsync(3000);
 		expect(frames.size).toBe(1);

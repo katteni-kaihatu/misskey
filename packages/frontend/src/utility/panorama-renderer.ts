@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 export type PanoramaRenderer = {
 	resize: (width: number, height: number) => void;
-	render: (yaw: number) => void;
+	render: (yaw: number, pitch: number) => void;
 	dispose: () => void;
 };
 
@@ -49,9 +49,10 @@ export function createPanoramaRenderer(canvas: HTMLCanvasElement, image: HTMLIma
 			camera.aspect = safeWidth / safeHeight;
 			camera.updateProjectionMatrix();
 		},
-		render(yaw) {
+		render(yaw, pitch) {
 			if (disposed) return;
-			camera.lookAt(Math.sin(yaw), 0, -Math.cos(yaw));
+			const horizontal = Math.cos(pitch);
+			camera.lookAt(Math.sin(yaw) * horizontal, Math.sin(pitch), -Math.cos(yaw) * horizontal);
 			renderer.render(scene, camera);
 		},
 		dispose() {

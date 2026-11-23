@@ -9,6 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:role="ready ? 'group' : undefined" :aria-label="ready ? alt : undefined" :tabindex="ready ? 0 : undefined"
 	@pointerdown="beginDrag" @pointermove="drag" @pointerup="endDrag" @pointercancel="endDrag" @lostpointercapture="endDrag"
 	@keydown.left.prevent.stop="turn(-0.15)" @keydown.right.prevent.stop="turn(0.15)"
+	@keydown.up.prevent.stop="turn(0, 0.15)" @keydown.down.prevent.stop="turn(0, -0.15)"
 	@keydown.space.prevent.stop="beginKeyHold" @keydown.enter.prevent.stop="beginKeyHold"
 	@keyup.space.prevent.stop="endKeyHold" @keyup.enter.prevent.stop="endKeyHold" @blur="endKeyHold()"
 >
@@ -49,8 +50,11 @@ let starting = false;
 let frame: number | null = null;
 let lastTime: number | null = null;
 let yaw = 0;
+let pitch = 0;
+const maxPitch = 85 * Math.PI / 180;
 let dragPointer: number | null = null;
 let dragX = 0;
+let dragY = 0;
 let resumeTimer: number | null = null;
 const heldKeys = new Set<string>();
 
@@ -117,7 +121,7 @@ function animate(time: number): void {
 	const elapsed = time - lastTime;
 	if (elapsed >= 1000 / 15) {
 		yaw += Math.min(elapsed, 200) / 1000 * Math.PI / 90;
-		renderer.render(yaw);
+		renderer.render(yaw, pitch);
 		lastTime = time;
 	}
 	frame = requestAnimationFrame(animate);
@@ -132,7 +136,7 @@ function resize(): void {
 	if (!renderer || !root.value) return;
 	const size = root.value.getBoundingClientRect();
 	renderer.resize(size.width, size.height);
-	renderer.render(yaw);
+	renderer.render(yaw, pitch);
 }
 
 async function updateRenderer(): Promise<void> {
@@ -154,11 +158,12 @@ async function updateRenderer(): Promise<void> {
 	}
 }
 
-function turn(delta: number): void {
+function turn(deltaYaw: number, deltaPitch = 0): void {
 	if (!ready.value) return;
 	pauseForInteraction();
-	yaw += delta;
-	renderer?.render(yaw);
+	yaw += deltaYaw;
+	pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch + deltaPitch));
+	renderer?.render(yaw, pitch);
 	resumeAfterInteraction();
 }
 
@@ -167,13 +172,18 @@ function beginDrag(event: PointerEvent): void {
 	pauseForInteraction();
 	dragPointer = event.pointerId;
 	dragX = event.clientX;
+	dragY = event.clientY;
 	root.value?.setPointerCapture(event.pointerId);
 }
 
 function drag(event: PointerEvent): void {
 	if (dragPointer !== event.pointerId || !root.value) return;
-	turn(-(event.clientX - dragX) / Math.max(1, root.value.clientWidth) * Math.PI / 2);
+	turn(
+		-(event.clientX - dragX) / Math.max(1, root.value.clientWidth) * Math.PI / 2,
+		(event.clientY - dragY) / Math.max(1, root.value.clientHeight) * Math.PI / 2,
+	);
 	dragX = event.clientX;
+	dragY = event.clientY;
 }
 
 function endDrag(event: PointerEvent): void {
@@ -193,7 +203,7 @@ function motionChanged(): void { reducedMotion.value = motion.matches; }
 
 watch(eligible, () => { void updateRenderer(); }, { flush: 'post' });
 watch(paused, updateAnimation);
-watch(() => props.src, () => { loaded.value = false; failed.value = false; yaw = 0; dispose(); });
+watch(() => props.src, () => { loaded.value = false; failed.value = false; yaw = 0; pitch = 0; dispose(); });
 
 onMounted(() => {
 	loaded.value = Boolean(image.value?.complete && image.value.naturalWidth);
@@ -209,7 +219,7 @@ onBeforeUnmount(() => { active.value = false; observer?.disconnect(); resizeObse
 </script>
 
 <style lang="scss" module>
-.root { position: relative; width: 100%; height: 100%; overflow: hidden; touch-action: pan-y; > img { display: block; width: 100%; height: 100%; object-fit: cover; } &:focus-visible { outline: 2px solid var(--MI_THEME-focus); outline-offset: -2px; } }
+.root { position: relative; width: 100%; height: 100%; overflow: hidden; > img { display: block; width: 100%; height: 100%; object-fit: cover; } &:focus-visible { outline: 2px solid var(--MI_THEME-focus); outline-offset: -2px; } }
 .canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
-.ready { cursor: grab; > img { opacity: 0; } > .canvas { opacity: 1; } &:active { cursor: grabbing; } }
+.ready { cursor: grab; touch-action: none; > img { opacity: 0; } > .canvas { opacity: 1; } &:active { cursor: grabbing; } }
 </style>

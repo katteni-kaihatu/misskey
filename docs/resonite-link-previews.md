@@ -46,7 +46,7 @@ The supplied logo assets retain their original colors and proportions.
 Resonite thumbnails use the full image-proxy URL without `preview=1`. Images
 at least 512 pixels wide with a 2:1 aspect ratio are displayed as 360° panoramas,
 rotating once every three minutes. Pressing and holding the image pauses automatic
-rotation; dragging or the left/right arrow keys adjusts the view manually. Rotation
+rotation; dragging or the arrow keys looks left, right, up and down. Rotation
 resumes three seconds after the interaction ends, without a control overlay.
 Keyboard users can hold Space or Enter to pause without changing the view.
 Reduced-motion and Misskey animation preferences disable automatic rotation. Rendering stops and GPU
