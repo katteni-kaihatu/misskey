@@ -4086,6 +4086,28 @@ _xriftPreview:
   error: "情報を取得できませんでした"
   openDirectly: "XRiftで直接開いてください"
 
+_resonitePreview:
+  world: "ワールド"
+  session: "セッション"
+  open: "Resoniteで開く"
+  join: "Resoniteで参加"
+  openWorld: "ワールドを開く"
+  viewWeb: "Webで見る"
+  featured: "注目"
+  full: "満員"
+  host: "ホスト {name}"
+  visits: "{count} visits"
+  participants: "{current}/{max}人"
+  currentParticipants: "{count}人"
+  updated: "{date} 更新"
+  worldUnavailable: "このワールドは利用できません"
+  sessionUnavailable: "このセッションは利用できません"
+  unavailableDescription: "公開されていないか、削除されました。セッションは終了している場合もあります。"
+  ended: "このセッションは終了しました"
+  endedDescription: "公開ワールドがある場合は、新しく開けます。"
+  error: "情報を取得できませんでした"
+  openDirectly: "時間をおいて再読み込みするか、Webで確認してください。"
+
 _gridspaceEmojiSync:
   title: "連携先との絵文字同期"
   description: "絵文字の追加・変更を両サーバーに反映します。削除や内容の食い違いは自動反映せず、ここで確認できます。"

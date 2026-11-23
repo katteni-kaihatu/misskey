@@ -27,6 +27,7 @@ import * as note from './note.js';
 import { nyaize } from './nyaize.js';
 export { api, entities, acct, note, nyaize };
 export type { XriftPreview } from './xrift.js';
+export type { ResonitePreview, ResoniteTextPart } from './resonite.js';
 
 //#region standalone types
 import type { Endpoints } from './api.types.js';

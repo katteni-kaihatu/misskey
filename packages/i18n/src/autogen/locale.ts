@@ -15351,6 +15351,88 @@ export interface Locale extends ILocale {
          */
         "openDirectly": string;
     };
+    "_resonitePreview": {
+        /**
+         * ワールド
+         */
+        "world": string;
+        /**
+         * セッション
+         */
+        "session": string;
+        /**
+         * Resoniteで開く
+         */
+        "open": string;
+        /**
+         * Resoniteで参加
+         */
+        "join": string;
+        /**
+         * ワールドを開く
+         */
+        "openWorld": string;
+        /**
+         * Webで見る
+         */
+        "viewWeb": string;
+        /**
+         * 注目
+         */
+        "featured": string;
+        /**
+         * 満員
+         */
+        "full": string;
+        /**
+         * ホスト {name}
+         */
+        "host": ParameterizedString<"name">;
+        /**
+         * {count} visits
+         */
+        "visits": ParameterizedString<"count">;
+        /**
+         * {current}/{max}人
+         */
+        "participants": ParameterizedString<"current" | "max">;
+        /**
+         * {count}人
+         */
+        "currentParticipants": ParameterizedString<"count">;
+        /**
+         * {date} 更新
+         */
+        "updated": ParameterizedString<"date">;
+        /**
+         * このワールドは利用できません
+         */
+        "worldUnavailable": string;
+        /**
+         * このセッションは利用できません
+         */
+        "sessionUnavailable": string;
+        /**
+         * 公開されていないか、削除されました。セッションは終了している場合もあります。
+         */
+        "unavailableDescription": string;
+        /**
+         * このセッションは終了しました
+         */
+        "ended": string;
+        /**
+         * 公開ワールドがある場合は、新しく開けます。
+         */
+        "endedDescription": string;
+        /**
+         * 情報を取得できませんでした
+         */
+        "error": string;
+        /**
+         * 時間をおいて再読み込みするか、Webで確認してください。
+         */
+        "openDirectly": string;
+    };
     "_gridspaceEmojiSync": {
         /**
          * 連携先との絵文字同期

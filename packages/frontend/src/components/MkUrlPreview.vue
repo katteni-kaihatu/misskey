@@ -6,6 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <MkGridspaceNoteLinkPreview v-if="linkedNote" :url="url"/>
 <MkXriftPreview v-else-if="xriftType && (fetching || unknownUrl || summalyResult?.xrift)" :url="url" :type="xriftType" :summary="summalyResult" :loading="fetching" :failed="unknownUrl"/>
+<MkResonitePreview v-else-if="resoniteLink && (fetching || unknownUrl || summalyResult?.resonite)" :url="url" :type="resoniteLink.type" :summary="summalyResult" :loading="fetching" :failed="unknownUrl"/>
 <template v-else-if="player.url && playerEnabled">
 	<div
 		:class="$style.player"
@@ -188,7 +189,9 @@ import { transformPlayerUrl } from '@/utility/url-preview.js';
 import { store } from '@/store.js';
 import { prefer } from '@/preferences.js';
 import MkXriftPreview from '@/components/MkXriftPreview.vue';
-import type { XriftPreview } from 'misskey-js';
+import MkResonitePreview from '@/components/MkResonitePreview.vue';
+import { getResoniteLink } from '@/utility/resonite-link.js';
+import type { XriftPreview, ResonitePreview } from 'misskey-js';
 
 const props = withDefaults(defineProps<{
 	url: string;
@@ -210,8 +213,9 @@ const self = maybeRelativeUrl !== props.url;
 const attr = self ? 'to' : 'href';
 const target = self ? null : '_blank';
 const fetching = ref(true);
-type PreviewSummary = SummalyResult & { xrift?: XriftPreview };
+type PreviewSummary = SummalyResult & { xrift?: XriftPreview; resonite?: ResonitePreview };
 const summalyResult = ref<PreviewSummary | null>(null);
+const resoniteLink = computed(() => getResoniteLink(props.url));
 const xriftType = computed(() => {
 	if (requestUrl.origin !== 'https://app.xrift.net' || requestUrl.username || requestUrl.password) return null;
 	const match = /^\/(world|instance|user|marketplace)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.exec(requestUrl.pathname);
@@ -280,7 +284,7 @@ requestUrl.hash = '';
 function fetchPreview() {
 	if (catalystImageUrl) return;
 	// Revalidate XRift metadata; the server coalesces and caches provider calls.
-	window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`, xriftType.value ? { cache: 'no-cache' } : undefined)
+	window.fetch(`/url?url=${encodeURIComponent(requestUrl.href)}&lang=${versatileLang}`, xriftType.value || resoniteLink.value ? { cache: 'no-cache' } : undefined)
 		.then(res => {
 			if (!res.ok) {
 				if (_DEV_) console.warn(`[HTTP${res.status}] Failed to fetch url preview`);
