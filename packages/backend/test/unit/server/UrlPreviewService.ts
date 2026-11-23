@@ -42,6 +42,7 @@ describe('XRift preview handling', () => {
 		const { load, getJson, send, reply } = setup();
 		const first = await load();
 		expect(first).toMatchObject({ title: 'School', xrift: { creator: null }, thumbnail: expect.stringContaining('https://media.example/preview.webp?') });
+		expect(new URL((first as { thumbnail: string }).thumbnail).searchParams.get('preview')).toBe('1');
 		expect(JSON.stringify(first)).not.toContain('xrift_sk_test');
 		expect(await load()).toEqual(first);
 		expect(getJson).toHaveBeenCalledTimes(3);
@@ -95,5 +96,27 @@ describe('XRift preview handling', () => {
 		const result = await service.handle({ query: { url: worldUrl.replace('/world/', '/user/') } } as never, reply as never);
 		expect(result).toMatchObject({ xrift: { state: 'error' } });
 		expect(send).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('Resonite preview handling', () => {
+	const url = 'https://go.resonite.com/session/S-Test';
+	test('fetches without credentials, coalesces requests and proxies the thumbnail', async () => {
+		const { service, getJson, send, reply } = setup(null);
+		getJson.mockImplementation(async () => ({ sessionId: 'S-Test', name: 'Public session', description: 'Welcome', hostUsername: 'Host', accessLevel: 'Anyone', hideFromListing: false, isValid: true, hasEnded: false, joinedUsers: 3, totalJoinedUsers: 20, maxUsers: 16, thumbnailUrl: 'https://thumbnails.resonite.com/test.webp' }) as never);
+		const results = await Promise.all([url, `${url}?share=1`].map(input => service.handle({ query: { url: input } } as never, reply as never)));
+		expect(results[0]).toMatchObject({ title: 'Public session', resonite: { state: 'available', currentUsers: 3, maxUsers: 16 }, thumbnail: expect.stringContaining('https://media.example/preview.webp?') });
+		expect(results[1]).toEqual(results[0]);
+		expect(new URL((results[0] as { thumbnail: string }).thumbnail).searchParams.has('preview')).toBe(false);
+		expect(send).toHaveBeenCalledTimes(1);
+		expect(send.mock.calls[0][1]).toMatchObject({ redirect: 'error', headers: { Accept: 'application/json' } });
+		expect(JSON.stringify(send.mock.calls)).not.toContain('Authorization');
+		expect(reply.header).toHaveBeenCalledWith('Cache-Control', 'max-age=60');
+	});
+	test('keeps the error card when the provider fails instead of loading an unrelated player', async () => {
+		const { service, getJson, reply } = setup(null);
+		getJson.mockRejectedValueOnce(new Error('provider unavailable'));
+		expect(await service.handle({ query: { url } } as never, reply as never)).toMatchObject({ resonite: { state: 'error' } });
+		expect(getJson).toHaveBeenCalledTimes(1);
 	});
 });

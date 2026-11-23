@@ -5,7 +5,7 @@
 
 import { describe, test, assert, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent, type RenderResult } from '@testing-library/vue';
-import type { XriftPreview } from 'misskey-js';
+import type { XriftPreview, ResonitePreview } from 'misskey-js';
 import type { SummalyResult } from '@misskey-dev/summaly';
 import { preferState } from '../setup.unit.js';
 import { components } from '@/components/index.js';
@@ -22,7 +22,7 @@ describe('MkUrlPreview', () => {
 		fetchMock.mockClear();
 	});
 
-	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: XriftPreview }): Promise<RenderResult> => {
+	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: XriftPreview; resonite?: ResonitePreview }): Promise<RenderResult> => {
 		if (!summary.player) {
 			summary.player = {
 				url: null,
@@ -75,6 +75,16 @@ describe('MkUrlPreview', () => {
 	});
 
 	const catalystImageBase = 'https://citlali.natsuneko.com/r2/57dd6525-2f7d-4179-b01e-5265ec608e88/8f2c300f-cdf0-4ed8-9e67-bc54aa775007';
+
+	test('renders a Resonite session card from the server preview', async () => {
+		const result = await renderPreviewBy({
+			url: 'https://go.resonite.com/session/S-Test', title: 'Public session', description: 'Welcome',
+			resonite: { type: 'session', state: 'available', creator: 'Host', currentUsers: 4, maxUsers: 16 },
+		});
+		assert.isNotNull(result.getByRole('link', { name: 'Resoniteで参加' }));
+		assert.isNotNull(result.getByText('4/16人'));
+		assert.isNull(result.container.querySelector('iframe'));
+	});
 
 	test.each(['medium', 'tiny', 'original', 'blur', 'medium/', 'medium?download=1#image'])('Renders a Catalyst direct image (%s) without fetching a page preview', (variant) => {
 		const url = `${catalystImageBase}/${variant}`;

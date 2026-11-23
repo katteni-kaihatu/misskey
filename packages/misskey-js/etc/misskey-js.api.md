@@ -3831,6 +3831,27 @@ type RequestResetPasswordRequest = operations['request-reset-password']['request
 type ResetPasswordRequest = operations['reset-password']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+export type ResonitePreview = {
+    type: 'world' | 'session';
+    state: 'available' | 'unavailable' | 'ended' | 'error';
+    titleParts?: ResoniteTextPart[];
+    creator?: string;
+    worldUrl?: string;
+    visits?: number;
+    currentUsers?: number;
+    maxUsers?: number;
+    createdAt?: string;
+    updatedAt?: string;
+    featured?: boolean;
+};
+
+// @public (undocumented)
+export type ResoniteTextPart = {
+    text: string;
+    color?: string;
+};
+
+// @public (undocumented)
 type RetentionResponse = operations['retention']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
