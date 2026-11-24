@@ -40170,6 +40170,11 @@ export interface operations {
                     'application/json': {
                         isFavorited: boolean;
                         isMutedThread: boolean;
+                        gridspaceDeleteTarget?: {
+                            noteId: string;
+                            actorUri: string;
+                            channelId?: string;
+                        };
                     };
                 };
             };
