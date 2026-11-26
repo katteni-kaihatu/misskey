@@ -682,6 +682,7 @@ export class PreferencesManager extends EventEmitter<PreferencesManagerEvents> {
 			type: 'switch',
 			icon: 'ti ti-user-cog',
 			text: i18n.ts.overrideByAccount,
+			disabled: isAccountDependentKey(key),
 			ref: overrideByAccount,
 		}, {
 			type: 'switch',

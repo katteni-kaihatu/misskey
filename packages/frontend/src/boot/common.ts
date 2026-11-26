@@ -36,7 +36,7 @@ import { startWebClientIconRotation } from '@/utility/web-client-icon.js';
 
 export async function common(createVue: () => Promise<App<Element>>) {
 	console.info(`Misskey v${version}`);
-	startWebClientIconRotation(window.document);
+	startWebClientIconRotation(window.document, prefer.r.webClientIcon);
 
 	if (_DEV_) {
 		console.warn('Development mode!!!');
