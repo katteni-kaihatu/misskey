@@ -11,3 +11,15 @@ Only the G frontend changes. Instance metadata, ActivityPub, the canonical `/fav
 Validation includes a DOM regression suite for a shared document choice, a new choice after reload, missing/multiple favicon declarations, and preservation of server metadata, touch icons, manifests and pinned-tab declarations. Generated PNG dimensions/signatures and original byte checksums are checked separately. The two icon-only navigation buttons have existing localized accessible names.
 
 Changelog candidate: Randomize the Gridspace web navigation and tab icon among five selected community artworks on each page load.
+
+## Release verification
+
+G `2026.11.0-grid-space.31.102`, runtime source `b27582dddf7dd0cf4531d3d97843b70a753a5dbb`, is deployed and healthy. Three DOM cases, changed-source/test lint, generator syntax, SPDX, locale safety, frontend build and full Linux/amd64 image build pass. Frontend typechecking reports the same 101 diagnostics on archived `origin/master` and the candidate, with no diagnostic differences; it is a pre-existing baseline, not a passing global typecheck.
+
+An isolated empty-database preview was tested in Chrome with a synthetic account. The navigation and favicon matched; SPA navigation retained `machiyoh`, while a fresh document chose `tekerets`. The production browser then loaded `ningen`, again matching the navigation and favicon. All ten served PNGs match their committed checksums. The favicon test reads the browser-control tool's recorded original URL when its control badge is active.
+
+Public icon metadata, server HTML icon declarations, canonical favicon bytes, Apple touch icon bytes and the complete app manifest match the pre-release values. The R application was not deployed or changed.
+
+A fresh consistent G database backup of 80,813,110 bytes, globals, compose/config/TLS, runtime inventory and local uploads was fully verified before rollout. Recovery files and the previous `.101` image are retained under `/home/neo/misskey/backups/20261126-web-client-icons`; private local evidence is under `C:/Users/neo/AppData/Local/MisskeyDeployments/20261126-web-client-icons`.
+
+The first image unpack attempt encountered a full application filesystem. The `.101` service remained healthy and its compose file was restored. Only unused `.97`, `.98` and `.99` application images, verified to have no container references or rollback tags, were removed. Databases and recovery backups were preserved. The new image was then successfully unpacked and executed in network-isolated version verification before the successful switch. The private rollout helper now requires that execution check before changing compose.
