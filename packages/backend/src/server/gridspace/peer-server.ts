@@ -17,6 +17,8 @@ import { notificationOptionsSchema, type NotificationPeerRequest } from '@/core/
 import { privateOptionsSchema, type PrivatePeerRequest } from '@/core/gridspace/private-protocol.js';
 import { noteMenuProperties, type NoteMenuPeerRequest } from '@/core/gridspace/note-menu-protocol.js';
 import { placementActorIdSchema } from '@/core/gridspace/conversation-protocol.js';
+import { placementNoteBatchSchema, readPlacementNoteBatch, type PlacementNoteBatch } from '@/core/gridspace/placement-note-batch.js';
+import type { PrivatePage } from '@/core/gridspace/private-protocol.js';
 import { actionOptionsSchema, uploadWireSchema, type ActionPeerRequest, type UploadPeerRequest } from '@/core/gridspace/action-protocol.js';
 import { replyOptionsSchema, type ReplyPeerRequest } from '@/core/gridspace/reply-protocol.js';
 import type { GridspacePeerLinkRequest } from '@/core/gridspace/GridspaceLinkService.js';
@@ -310,7 +312,10 @@ export function registerGridspacePeer(fastify: FastifyInstance, config: Gridspac
 					noteId: { type: 'string', pattern: '^[a-zA-Z0-9]{1,32}$' },
 				} } },
 			}, async (request, reply) => {
-				try { return await notes(name, request.body.noteId); } catch {
+				try { return await notes(name, request.body.noteId); } catch (error) {
+					// A non-public reference is a known policy deferral. Keep the durable
+					// delivery queued without misreporting it as a server outage.
+					if (name === 'sync' && error instanceof Error && 'code' in error && error.code === 'NOTE_REFERENCE_UNAVAILABLE') return reply.code(409).send({ error: 'PEER_NOTE_DEFERRED' });
 					return reply.code(503).send({ error: 'PEER_NOTE_UNAVAILABLE' });
 				}
 			});
@@ -408,6 +413,19 @@ export function registerGridspacePeer(fastify: FastifyInstance, config: Gridspac
 		});
 	}
 	if (privateAction) {
+		fastify.post<{ Body: PlacementNoteBatch }>('/private/placement-notes', {
+			bodyLimit: 32768, config: { rawBody: true }, preHandler: authenticate, schema: { body: placementNoteBatchSchema },
+			preValidation: async (request, reply) => {
+				// Fastify normally removes unknown properties during validation. Reject
+				// other credential kinds explicitly before that normalization.
+				if (request.body && Object.keys(request.body).some(key => key !== 'placementActorId' && key !== 'items')) return reply.code(400).send({ error: 'INVALID_REQUEST' });
+			},
+		}, async (request, reply) => {
+			try { return await readPlacementNoteBatch(request.body, input => privateAction('notes', input) as Promise<PrivatePage>); } catch (error) {
+				if (error instanceof Error && 'code' in error && error.code === 'INVALID_REQUEST') return reply.code(400).send({ error: 'INVALID_REQUEST' });
+				return reply.code(503).send({ error: 'PEER_UNAVAILABLE' });
+			}
+		});
 		fastify.get('/private-oauth-client', async () => ({
 			client_id: config.origin + GRIDSPACE_PRIVATE_CLIENT_PATH, client_uri: config.origin + '/',
 			client_name: 'GridSpace private note reader', redirect_uris: [config.origin + GRIDSPACE_CALLBACK_PATH],

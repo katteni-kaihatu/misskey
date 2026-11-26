@@ -14,7 +14,7 @@ import { $i } from '@/i.js';
 import { store } from '@/store.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { prefer } from '@/preferences.js';
-import { fetchExtendedReactions, watchSharedReactions, supportsExtendedReactions } from '@/utility/extended-reactions.js';
+import { fetchExtendedReactions, watchSharedReactions, supportsExtendedReactions, reactionRetryDelay } from '@/utility/extended-reactions.js';
 import { globalEvents } from '@/events.js';
 
 export const noteEvents = new EventEmitter<{
@@ -260,16 +260,16 @@ export function useNoteCapture(props: {
 		}, 100);
 	}
 
-	function retryExtended(): void {
+	function retryExtended(delay?: number): void {
 		if (disposed || retryTimer !== undefined) return;
 		retryTimer = window.setTimeout(() => {
 			retryTimer = undefined;
 			void refreshExtended();
-		}, Math.min(60000, 1000 * 2 ** Math.min(retryAttempt++, 6)));
+		}, delay ?? Math.min(60000, 1000 * 2 ** Math.min(retryAttempt++, 6)));
 	}
 
 	async function refreshExtended(): Promise<void> {
-		if (!$note.extendedReactions || disposed || (stopSharedRefresh && window.document.hidden)) return;
+		if (!$note.extendedReactions || disposed || retryTimer !== undefined || (stopSharedRefresh && window.document.hidden)) return;
 		if (refreshing) { refreshAgain = true; return; }
 		window.clearTimeout(retryTimer); retryTimer = undefined;
 		refreshing = true;
@@ -302,12 +302,12 @@ export function useNoteCapture(props: {
 				if (signature !== lastReactionState) { $note.reactionVersion++; lastReactionState = signature; }
 				if (state.complete === false) retryExtended(); else retryAttempt = 0;
 			}
-		} catch {
+		} catch (error) {
 			// Keep the previous state on transient network failures.
-			retryExtended();
+			retryExtended(reactionRetryDelay(error));
 		} finally {
 			refreshing = false;
-			if (refreshAgain) { refreshAgain = false; void refreshExtended(); }
+			if (refreshAgain) { refreshAgain = false; if (retryTimer === undefined) scheduleExtendedRefresh(); }
 		}
 	}
 

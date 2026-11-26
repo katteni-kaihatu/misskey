@@ -52,7 +52,7 @@ import { store } from '@/store';
 import { noteEvents } from '@/composables/use-note-capture.js';
 import { mute as muteEmoji, unmute as unmuteEmoji, checkMuted as isEmojiMuted } from '@/utility/emoji-mute.js';
 import { addToEmojiPalette } from '@/utility/emoji-palette.js';
-import { addExtendedReaction, deleteExtendedReaction, fetchReactionUsers } from '@/utility/extended-reactions.js';
+import { addExtendedReaction, deleteExtendedReaction, fetchReactionUsers, reactionRetryDelay } from '@/utility/extended-reactions.js';
 import { haptic } from '@/utility/haptic.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 
@@ -294,8 +294,13 @@ function fetchUsers() {
 let usersRequest = 0;
 let active = true;
 let disposeRemoteDetails: (() => void) | undefined;
+let avatarObserver: IntersectionObserver | undefined;
+let inViewport = false;
+let usersRetryTimer: number | undefined;
+let usersRetryAttempt = 0;
 
 async function refreshUsers() {
+	window.clearTimeout(usersRetryTimer); usersRetryTimer = undefined;
 	disposeRemoteDetails?.(); disposeRemoteDetails = undefined;
 	const request = ++usersRequest;
 	if (!showAvatars.value || !active) {
@@ -303,6 +308,7 @@ async function refreshUsers() {
 		remoteUsers.value = [];
 		return;
 	}
+	if (window.document.hidden || !inViewport) return;
 	try {
 		if (props.transport) {
 			const actors = active && !window.document.hidden ? sources.value.flatMap(source => props.transport!.previews(source.reaction)) : [];
@@ -310,26 +316,46 @@ async function refreshUsers() {
 			return;
 		}
 		const reactions = await fetchUsers();
-		if (request === usersRequest) users.value = [...new Map(reactions.map(x => [x.user.id, x.user])).values()];
-	} catch { if (props.transport) remoteUsers.value = []; }
+		if (request === usersRequest) { usersRetryAttempt = 0; users.value = [...new Map(reactions.map(x => [x.user.id, x.user])).values()]; }
+	} catch (error) {
+		if (props.transport) remoteUsers.value = [];
+		const delay = reactionRetryDelay(error) ?? Math.min(60000, 1000 * 2 ** Math.min(usersRetryAttempt++, 6));
+		if (request === usersRequest && active && inViewport && !window.document.hidden) {
+			usersRetryTimer = window.setTimeout(() => { usersRetryTimer = undefined; void refreshUsers(); }, delay);
+		}
+	}
 }
 
-function visibility() { if (props.transport) { usersRequest++; remoteUsers.value = []; disposeRemoteDetails?.(); if (!window.document.hidden) void refreshUsers(); } }
+function visibility() { usersRequest++; window.clearTimeout(usersRetryTimer); usersRetryTimer = undefined; if (props.transport) { remoteUsers.value = []; disposeRemoteDetails?.(); } if (!window.document.hidden) void refreshUsers(); }
 
 window.document.addEventListener('visibilitychange', visibility);
-onBeforeUnmount(() => { active = false; usersRequest++; window.document.removeEventListener('visibilitychange', visibility); remoteUsers.value = []; disposeRemoteDetails?.(); });
-onDeactivated(() => { active = false; usersRequest++; remoteUsers.value = []; disposeRemoteDetails?.(); });
+onBeforeUnmount(() => { active = false; usersRequest++; window.clearTimeout(usersRetryTimer); avatarObserver?.disconnect(); window.document.removeEventListener('visibilitychange', visibility); remoteUsers.value = []; disposeRemoteDetails?.(); });
+onDeactivated(() => { active = false; usersRequest++; window.clearTimeout(usersRetryTimer); remoteUsers.value = []; disposeRemoteDetails?.(); });
 onActivated(() => { const wasInactive = !active; active = true; if (wasInactive) void refreshUsers(); });
 watch([() => props.noteId, () => props.transport], () => { usersRequest++; remoteUsers.value = []; void refreshUsers(); });
 watch(showAvatars, () => { void refreshUsers(); });
 
-watch([() => props.count, () => props.reactionVersion, sources], ([newCount], [oldCount]) => {
+// The parent creates new source arrays when a note snapshot is refreshed. Equal
+// counts/versions must not reload the same actors for every snapshot.
+watch(() => JSON.stringify([props.count, props.reactionVersion, sources.value]), (_value, previous) => {
 	void refreshUsers();
-	if (oldCount < newCount) anime();
+	if (previous && JSON.parse(previous)[0] < props.count) anime();
 });
 
 onMounted(() => {
-	void refreshUsers();
+	const element = buttonEl.value;
+	if (element && typeof IntersectionObserver !== 'undefined' && element.getBoundingClientRect().width > 0) {
+		avatarObserver = new IntersectionObserver(entries => {
+			const visible = entries.some(entry => entry.isIntersecting);
+			if (visible === inViewport) return;
+			inViewport = visible;
+			if (visible) void refreshUsers(); else { window.clearTimeout(usersRetryTimer); usersRetryTimer = undefined; }
+		}, { rootMargin: '100px' });
+		avatarObserver.observe(element);
+	} else {
+		inViewport = true;
+		void refreshUsers();
+	}
 	if (!props.isInitial) anime();
 });
 

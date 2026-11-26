@@ -37,7 +37,7 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { NotePlacementService } from '@/core/NotePlacementService.js';
 import { GridspacePlacementActionService } from './GridspacePlacementActionService.js';
-import { dedicatedOriginal } from './conversation-protocol.js';
+import { dedicatedOriginal, originNoteId } from './conversation-protocol.js';
 import { GridspaceChannelAuthService } from './GridspaceChannelAuthService.js';
 import { GridspaceLinkError, GridspaceLinkService } from './GridspaceLinkService.js';
 import { GridspaceSearchService } from './GridspaceSearchService.js';
@@ -52,7 +52,8 @@ import { searchNoteTimeSql } from './search-visibility.js';
 import { readSearchRows } from './timeline/search-page.js';
 import { canonicalGridspaceNoteUri, gridspaceNoteId } from './note-protocol.js';
 import { fillPeerEmojiUrls } from './peer-emoji-url.js';
-import { GridspacePeerAuthorizationError, requestGridspacePeer } from './peer-client.js';
+import { GridspaceEndpointUnavailable, GridspacePeerAuthorizationError, requestGridspacePeer } from './peer-client.js';
+import { PLACEMENT_NOTE_BATCH_LIMIT, PLACEMENT_NOTE_BATCH_PATH, type PlacementNoteBatchResult, type PlacementNoteTarget } from './placement-note-batch.js';
 import { PRIVATE_FILE_LIMIT, type PrivateNote, type PrivateWireNote, type PrivateOptions, type PrivatePage, type PrivatePeerRequest } from './private-protocol.js';
 import { TimelineReferenceService } from './timeline/TimelineReferenceService.js';
 import { TIMELINE_AUTHORIZATION_TTL_MS, type TimelineOptions, type TimelinePosition, type TimelineReference } from './timeline/timeline-protocol.js';
@@ -767,6 +768,55 @@ export class GridspacePrivateService {
 		const link = await this.history.findLink(userId);
 		if (link) targets.push(`${this.peer!.peerOrigin}/users/${link.peerUserId}`, `${this.peer!.origin}/users/${link.localUserId}`);
 		return [...new Set(targets)];
+	}
+
+	/** Batch independent placement scopes without caching bodies or sharing their authorization. */
+	public async placementNotes(viewer: MiLocalUser, targets: PlacementNoteTarget[], deadline: number): Promise<{ notes: PrivateNote[]; validForMs: number }> {
+		const startedAt = Date.now();
+		if (!this.peer || !targets.length || targets.length > PLACEMENT_NOTE_BATCH_LIMIT || new Set(targets.map(target => target.noteId)).size !== targets.length ||
+			targets.some(target => originNoteId(target.conversationUri, this.peer!.peerOrigin) !== target.noteId)) throw new GridspaceLinkError('INVALID_REQUEST');
+		const actor = await this.placementActions!.destination(viewer, targets[0].conversationUri, targets[0].noteId);
+		let result: PlacementNoteBatchResult;
+		try {
+			result = await requestGridspacePeer(this.peer, PLACEMENT_NOTE_BATCH_PATH, { ...actor.credential, items: targets }, 4 * 1024 * 1024, deadline) as PlacementNoteBatchResult;
+		} catch (error) {
+			// A rolling update may pair with an older server. Never fan out a 503,
+			// timeout or authorization failure into one retry per conversation.
+			if (!(error instanceof GridspaceEndpointUnavailable)) throw new GridspaceLinkError('PEER_UNAVAILABLE');
+			const pages: { notes: PrivateNote[]; validForMs: number }[] = [];
+			for (let offset = 0; offset < targets.length; offset += 4) {
+				pages.push(...await Promise.all(targets.slice(offset, offset + 4).map(async target => {
+					try { return await this.notes(viewer, { mode: 'show', ...target }, 1, undefined, deadline); } catch (cause) {
+						if (!(cause instanceof GridspaceLinkError) || !['ACTION_REJECTED', 'AUTHORIZATION_REVOKED', 'LINK_REVOKED'].includes(cause.code)) throw cause;
+						return { notes: [], validForMs: TIMELINE_AUTHORIZATION_TTL_MS };
+					}
+				})));
+			}
+			await actor.check();
+			return { notes: pages.flatMap(page => page.notes), validForMs: Math.max(0, Math.min(...pages.map(page => page.validForMs)) - (Date.now() - startedAt)) };
+		}
+		if (!result || !Array.isArray(result.items) || result.items.length !== targets.length || new Set(result.items.map(item => item?.noteId)).size !== targets.length) throw new GridspaceLinkError('PEER_UNAVAILABLE');
+		const wire: PrivateWireNote[] = [];
+		let validForMs = TIMELINE_AUTHORIZATION_TTL_MS;
+		for (const item of result.items) {
+			const target = targets.find(target => target.noteId === item?.noteId);
+			if (!target || item.page === undefined) throw new GridspaceLinkError('PEER_UNAVAILABLE');
+			if (item.page === null) continue;
+			const page = item.page;
+			if (!Array.isArray(page.notes) || page.notes.length > 1 || !Number.isFinite(Date.parse(page.observedAt)) ||
+				page.validForMs != null && (!Number.isFinite(page.validForMs) || page.validForMs < 0) ||
+				page.notes.some(note => !note || note.id !== target.noteId || note.origin !== this.peer!.peerOrigin || typeof note.uri !== 'string' || canonicalGridspaceNoteUri(note.uri, this.peer!.peerOrigin) !== canonicalGridspaceNoteUri(target.conversationUri, this.peer!.peerOrigin))) throw new GridspaceLinkError('PEER_UNAVAILABLE');
+			validForMs = Math.min(validForMs, page.validForMs ?? TIMELINE_AUTHORIZATION_TTL_MS);
+			wire.push(...page.notes);
+		}
+		const actorAllows = await this.localActorChecker(viewer, this.actorsForNotes(wire));
+		const notes: PrivateNote[] = [];
+		for (const note of wire) if (await this.localAllows(viewer, note, false, actor.peerUserId, actorAllows)) {
+			const { filterActors: _filterActors, ...display } = note;
+			notes.push(await this.filterChannelRenote(viewer, display, actor.peerUserId, actorAllows));
+		}
+		await actor.check();
+		return { notes, validForMs: Math.max(0, validForMs - (Date.now() - startedAt)) };
 	}
 
 	public async notes(viewer: MiLocalUser, input: PrivateOptions, limit: number, cursor?: string, deadline?: number) {

@@ -44,6 +44,22 @@ afterEach(async () => {
 	await Promise.all(servers.splice(0).map(app => app.close()));
 });
 
+test('sync defers unshareable references without acknowledging delivery or hiding actual failures', async () => {
+	const notes = vi.fn(async () => { throw Object.assign(new Error('Reference unavailable'), { code: 'NOTE_REFERENCE_UNAVAILABLE' }); });
+	const app = await server(true, undefined, undefined, notes);
+	const payload = Buffer.from(JSON.stringify({ noteId: 'note' }));
+	const inject = (name: string) => {
+		const url = '/gridspace/v1/notes/' + name;
+		return app.inject({ method: 'POST', url, payload, headers: createGridspaceHeaders(g, 'POST', url, payload) });
+	};
+	const deferred = await inject('sync');
+	expect(deferred.statusCode).toBe(409);
+	expect(deferred.json()).toEqual({ error: 'PEER_NOTE_DEFERRED' });
+	expect((await inject('read')).statusCode).toBe(503);
+	notes.mockRejectedValue(new Error('Actual failure'));
+	expect((await inject('sync')).statusCode).toBe(503);
+});
+
 describe('GridSpace channel actions', () => {
 	test('preserves absent notification consent as a signed peer error', async () => {
 		const notifications = vi.fn(async () => { throw Object.assign(new Error('Notification consent absent'), { code: 'NOTIFICATIONS_NOT_GRANTED' }); });

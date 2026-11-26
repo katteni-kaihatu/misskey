@@ -3,13 +3,23 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { entities } from 'misskey-js';
-import { fetchExtendedReactions, fetchReactionUsers, supportsExtendedReactions, watchSharedReactions } from '@/utility/extended-reactions.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
-vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: vi.fn() }));
+const { apiMock } = vi.hoisted(() => ({ apiMock: vi.fn() }));
+vi.mock('@/utility/misskey-api.js', () => ({ misskeyApi: apiMock }));
 vi.mock('@/composables/use-note-capture.js', () => ({ noteEvents: { emit: vi.fn() } }));
+type Reactions = typeof import('@/utility/extended-reactions.js');
+let fetchExtendedReactions: Reactions['fetchExtendedReactions'];
+let fetchReactionUsers: Reactions['fetchReactionUsers'];
+let supportsExtendedReactions: Reactions['supportsExtendedReactions'];
+let watchSharedReactions: Reactions['watchSharedReactions'];
+let reactionRetryDelay: Reactions['reactionRetryDelay'];
+beforeEach(async () => {
+	vi.resetModules(); apiMock.mockReset();
+	({ fetchExtendedReactions, fetchReactionUsers, supportsExtendedReactions, watchSharedReactions, reactionRetryDelay } = await import('@/utility/extended-reactions.js'));
+});
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe('paired extended reactions', () => {
@@ -38,9 +48,12 @@ describe('paired extended reactions', () => {
 		expect(supportsExtendedReactions({ ...peer, channel: { id: 'channel' } } as entities.Note)).toBe(false);
 	});
 	test('deduplicates mounted copies and batches no more than 100 notes', async () => {
+		vi.useFakeTimers();
 		const api = vi.mocked(misskeyApi);
 		api.mockImplementation((async (_endpoint: string, options: { noteIds: string[] }) => options.noteIds.map(noteId => ({ noteId }))) as never);
-		const values = await Promise.all([...Array.from({ length: 101 }, (_, n) => fetchExtendedReactions(String(n))), fetchExtendedReactions('0')]);
+		const waiting = Promise.all([...Array.from({ length: 101 }, (_, n) => fetchExtendedReactions(String(n))), fetchExtendedReactions('0')]);
+		await vi.advanceTimersByTimeAsync(1000);
+		const values = await waiting;
 		expect(api).toHaveBeenCalledTimes(2);
 		expect(api.mock.calls[0][1]).toMatchObject({ noteIds: Array.from({ length: 100 }, (_, n) => String(n)) });
 		expect(values[0]).toBe(values[101]);
@@ -60,16 +73,17 @@ describe('paired extended reactions', () => {
 		stopSecond(); expect(vi.getTimerCount()).toBe(0);
 	});
 	test('shares a pending show across different microtasks but reads again after completion', async () => {
+		vi.useFakeTimers();
 		let resolve!: (value: unknown) => void;
 		const api = vi.mocked(misskeyApi).mockImplementation(() => new Promise(r => { resolve = r; }) as never);
 		const first = fetchExtendedReactions('pending');
-		await Promise.resolve();
+		await vi.advanceTimersByTimeAsync(25);
 		const second = fetchExtendedReactions('pending');
 		expect(api).toHaveBeenCalledTimes(1);
 		resolve([{ noteId: 'pending' }]);
 		expect(await first).toBe(await second);
 		const third = fetchExtendedReactions('pending');
-		await Promise.resolve();
+		await vi.advanceTimersByTimeAsync(600);
 		expect(api).toHaveBeenCalledTimes(2);
 		resolve([{ noteId: 'pending' }]); await third;
 	});
@@ -81,7 +95,7 @@ describe('paired extended reactions', () => {
 		expect(api).toHaveBeenCalledTimes(1);
 		await fetchReactionUsers('avatars', '👍', true, 2, 'b');
 		expect(api).toHaveBeenCalledTimes(2);
-		await vi.advanceTimersByTimeAsync(1001);
+		await vi.advanceTimersByTimeAsync(5001);
 		await fetchReactionUsers('avatars', '👍', true, 2, 'b');
 		expect(api).toHaveBeenCalledTimes(3);
 	});
@@ -89,6 +103,44 @@ describe('paired extended reactions', () => {
 		const api = vi.mocked(misskeyApi).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([] as never);
 		await expect(fetchReactionUsers('retry', '👍', true, 1, 'a')).rejects.toThrow('offline');
 		await expect(fetchReactionUsers('retry', '👍', true, 1, 'a')).resolves.toEqual([]);
+		expect(api).toHaveBeenCalledTimes(2);
+	});
+	test('combines separate per-note update timers into one show request', async () => {
+		vi.useFakeTimers();
+		const api = vi.mocked(misskeyApi).mockImplementation((async (_endpoint, input: { noteIds: string[] }) => input.noteIds.map(noteId => ({ noteId }))) as never);
+		const waiting: Promise<unknown>[] = [];
+		for (let i = 0; i < 80; i++) window.setTimeout(() => { waiting.push(fetchExtendedReactions(`timer${i}`)); }, 100);
+		await vi.advanceTimersByTimeAsync(1000);
+		await Promise.all(waiting);
+		expect(api).toHaveBeenCalledTimes(1);
+		expect(api.mock.calls[0][1]).toMatchObject({ noteIds: expect.any(Array) });
+		expect((api.mock.calls[0][1] as { noteIds: string[] }).noteIds).toHaveLength(80);
+	});
+	test('a show 429 pauses the whole queue instead of retrying once per note', async () => {
+		vi.useFakeTimers();
+		const error = { code: 'RATE_LIMIT_EXCEEDED', info: { reset: 'invalid' } };
+		const api = vi.mocked(misskeyApi).mockRejectedValueOnce(error)
+			.mockImplementation((async (_endpoint, input: { noteIds: string[] }) => input.noteIds.map(noteId => ({ noteId }))) as never);
+		const first = fetchExtendedReactions('limited').catch(value => value);
+		await vi.advanceTimersByTimeAsync(25);
+		expect(await first).toBe(error);
+		expect(reactionRetryDelay(error)).toBe(60000);
+		const waiting = Promise.all(Array.from({ length: 50 }, (_, i) => fetchExtendedReactions(`after${i}`)));
+		await vi.advanceTimersByTimeAsync(59000);
+		expect(api).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(1025);
+		expect(await waiting).toHaveLength(50);
+		expect(api).toHaveBeenCalledTimes(2);
+	});
+	test('list 429 cooldown is shared by different notes and expires', async () => {
+		vi.useFakeTimers();
+		const error = { code: 'RATE_LIMIT_EXCEEDED' };
+		const api = vi.mocked(misskeyApi).mockRejectedValueOnce(error).mockResolvedValue([] as never);
+		await expect(fetchReactionUsers('first', '👍', true, 1)).rejects.toBe(error);
+		await expect(fetchReactionUsers('second', '👍', true, 1)).rejects.toBe(error);
+		expect(api).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(60001);
+		await expect(fetchReactionUsers('second', '👍', true, 1)).resolves.toEqual([]);
 		expect(api).toHaveBeenCalledTimes(2);
 	});
 });

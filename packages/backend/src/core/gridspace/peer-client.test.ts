@@ -8,7 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { once } from 'node:events';
 import { afterEach, describe, expect, test } from 'vitest';
 import { GridspaceLinkService } from './GridspaceLinkService.js';
-import { gridspacePeerTransport, GridspacePeerAuthorizationError, GridspaceProtocolMismatch, requestGridspacePeer } from './peer-client.js';
+import { gridspacePeerTransport, GridspacePeerAuthorizationError, GridspaceProtocolMismatch, GridspaceNoteDeferred, requestGridspacePeer } from './peer-client.js';
 import { verifyGridspaceRequest, type GridspacePeerConfig } from './peer-protocol.js';
 
 const servers: ReturnType<typeof createServer>[] = [];
@@ -40,6 +40,15 @@ function link(config: GridspacePeerConfig) {
 }
 
 describe('GridSpace peer transport', () => {
+	test.each([{ status: 409, body: '{"error":"PEER_NOTE_DEFERRED"}', deferred: true }, { status: 503, body: '{"error":"PEER_NOTE_DEFERRED"}', deferred: false },
+		{ status: 409, body: '{"error":"OTHER"}', deferred: false }])('classifies only the fixed note deferral ($status, $body)', async ({ status, body, deferred }) => {
+		const origin = await listen((_req, res) => { res.statusCode = status; res.end(body); });
+		const config = peer('https://g.example', origin);
+		const error = await requestGridspacePeer(config, '/gridspace/v1/notes/sync', {}).catch(error => error);
+		expect(error instanceof GridspaceNoteDeferred).toBe(deferred);
+		await expect(requestGridspacePeer(config, '/gridspace/v1/notes/read', {})).rejects.not.toBeInstanceOf(GridspaceNoteDeferred);
+	});
+
 	test('classifies only fixed timeline authorization errors without exposing the peer body', async () => {
 		const origin = await listen((_req, res) => { res.statusCode = 403; res.end('{"error":"AUTHORIZATION_REVOKED","token":"private"}'); });
 		const config = peer('https://g.example', origin);

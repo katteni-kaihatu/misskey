@@ -12,6 +12,7 @@ import type { Readable } from 'node:stream';
 export class GridspaceProtocolMismatch extends Error {}
 export class GridspaceEndpointUnavailable extends Error {}
 export class GridspacePeerAuthorizationError extends Error {}
+export class GridspaceNoteDeferred extends Error {}
 
 const agents = new WeakMap<GridspacePeerConfig, Agent>();
 
@@ -45,6 +46,11 @@ async function requestMeasured(peer: GridspacePeerConfig, path: string, input: o
 		headers: { ...createGridspaceHeaders(peer, 'POST', path, bytes), host: transport.host },
 	});
 	if (!response.ok) {
+		if (path === '/gridspace/v1/notes/sync' && response.status === 409) {
+			let body: unknown;
+			try { body = await response.json(); } catch { /* Unrecognized conflicts remain failures. */ }
+			if (body && typeof body === 'object' && 'error' in body && body.error === 'PEER_NOTE_DEFERRED') throw new GridspaceNoteDeferred('Note reference is not currently shareable');
+		}
 		if (path === '/gridspace/v1/private/timeline' && response.status === 403) {
 			let body: unknown;
 			try { body = await response.json(); } catch { /* An unreadable error remains unavailable. */ }

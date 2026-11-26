@@ -25,12 +25,14 @@ import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { acquireApObjectLock } from '@/misc/distributed-lock.js';
 import { resolveGridspaceConfig, type GridspacePeerConfig } from './peer-protocol.js';
-import { GridspaceEndpointUnavailable, requestGridspacePeer } from './peer-client.js';
+import { GridspaceEndpointUnavailable, GridspaceNoteDeferred, requestGridspacePeer } from './peer-client.js';
 import { startGridspaceTimer, stopGridspaceTimer } from './background-timer.js';
 import { GRIDSPACE_NOTE_BATCH_LIMIT, GRIDSPACE_NOTE_BATCH_BODY_LIMIT, validateGridspaceNoteBatch, canShareGridspaceNote, canonicalGridspaceNoteUri, gridspaceNoteUris, gridspaceNoteId, GRIDSPACE_NOTE_BODY_LIMIT, GRIDSPACE_NOTE_PATH, validateGridspaceBundle, type GridspaceNoteBundle } from './note-protocol.js';
 
 /** The root is public, but one of its references is not available for public import. */
-export class GridspaceNoteReferenceUnavailable extends Error {}
+export class GridspaceNoteReferenceUnavailable extends Error {
+	public readonly code = 'NOTE_REFERENCE_UNAVAILABLE';
+}
 
 @Injectable()
 export class GridspaceNoteService implements OnModuleInit, OnApplicationShutdown {
@@ -75,9 +77,10 @@ export class GridspaceNoteService implements OnModuleInit, OnApplicationShutdown
 					await this.request('sync', item.noteId);
 					// A concurrent delete replaces the version and must stay queued.
 					await queue.delete({ noteId: item.noteId, version: item.version });
-				} catch {
+				} catch (error) {
+					const backoff = Math.min(300000, 3000 * 2 ** Math.min(item.attempts, 7));
 					await queue.update({ noteId: item.noteId, version: item.version }, {
-						attempts: item.attempts + 1, retryAt: new Date(Date.now() + Math.min(300000, 3000 * 2 ** Math.min(item.attempts, 7))),
+						attempts: item.attempts + 1, retryAt: new Date(Date.now() + (error instanceof GridspaceNoteDeferred ? Math.max(60000, backoff) : backoff)),
 					});
 				}
 			}

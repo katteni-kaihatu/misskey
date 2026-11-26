@@ -12,7 +12,8 @@ import { prefer } from '@/preferences.js';
 const mocks = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetch: vi.fn(), menu: vi.fn(), confirm: vi.fn(), tooltip: vi.fn(), popup: vi.fn((_component: unknown, _props: Record<string, unknown>) => ({ dispose: vi.fn() })) }));
 vi.mock('@@/js/config.js', () => ({ host: 'g.test' }));
 vi.mock('@/utility/synced-reaction-aliases.js', () => ({ useSyncedReactionAliases: () => shallowRef({ ':cat@r.test:': ':cat@.:' }) }));
-vi.mock('@/utility/extended-reactions.js', () => ({ addExtendedReaction: mocks.add, deleteExtendedReaction: mocks.remove, fetchReactionUsers: mocks.fetch }));
+vi.mock('@/utility/extended-reactions.js', () => ({ addExtendedReaction: mocks.add, deleteExtendedReaction: mocks.remove, fetchReactionUsers: mocks.fetch,
+	reactionRetryDelay: (error: { code?: string }) => error?.code === 'RATE_LIMIT_EXCEEDED' ? 60000 : undefined }));
 vi.mock('@/preferences.js', async () => ({ prefer: { s: { animation: false, dataSaver: {}, confirmOnReact: false }, r: { reactionUserDisplay: (await import('vue')).ref('avatars') } } }));
 vi.mock('@/i.js', () => ({ $i: { id: 'me' } }));
 vi.mock('@/custom-emojis.js', () => ({ customEmojisMap: new Map([['cat', {}]]) }));
@@ -33,9 +34,58 @@ vi.mock('@/components/MkReactionIcon.vue', () => ({ default: { props: ['reaction
 vi.mock('@/components/MkReactionEffect.vue', () => ({ default: { template: '<div/>' } }));
 
 beforeEach(() => { vi.clearAllMocks(); prefer.r.reactionUserDisplay.value = 'avatars'; mocks.confirm.mockResolvedValue({ canceled: false }); mocks.fetch.mockResolvedValue([]); mocks.add.mockResolvedValue(undefined); mocks.remove.mockResolvedValue(undefined); });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 const base = { noteId: 'note', reactions: { ':cat@r.test:': 1, ':cat@.:': 1 }, reactionEmojis: {}, myReaction: null, extendedReactions: true };
 const global = { directives: { ripple: {} }, stubs: { MkAvatar: { props: ['user'], template: '<span :data-user="user.id"/>' } } };
+
+test('equal reaction snapshots do not reload avatar lists, but membership versions do', async () => {
+	const view = render(Viewer, { props: { ...base, reactionVersion: { ':cat@r.test:': 'a', ':cat@.:': 'a' } }, global });
+	await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
+	await view.rerender({ reactions: { ...base.reactions }, reactionVersion: { ':cat@r.test:': 'a', ':cat@.:': 'a' } });
+	await Promise.resolve();
+	expect(mocks.fetch).toHaveBeenCalledTimes(2);
+	await view.rerender({ reactionVersion: { ':cat@r.test:': 'b', ':cat@.:': 'a' } });
+	await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(4));
+});
+
+test.each([{ code: 'RATE_LIMIT_EXCEEDED', delay: 60000 }, { code: 'NETWORK_ERROR', delay: 1000 }, { code: 'PEER_UNAVAILABLE', delay: 1000 }])('unchanged visible avatars recover after $code and cancel their retry on unmount', async ({ code, delay }) => {
+	vi.useFakeTimers();
+	mocks.fetch.mockRejectedValueOnce({ code }).mockResolvedValue([{ user: { id: 'recovered' } }]);
+	const view = render(Viewer, { props: { ...base, reactions: { ':cat@.:': 1 } }, global });
+	await vi.advanceTimersByTimeAsync(0);
+	expect(mocks.fetch).toHaveBeenCalledTimes(1);
+	await vi.advanceTimersByTimeAsync(delay - 1);
+	expect(mocks.fetch).toHaveBeenCalledTimes(1);
+	await vi.advanceTimersByTimeAsync(1);
+	expect(mocks.fetch).toHaveBeenCalledTimes(2);
+	expect(view.container.querySelector('[data-user="recovered"]')).not.toBeNull();
+	mocks.fetch.mockRejectedValue({ code: 'RATE_LIMIT_EXCEEDED' });
+	await view.rerender({ reactions: { ':cat@.:': 2 } });
+	await vi.advanceTimersByTimeAsync(0);
+	const calls = mocks.fetch.mock.calls.length;
+	view.unmount();
+	await vi.advanceTimersByTimeAsync(120000);
+	expect(mocks.fetch).toHaveBeenCalledTimes(calls);
+});
+
+test('offscreen reaction buttons defer avatar reads until they enter the viewport', async () => {
+	let visibility!: IntersectionObserverCallback;
+	const disconnect = vi.fn();
+	vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 100 } as DOMRect);
+	vi.stubGlobal('IntersectionObserver', class {
+		constructor(callback: IntersectionObserverCallback) { visibility = callback; }
+		observe() {}
+		disconnect = disconnect;
+	});
+	const view = render(Viewer, { props: { ...base, reactions: { ':cat@.:': 1 } }, global });
+	expect(mocks.fetch).not.toHaveBeenCalled();
+	visibility([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+	await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
+	visibility([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+	await view.rerender({ reactions: { ':cat@.:': 2 } });
+	expect(mocks.fetch).toHaveBeenCalledTimes(1);
+	view.unmount(); expect(disconnect).toHaveBeenCalledOnce();
+});
 
 test('one button adds the local emoji and fetches avatars for both raw keys', async () => {
 	mocks.fetch.mockImplementation(async (_id, reaction) => [{ user: { id: reaction } }]);
