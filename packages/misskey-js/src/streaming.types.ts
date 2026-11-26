@@ -322,6 +322,7 @@ export type Channels = {
 			updated: (payload: Pick<Space, 'name' | 'access' | 'tilePlacement'>) => void;
 			leader: (payload: { userId: User['id'] | null; }) => void;
 			tileAdded: (payload: SpaceTile) => void;
+			tileUpdated: (payload: SpaceTile) => void;
 			tileRemoved: (payload: { tileId: string; }) => void;
 			tilesMoved: (payload: { tileIds: string[]; }) => void;
 			shared: (payload: { tileId: string; key: string; value: unknown; rev: number; userId: User['id']; }) => void;

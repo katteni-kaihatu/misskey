@@ -90,6 +90,7 @@ export const DI = {
 	chatRoomsRepository: Symbol('chatRoomsRepository'),
 	spacesRepository: Symbol('spacesRepository'),
 	spaceTilesRepository: Symbol('spaceTilesRepository'),
+	spaceTileDefsRepository: Symbol('spaceTileDefsRepository'),
 	chatRoomMembershipsRepository: Symbol('chatRoomMembershipsRepository'),
 	chatRoomInvitationsRepository: Symbol('chatRoomInvitationsRepository'),
 	bubbleGameRecordsRepository: Symbol('bubbleGameRecordsRepository'),

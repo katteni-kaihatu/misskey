@@ -85,6 +85,7 @@ import {
 	MiChatRoom,
 	MiSpace,
 	MiSpaceTile,
+	MiSpaceTileDef,
 	MiChatRoomMembership,
 	MiChatRoomInvitation,
 	MiChatApproval,
@@ -536,6 +537,12 @@ const $spaceTilesRepository: Provider = {
 	inject: [DI.db],
 };
 
+const $spaceTileDefsRepository: Provider = {
+	provide: DI.spaceTileDefsRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiSpaceTileDef).extend(miRepository as MiRepository<MiSpaceTileDef>),
+	inject: [DI.db],
+};
+
 const $chatRoomsRepository: Provider = {
 	provide: DI.chatRoomsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChatRoom).extend(miRepository as MiRepository<MiChatRoom>),
@@ -650,6 +657,7 @@ const $reversiGamesRepository: Provider = {
 		$chatRoomsRepository,
 		$spacesRepository,
 		$spaceTilesRepository,
+		$spaceTileDefsRepository,
 		$chatRoomMembershipsRepository,
 		$chatRoomInvitationsRepository,
 		$chatApprovalsRepository,
@@ -732,6 +740,7 @@ const $reversiGamesRepository: Provider = {
 		$chatRoomsRepository,
 		$spacesRepository,
 		$spaceTilesRepository,
+		$spaceTileDefsRepository,
 		$chatRoomMembershipsRepository,
 		$chatRoomInvitationsRepository,
 		$chatApprovalsRepository,

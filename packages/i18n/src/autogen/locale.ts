@@ -6867,6 +6867,157 @@ export interface Locale extends ILocale {
          * 続きをひらく
          */
         "continueSpace": string;
+        /**
+         * みんなのタイル
+         */
+        "customTiles": string;
+        /**
+         * 自分のタイル
+         */
+        "myTiles": string;
+        /**
+         * タイルの一覧
+         */
+        "browseTiles": string;
+        /**
+         * タイルをつくる
+         */
+        "createTile": string;
+        /**
+         * タイルを書き換える
+         */
+        "editTile": string;
+        /**
+         * まだタイルはありません。
+         */
+        "noCustomTiles": string;
+        /**
+         * 自分だけのタイル
+         */
+        "privateTile": string;
+        /**
+         * このタイルは消されました。
+         */
+        "deletedTile": string;
+        /**
+         * タイルを読み込めませんでした。
+         */
+        "tileLoadFailed": string;
+        /**
+         * ホストだけが操作できます
+         */
+        "tileHostOnly": string;
+        /**
+         * ホストだけが操作できるようにする
+         */
+        "tileHostOnlyOn": string;
+        /**
+         * 全員が操作できるようにする
+         */
+        "tileHostOnlyOff": string;
+        /**
+         * このタイルは、次の場所からデータを読みます。許しますか？
+         */
+        "tileFetchConfirm": string;
+        /**
+         * 許して置く
+         */
+        "tileFetchAllow": string;
+        /**
+         * 許さずに置く
+         */
+        "tileFetchDeny": string;
+        /**
+         * このタイルが読みに行く先に、まだ許していないものがあります。
+         */
+        "tileFetchPending": string;
+        /**
+         * 許す
+         */
+        "tileFetchAllowNow": string;
+        "_tileEditor": {
+            /**
+             * なまえ
+             */
+            "name": string;
+            /**
+             * 説明
+             */
+            "description": string;
+            /**
+             * コード (HTML と JavaScript)
+             */
+            "code": string;
+            /**
+             * 読みに行く先のドメイン
+             */
+            "fetchHosts": string;
+            /**
+             * space.fetch で読む先を、1行に1つ書きます。例: api.example.com
+             */
+            "fetchHostsCaption": string;
+            /**
+             * みんなのタイルに出す
+             */
+            "visibilityPublic": string;
+            /**
+             * 切ると、一覧には出ません。自分で置くことはできます。
+             */
+            "visibilityPublicCaption": string;
+            /**
+             * 動かす
+             */
+            "run": string;
+            /**
+             * ためす
+             */
+            "preview": string;
+            /**
+             * 2人でためす
+             */
+            "twoPeople": string;
+            /**
+             * スペースにはつながりません。ここでの値は保存されません。
+             */
+            "previewCaption": string;
+            /**
+             * space.fetch は、保存してからためせます。
+             */
+            "fetchNeedsSave": string;
+            /**
+             * このタイルを消しますか？ 置いてあるスペースでも動かなくなります。
+             */
+            "deleteConfirm": string;
+            /**
+             * ゲスト
+             */
+            "guest": string;
+            /**
+             * 作者
+             */
+            "by": string;
+            /**
+             * タイルから使えるもの
+             */
+            "apiReference": string;
+            /**
+             * space.shared(key, 最初の値) … 全員で同じになる値。get() / set(値) / on(fn)
+             * space.mine(key, 最初の値) … 自分のブラウザにだけ残る値
+             * space.keys(prefix) … 共有する値のキーの一覧
+             * space.onShared(fn) … どのキーが変わっても呼ばれる
+             * space.send(type, body) / space.on(type, fn) … 保存しない知らせ
+             * space.me / space.members / space.onMembers(fn) … 自分と、いる人
+             * space.isHost / space.hostOnly … ホストか、ホストだけが操作できるタイルか
+             * space.isLeader / space.onLeader(fn) … 自分が担当か (1人だけにさせたい処理に使う)
+             * space.fetch(url, { json: true }) … 外部の URL を読む。上に書いたドメインだけ
+             * space.misskey(endpoint, params) … notes/show、users/show、flash/show
+             * space.pickFile() … ドライブからファイルを選んでもらう
+             * space.open(url) … リンクを開く (確かめてから)
+             * space.post(text) … 投稿フォームを開く
+             * space.origin … このサーバーの URL
+             */
+            "apiReferenceBody": string;
+        };
         "_tiles": {
             "_memo": {
                 /**

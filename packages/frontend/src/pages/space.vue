@@ -51,7 +51,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<MkSpaceTile
 						v-if="stageTile != null"
-						:key="stageTile.id"
+						:key="tileKey(stageTile)"
+						:hostControls="isHost"
 						:tile="stageTile"
 						:removable="isHost || stageTile.creatorId === $i?.id"
 						expandable
@@ -109,7 +110,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div v-if="sideTiles.length === 0 && stageTile == null" :class="$style.empty">{{ i18n.ts._spaces.noTiles }}</div>
 						<MkSpaceTile
 							v-for="tile in sideTiles"
-							:key="tile.id"
+							:key="tileKey(tile)"
+							:hostControls="isHost"
 							:tile="tile"
 							:removable="isHost || tile.creatorId === $i?.id"
 							:expandable="tile.kind !== 'play'"
@@ -202,6 +204,7 @@ import MkInfo from '@/components/MkInfo.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkSpaceTile from '@/components/MkSpaceTile.vue';
 import { getBuiltinTiles } from '@/spaces/builtin-tiles.js';
+import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
@@ -299,13 +302,51 @@ const canPlaceTile = computed(() => space.value != null && (space.value.tilePlac
 
 /** 置くタイルを選んで置く。 */
 async function placeTile(ev: MouseEvent): Promise<void> {
-	os.popupMenu(getBuiltinTiles().map(tile => ({
+	const target = ev.currentTarget ?? ev.target;
+	// 自作タイルは、メニューを開く前に取っておく。取れなくても、きほんのタイルは置ける
+	const [mine, everyones] = await Promise.all([
+		misskeyApi('spaces/tile-defs/my', { limit: 30 }).catch(() => []),
+		misskeyApi('spaces/tile-defs/list', { limit: 30 }).catch(() => []),
+	]);
+	const others = everyones.filter(def => def.userId !== $i?.id);
+	const customItem = (def: Misskey.entities.SpaceTileDef): MenuItem => ({
+		icon: 'ti ti-puzzle',
+		text: def.name,
+		caption: `@${def.user.username}`,
+		action: () => { void placeCustomTile(def); },
+	});
+	const menu: MenuItem[] = getBuiltinTiles().map(tile => ({
 		icon: tile.icon,
 		text: tile.name,
 		action: () => {
 			void os.apiWithDialog('spaces/tiles/add', { spaceId: props.spaceId, kind: tile.kind as Misskey.entities.SpacesTilesAddRequest['kind'] });
 		},
-	})), ev.currentTarget ?? ev.target);
+	}));
+	if (mine.length > 0) menu.push({ type: 'divider' }, { type: 'label', text: i18n.ts._spaces.myTiles }, ...mine.map(customItem));
+	if (others.length > 0) menu.push({ type: 'divider' }, { type: 'label', text: i18n.ts._spaces.customTiles }, ...others.map(customItem));
+	menu.push({ type: 'divider' }, { type: 'link', icon: 'ti ti-layout-grid', text: i18n.ts._spaces.browseTiles, to: '/spaces/tiles' });
+	os.popupMenu(menu, target);
+}
+
+/** 自作タイルを置く。外部の URL を読むタイルなら、読みに行く先を見せて、許すかどうかを聞く。 */
+async function placeCustomTile(def: Misskey.entities.SpaceTileDef): Promise<void> {
+	let allowedHosts: string[] = [];
+	if (def.fetchHosts.length > 0) {
+		const { canceled } = await os.confirm({
+			type: 'question',
+			title: i18n.ts._spaces.tileFetchConfirm,
+			text: def.fetchHosts.join('\n'),
+			okText: i18n.ts._spaces.tileFetchAllow,
+			cancelText: i18n.ts._spaces.tileFetchDeny,
+		});
+		if (!canceled) allowedHosts = def.fetchHosts;
+	}
+	await os.apiWithDialog('spaces/tiles/add', { spaceId: props.spaceId, defId: def.id, allowedHosts });
+}
+
+/** 自作タイルは、作者が書き換えたあとに入り直すと、新しいコードで枠を作り直す。 */
+function tileKey(tile: Misskey.entities.SpaceTile): string {
+	return `${tile.id}:${tile.def?.updatedAt ?? ''}`;
 }
 
 async function removeTile(tile: Misskey.entities.SpaceTile): Promise<void> {

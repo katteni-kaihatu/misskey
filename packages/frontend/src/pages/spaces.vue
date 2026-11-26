@@ -47,6 +47,10 @@ onMounted(fetchSpaces);
 onActivated(fetchSpaces);
 
 const headerActions = computed(() => [{
+	icon: 'ti ti-layout-grid',
+	text: i18n.ts._spaces.browseTiles,
+	handler: () => router.push('/spaces/tiles'),
+}, {
 	icon: 'ti ti-refresh',
 	text: i18n.ts.reload,
 	handler: fetchSpaces,

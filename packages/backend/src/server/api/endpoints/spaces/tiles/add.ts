@@ -4,13 +4,14 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { SpacesRepository } from '@/models/_.js';
+import type { SpacesRepository, SpaceTileDefsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ApiError } from '@/server/api/error.js';
 import { DI } from '@/di-symbols.js';
 import { SpaceService } from '@/core/spaces/SpaceService.js';
 import { SpaceTileService } from '@/core/spaces/SpaceTileService.js';
-import { spaceTileKinds } from '@/models/SpaceTile.js';
+import { SPACE_TILE_KIND_CUSTOM, spaceTileKinds } from '@/models/SpaceTile.js';
+import { normalizeSpaceTileHosts, SpaceTileDefService } from '@/core/spaces/SpaceTileDefService.js';
 
 export const meta = {
 	tags: ['spaces'],
@@ -53,6 +54,16 @@ export const meta = {
 			code: 'ACCESS_DENIED',
 			id: '34fda655-58ff-493e-8055-cfa58300f1e1',
 		},
+		noSuchTileDef: {
+			message: 'No such tile.',
+			code: 'NO_SUCH_TILE_DEF',
+			id: 'a2780d7f-1ecf-4616-bd03-9719ce2bb901',
+		},
+		kindOrDefRequired: {
+			message: 'Specify either kind or defId.',
+			code: 'KIND_OR_DEF_REQUIRED',
+			id: '7d9c6617-3599-48cf-b135-9d13020cd121',
+		},
 	},
 } as const;
 
@@ -60,9 +71,15 @@ export const paramDef = {
 	type: 'object',
 	properties: {
 		spaceId: { type: 'string', format: 'misskey:id' },
+		// きほんのタイルは kind、自作タイルは defId のどちらかで示す
 		kind: { type: 'string', enum: spaceTileKinds },
+		defId: { type: 'string', format: 'misskey:id' },
+		// 自作タイルの space.fetch に許すドメイン。定義が宣言している先だけが残る
+		allowedHosts: { type: 'array', maxItems: 32, items: { type: 'string', minLength: 1, maxLength: 253 } },
+		// ホストだけが操作できるタイルにするか。ホストだけが選べる
+		hostOnly: { type: 'boolean' },
 	},
-	required: ['spaceId', 'kind'],
+	required: ['spaceId'],
 } as const;
 
 @Injectable()
@@ -71,8 +88,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.spacesRepository)
 		private spacesRepository: SpacesRepository,
 
+		@Inject(DI.spaceTileDefsRepository)
+		private spaceTileDefsRepository: SpaceTileDefsRepository,
+
 		private spaceService: SpaceService,
 		private spaceTileService: SpaceTileService,
+		private spaceTileDefService: SpaceTileDefService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			if (!this.spaceService.isEnabled()) throw new ApiError(meta.errors.spacesDisabled);
@@ -84,8 +105,20 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (!(await this.spaceService.isMember(space.id, me.id))) throw new ApiError(meta.errors.notInSpace);
 			if (!this.spaceTileService.canPlace(me, space)) throw new ApiError(meta.errors.accessDenied);
 
-			const tile = await this.spaceTileService.add(space, me, ps.kind);
-			return this.spaceTileService.pack(tile);
+			if (ps.hostOnly === true && !this.spaceTileService.canSetHostOnly(me, space)) throw new ApiError(meta.errors.accessDenied);
+			if ((ps.kind == null) === (ps.defId == null)) throw new ApiError(meta.errors.kindOrDefRequired);
+
+			if (ps.defId != null) {
+				const def = await this.spaceTileDefsRepository.findOneBy({ id: ps.defId });
+				// 置けないものは、無いものと同じに見せる
+				if (def == null || !this.spaceTileDefService.canPlace(def, me)) throw new ApiError(meta.errors.noSuchTileDef);
+				const allowedHosts = normalizeSpaceTileHosts(ps.allowedHosts ?? []).filter(host => def.fetchHosts.includes(host));
+				const tile = await this.spaceTileService.add(space, me, SPACE_TILE_KIND_CUSTOM, { def, allowedHosts, hostOnly: ps.hostOnly });
+				return await this.spaceTileService.pack(tile);
+			}
+
+			const tile = await this.spaceTileService.add(space, me, ps.kind!, { hostOnly: ps.hostOnly });
+			return await this.spaceTileService.pack(tile);
 		});
 	}
 }

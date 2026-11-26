@@ -73,6 +73,7 @@ import { packedChatMessageSchema, packedChatMessageLiteSchema, packedChatMessage
 import { packedChatRoomSchema } from '@/models/json-schema/chat-room.js';
 import { packedSpaceSchema } from '@/models/json-schema/space.js';
 import { packedSpaceTileSchema } from '@/models/json-schema/space-tile.js';
+import { packedSpaceTileDefSchema } from '@/models/json-schema/space-tile-def.js';
 import { packedChatRoomInvitationSchema } from '@/models/json-schema/chat-room-invitation.js';
 import { packedChatRoomMembershipSchema } from '@/models/json-schema/chat-room-membership.js';
 import { packedAchievementNameSchema, packedAchievementSchema } from '@/models/json-schema/achievement.js';
@@ -149,6 +150,7 @@ export const refs = {
 	ChatRoom: packedChatRoomSchema,
 	Space: packedSpaceSchema,
 	SpaceTile: packedSpaceTileSchema,
+	SpaceTileDef: packedSpaceTileDefSchema,
 	ChatRoomInvitation: packedChatRoomInvitationSchema,
 	ChatRoomMembership: packedChatRoomMembershipSchema,
 };

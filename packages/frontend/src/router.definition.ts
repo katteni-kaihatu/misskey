@@ -619,6 +619,22 @@ export const ROUTE_DEF = [{
 	component: page(() => import('@/pages/spaces.vue')),
 	loginRequired: true,
 }, {
+	path: '/spaces/tiles',
+	component: page(() => import('@/pages/space-tiles.vue')),
+	loginRequired: true,
+}, {
+	path: '/spaces/tiles/new',
+	component: page(() => import('@/pages/space-tile-edit.vue')),
+	loginRequired: true,
+}, {
+	path: '/spaces/tiles/:defId/edit',
+	component: page(() => import('@/pages/space-tile-edit.vue')),
+	loginRequired: true,
+}, {
+	path: '/spaces/tiles/:defId',
+	component: page(() => import('@/pages/space-tile.vue')),
+	loginRequired: true,
+}, {
 	path: '/spaces/:spaceId',
 	component: page(() => import('@/pages/space.vue')),
 	loginRequired: true,

@@ -69,5 +69,6 @@ export type ChatMessageLiteForRoom = components['schemas']['ChatMessageLiteForRo
 export type ChatRoom = components['schemas']['ChatRoom'];
 export type Space = components['schemas']['Space'];
 export type SpaceTile = components['schemas']['SpaceTile'];
+export type SpaceTileDef = components['schemas']['SpaceTileDef'];
 export type ChatRoomInvitation = components['schemas']['ChatRoomInvitation'];
 export type ChatRoomMembership = components['schemas']['ChatRoomMembership'];

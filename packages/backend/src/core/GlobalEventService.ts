@@ -232,6 +232,7 @@ export interface SpaceEventTypes {
 	/** 担当が替わった。だれもいなければ null */
 	leader: { userId: MiUser['id'] | null; };
 	tileAdded: Packed<'SpaceTile'>;
+	tileUpdated: Packed<'SpaceTile'>;
 	tileRemoved: { tileId: string; };
 	tilesMoved: { tileIds: string[]; };
 	/** 共有する値が書かれた。value が null ならキーが消えた */

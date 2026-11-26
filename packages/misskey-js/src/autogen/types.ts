@@ -4260,6 +4260,60 @@ export type paths = {
          */
         post: operations['spaces___show'];
     };
+    '/spaces/tile-defs/create': {
+        /**
+         * spaces/tile-defs/create
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tile-defs___create'];
+    };
+    '/spaces/tile-defs/delete': {
+        /**
+         * spaces/tile-defs/delete
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tile-defs___delete'];
+    };
+    '/spaces/tile-defs/list': {
+        /**
+         * spaces/tile-defs/list
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *read:spaces*
+         */
+        post: operations['spaces___tile-defs___list'];
+    };
+    '/spaces/tile-defs/my': {
+        /**
+         * spaces/tile-defs/my
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *read:spaces*
+         */
+        post: operations['spaces___tile-defs___my'];
+    };
+    '/spaces/tile-defs/show': {
+        /**
+         * spaces/tile-defs/show
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *read:spaces*
+         */
+        post: operations['spaces___tile-defs___show'];
+    };
+    '/spaces/tile-defs/update': {
+        /**
+         * spaces/tile-defs/update
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tile-defs___update'];
+    };
     '/spaces/tiles/add': {
         /**
          * spaces/tiles/add
@@ -4268,6 +4322,15 @@ export type paths = {
          *     **Credential required**: *Yes* / **Permission**: *write:spaces*
          */
         post: operations['spaces___tiles___add'];
+    };
+    '/spaces/tiles/fetch': {
+        /**
+         * spaces/tiles/fetch
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tiles___fetch'];
     };
     '/spaces/tiles/move': {
         /**
@@ -4286,6 +4349,15 @@ export type paths = {
          *     **Credential required**: *Yes* / **Permission**: *write:spaces*
          */
         post: operations['spaces___tiles___remove'];
+    };
+    '/spaces/tiles/update': {
+        /**
+         * spaces/tiles/update
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tiles___update'];
     };
     '/spaces/token': {
         /**
@@ -6475,6 +6547,35 @@ export type components = {
             /** Format: id */
             creatorId: string;
             position: number;
+            def: {
+                /** Format: id */
+                id: string;
+                name: string;
+                /** Format: id */
+                userId: string;
+                /** Format: date-time */
+                updatedAt: string;
+                fetchHosts: string[];
+            } | null;
+            allowedHosts: string[];
+            hostOnly: boolean;
+        };
+        SpaceTileDef: {
+            /** Format: id */
+            id: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: id */
+            userId: string;
+            user: components['schemas']['UserLite'];
+            name: string;
+            description: string;
+            fetchHosts: string[];
+            /** @enum {string} */
+            visibility: 'public' | 'private';
+            code?: string;
         };
         ChatRoomInvitation: {
             id: string;
@@ -43654,6 +43755,419 @@ export interface operations {
             };
         };
     };
+    'spaces___tile-defs___create': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    name: string;
+                    description?: string;
+                    code: string;
+                    fetchHosts?: string[];
+                    /** @enum {string} */
+                    visibility?: 'public' | 'private';
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTileDef'];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'spaces___tile-defs___delete': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    defId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'spaces___tile-defs___list': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** @default 30 */
+                    limit?: number;
+                    /** Format: misskey:id */
+                    sinceId?: string;
+                    /** Format: misskey:id */
+                    untilId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTileDef'][];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'spaces___tile-defs___my': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** @default 30 */
+                    limit?: number;
+                    /** Format: misskey:id */
+                    sinceId?: string;
+                    /** Format: misskey:id */
+                    untilId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTileDef'][];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'spaces___tile-defs___show': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    defId: string;
+                    /** Format: misskey:id */
+                    tileId?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTileDef'];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'spaces___tile-defs___update': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    defId: string;
+                    name?: string;
+                    description?: string;
+                    code?: string;
+                    fetchHosts?: string[];
+                    /** @enum {string} */
+                    visibility?: 'public' | 'private';
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTileDef'];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     spaces___tiles___add: {
         requestBody: {
             content: {
@@ -43661,7 +44175,11 @@ export interface operations {
                     /** Format: misskey:id */
                     spaceId: string;
                     /** @enum {string} */
-                    kind: 'note' | 'image' | 'poll' | 'todo' | 'draw' | 'memo' | 'link' | 'play' | 'timer';
+                    kind?: 'note' | 'image' | 'poll' | 'todo' | 'draw' | 'memo' | 'link' | 'play' | 'timer';
+                    /** Format: misskey:id */
+                    defId?: string;
+                    allowedHosts?: string[];
+                    hostOnly?: boolean;
                 };
             };
         };
@@ -43704,6 +44222,88 @@ export interface operations {
             };
             /** @description I'm Ai */
             418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    spaces___tiles___fetch: {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    tileId?: string;
+                    /** Format: misskey:id */
+                    defId?: string;
+                    url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        status: number;
+                        contentType: string | null;
+                        text: string;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Too many requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -43800,6 +44400,74 @@ export interface operations {
             204: {
                 headers: {
                     [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    spaces___tiles___update: {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    tileId: string;
+                    allowedHosts?: string[];
+                    hostOnly?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTile'];
                 };
             };
             /** @description Client error */

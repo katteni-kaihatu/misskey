@@ -54,7 +54,7 @@ function fakeRedis() {
 }
 
 function tile(patch: Partial<MiSpaceTile> = {}): MiSpaceTile {
-	return { id: 't1', spaceId: 'space', space: null, kind: 'memo', creatorId: 'alice', position: 0, shared: {}, ...patch };
+	return { id: 't1', spaceId: 'space', space: null, kind: 'memo', creatorId: 'alice', defId: null, def: null, allowedHosts: [], hostOnly: false, position: 0, shared: {}, ...patch };
 }
 
 function fixture(stored: MiSpaceTile[] = [tile()]) {
@@ -63,6 +63,7 @@ function fixture(stored: MiSpaceTile[] = [tile()]) {
 	const sorted = () => [...rows.values()].sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
 	const tiles = {
 		findBy: vi.fn(async () => sorted()),
+		findOneBy: vi.fn(async (where: { id: string }) => rows.get(where.id) ?? null),
 		find: vi.fn(async () => sorted()),
 		findOne: vi.fn(async () => sorted().at(-1) ?? null),
 		insertOne: vi.fn(async (row: MiSpaceTile) => { rows.set(row.id, row); return row; }),
@@ -75,6 +76,7 @@ function fixture(stored: MiSpaceTile[] = [tile()]) {
 		delete: vi.fn(async (id: string) => { rows.delete(id); }),
 	};
 	const events = { publishSpaceStream: vi.fn() };
+	const defs = { findBy: vi.fn(async () => [] as unknown[]) };
 	let nextId = 2;
 	const service = new SpaceTileService(
 		redis as unknown as Args[0],
@@ -82,8 +84,9 @@ function fixture(stored: MiSpaceTile[] = [tile()]) {
 		tiles as unknown as Args[2],
 		{ gen: () => `t${nextId++}` } as unknown as Args[3],
 		events as unknown as Args[4],
+		defs as unknown as Args[5],
 	);
-	return { service, redis, rows, tiles, events };
+	return { service, redis, rows, tiles, events, defs };
 }
 
 const space = { id: 'space', hostId: 'host', endedAt: null, tilePlacement: 'everyone' } as MiSpace;
@@ -218,5 +221,48 @@ describe('shared values', () => {
 		await f.service.remove(tile());
 		expect(f.events.publishSpaceStream).toHaveBeenLastCalledWith('space', 'tileRemoved', { tileId: 't1' });
 		expect(await f.service.setShared('space', 'alice', 't1', 'text', 'again')).toBe(false);
+	});
+});
+
+describe('custom tiles and host-only tiles', () => {
+	const def = { id: 'd1', userId: 'carol', name: 'Counter', fetchHosts: ['api.example.com'], updatedAt: new Date(0) };
+
+	test('a custom tile points at its definition and is announced with it, without the code', async () => {
+		const f = fixture();
+		f.defs.findBy.mockResolvedValue([def]);
+		const added = await f.service.add(space, { id: 'bob' }, 'custom', { def: def as never, allowedHosts: ['api.example.com'] });
+		expect(added).toMatchObject({ kind: 'custom', defId: 'd1', allowedHosts: ['api.example.com'], hostOnly: false });
+		const announced = f.events.publishSpaceStream.mock.calls.at(-1)![2];
+		expect(announced.def).toEqual({ id: 'd1', name: 'Counter', userId: 'carol', updatedAt: new Date(0).toISOString(), fetchHosts: ['api.example.com'] });
+		expect(JSON.stringify(announced)).not.toContain('code');
+	});
+
+	test('a tile whose definition was deleted is packed with no definition', async () => {
+		const f = fixture([tile({ kind: 'custom', defId: null })]);
+		expect((await f.service.pack(f.rows.get('t1')!)).def).toBeNull();
+	});
+
+	test('only the host can write to or signal a host-only tile', async () => {
+		const f = fixture([tile({ hostOnly: true })]);
+		expect(await f.service.setShared('space', 'guest', 't1', 'k', 1)).toBe(false);
+		expect(await f.service.signal('space', 'guest', 't1', 'ping', null)).toBe(false);
+		expect(await f.service.setShared('space', 'host', 't1', 'k', 1, true)).toBe(true);
+		expect(await f.service.signal('space', 'host', 't1', 'ping', null, true)).toBe(true);
+	});
+
+	test('switching host-only on and off takes effect at once and is announced', async () => {
+		const f = fixture();
+		expect(await f.service.setShared('space', 'guest', 't1', 'k', 1)).toBe(true);
+		const locked = await f.service.update(f.rows.get('t1')!, { hostOnly: true });
+		expect(f.events.publishSpaceStream).toHaveBeenCalledWith('space', 'tileUpdated', expect.objectContaining({ id: 't1', hostOnly: true }));
+		expect(await f.service.setShared('space', 'guest', 't1', 'k', 2)).toBe(false);
+		await f.service.update(locked, { hostOnly: false });
+		expect(await f.service.setShared('space', 'guest', 't1', 'k', 3)).toBe(true);
+	});
+
+	test('continuing a space carries over the definition, allowed hosts and host-only', async () => {
+		const f = fixture([tile({ kind: 'custom', defId: 'd1', allowedHosts: ['api.example.com'], hostOnly: true })]);
+		await f.service.copyTiles('space', 'next');
+		expect(f.tiles.insertOne).toHaveBeenCalledWith(expect.objectContaining({ spaceId: 'next', defId: 'd1', allowedHosts: ['api.example.com'], hostOnly: true }));
 	});
 });

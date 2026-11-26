@@ -4,10 +4,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<section :class="$style.root" class="_panel" :aria-label="definition?.name ?? tile.kind">
+<section :class="$style.root" class="_panel" :aria-label="title">
 	<header :class="$style.header">
-		<i v-if="definition != null" :class="[definition.icon, $style.icon]"></i>
-		<span :class="$style.name">{{ definition?.name ?? tile.kind }}</span>
+		<i :class="[definition?.icon ?? 'ti ti-puzzle', $style.icon]"></i>
+		<span :class="$style.name">{{ title }}<span v-if="author != null" :class="$style.author">@{{ author }}</span></span>
+		<button v-if="hostControls" class="_button" :class="[$style.remove, { [$style.active]: tile.hostOnly }]" :aria-label="tile.hostOnly ? i18n.ts._spaces.tileHostOnlyOff : i18n.ts._spaces.tileHostOnlyOn" :title="tile.hostOnly ? i18n.ts._spaces.tileHostOnlyOff : i18n.ts._spaces.tileHostOnlyOn" :aria-pressed="tile.hostOnly" @click="toggleHostOnly">
+			<i :class="tile.hostOnly ? 'ti ti-lock' : 'ti ti-lock-open'"></i>
+		</button>
+		<i v-else-if="tile.hostOnly" class="ti ti-lock" :class="$style.icon" role="img" :title="i18n.ts._spaces.tileHostOnly" :aria-label="i18n.ts._spaces.tileHostOnly"></i>
 		<button v-if="expandable" class="_button" :class="$style.remove" :aria-label="expanded ? i18n.ts._spaces.shrinkTile : i18n.ts._spaces.expandTile" :title="expanded ? i18n.ts._spaces.shrinkTile : i18n.ts._spaces.expandTile" @click="emit('expand')">
 			<i :class="expanded ? 'ti ti-arrows-minimize' : 'ti ti-arrows-maximize'"></i>
 		</button>
@@ -15,52 +19,56 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-x"></i>
 		</button>
 	</header>
-	<!-- タイルは、権限を絞った枠の中で動かす。allow-scripts だけを許し、同じ出どころとしては扱わせない -->
+	<!-- 作者があとから読みに行く先を足しても、許し直すまでは読めない。許せるのは、置いた本人とホスト -->
+	<div v-if="pendingHosts.length > 0 && removable" :class="$style.notice">
+		<div :class="$style.noticeText">{{ i18n.ts._spaces.tileFetchPending }}<br><code>{{ pendingHosts.join(', ') }}</code></div>
+		<MkButton small @click="allowHosts">{{ i18n.ts._spaces.tileFetchAllowNow }}</MkButton>
+	</div>
 	<!-- Play だけは、枠ではなく本体が直接描く。Play は AiScript で動き、Misskey の部品で描くため -->
 	<div v-if="definition != null && definition.html == null">
 		<MkFlashPlayer v-if="flashId != null" :flashId="flashId"/>
+		<div v-else-if="isLocked()" :class="$style.unknown">{{ i18n.ts._spaces.tileHostOnly }}</div>
 		<form v-else :class="$style.playForm" @submit.prevent="setFlash">
 			<MkInput v-model="flashInput" :class="$style.playInput" :placeholder="i18n.ts._spaces._tiles._play.placeholder" :aria-label="i18n.ts._spaces._tiles._play.placeholder"/>
 			<MkButton primary type="submit">{{ i18n.ts._spaces._tiles._play.set }}</MkButton>
 		</form>
 	</div>
-	<iframe
-		v-else-if="definition != null"
+	<MkSpaceTileFrame
+		v-else-if="frameSource != null"
 		ref="frame"
-		:class="$style.frame"
-		:style="{ height: `${expanded ? Math.max(height, EXPANDED_MIN_HEIGHT) : height}px` }"
-		sandbox="allow-scripts"
-		:srcdoc="srcdoc"
-		:title="definition.name"
-		@load="onLoad"
-	></iframe>
-	<div v-else :class="$style.unknown">{{ i18n.ts._spaces.unknownTile }}</div>
+		:html="frameSource.html"
+		:init="frameSource.init"
+		:title="title"
+		:expanded="expanded"
+		:call="handleCall"
+		@setShared="onSetShared"
+		@setMine="writeMine"
+		@signal="onSignal"
+		@ready="onReady"
+	/>
+	<MkLoading v-else-if="loading"/>
+	<div v-else :class="$style.unknown">{{ message }}</div>
 </section>
 </template>
 
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
-import { apiUrl, url as localUrl } from '@@/js/config.js';
-import { versatileLang } from '@@/js/intl-const.js';
+import { url as localUrl } from '@@/js/config.js';
 import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkFlashPlayer from '@/components/MkFlashPlayer.vue';
-import { chooseDriveFile } from '@/utility/drive.js';
+import MkSpaceTileFrame from '@/components/MkSpaceTileFrame.vue';
+import { misskeyApi } from '@/utility/misskey-api.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { getBuiltinTile } from '@/spaces/builtin-tiles.js';
-import { buildTileDocument, TILE_PORT_MESSAGE, toTileUser } from '@/spaces/tile-frame.js';
-import type { HostToTileMessage, TileToHostMessage } from '@/spaces/tile-frame.js';
+import { fetchTileDef, handleCommonTileCall } from '@/spaces/tile-calls.js';
+import { toTileUser } from '@/spaces/tile-frame.js';
+import type { HostToTileMessage, TileInit } from '@/spaces/tile-frame.js';
 import { getSpaceShared, onSpaceTileEvent, sendSpaceSignal, setSpaceShared, spaceSession as session } from '@/utility/space-session.js';
-
-const MIN_HEIGHT = 60;
-const MAX_HEIGHT = 640;
-const EXPANDED_MIN_HEIGHT = 360;
-/** タイルが本体に読ませられる Misskey のデータ。ログインなしの立場で読むので、公開されているものだけが返る */
-const PUBLIC_ENDPOINTS = ['notes/show', 'users/show', 'flash/show'];
 
 const props = defineProps<{
 	tile: Misskey.entities.SpaceTile;
@@ -70,6 +78,8 @@ const props = defineProps<{
 	expandable?: boolean;
 	/** いま大きく出しているか */
 	expanded?: boolean;
+	/** 「ホストだけが操作できる」の切り替えを出すか (自分がホストか) */
+	hostControls?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -78,10 +88,29 @@ const emit = defineEmits<{
 }>();
 
 const frame = useTemplateRef('frame');
-const height = ref(120);
 const definition = computed(() => getBuiltinTile(props.tile.kind));
-let port: MessagePort | null = null;
 let offTileEvent: (() => void) | null = null;
+
+/** 枠に入れるもの。きほんのタイルはすぐ決まる。自作タイルは、コードを取ってから決まる */
+const frameSource = shallowRef<{ html: string; init: TileInit } | null>(null);
+const loading = ref(false);
+const message = ref(i18n.ts._spaces.unknownTile);
+const author = ref<string | null>(null);
+const title = computed(() => definition.value?.name ?? props.tile.def?.name ?? props.tile.kind);
+
+/** タイルが読みに行くと宣言している先のうち、まだ許されていないもの */
+const pendingHosts = computed(() => (props.tile.def?.fetchHosts ?? []).filter(host => !props.tile.allowedHosts.includes(host)));
+
+async function allowHosts(): Promise<void> {
+	const hosts = props.tile.def?.fetchHosts ?? [];
+	const { canceled } = await os.confirm({ type: 'question', title: i18n.ts._spaces.tileFetchConfirm, text: hosts.join('\n') });
+	if (canceled) return;
+	await os.apiWithDialog('spaces/tiles/update', { tileId: props.tile.id, allowedHosts: hosts });
+}
+
+async function toggleHostOnly(): Promise<void> {
+	await os.apiWithDialog('spaces/tiles/update', { tileId: props.tile.id, hostOnly: !props.tile.hostOnly });
+}
 
 /** 自分だけの値の保存先。アカウントを切り替えても混ざらないよう、アカウントごとに分ける */
 const mineKey = `spaceTileMine:${$i?.id ?? ''}:${props.tile.id}` as const;
@@ -103,130 +132,105 @@ function writeMine(key: string, value: unknown): void {
 }
 
 /** 枠に最初に埋め込んだ共有の値。枠が読み込まれたあと、いまの値との差を伝えるのに使う */
-const embeddedShared = getSpaceShared(props.tile.id);
+let embeddedShared: Record<string, unknown> = {};
 
 /**
- * 枠の中身。タイルごとに1回だけ組み立てる。そのあとの変化は通信路で伝える。
+ * 枠に入れるものを決める。タイルごとに1回だけ。そのあとの変化は通信路で伝える。
  * いる人が変わるたびに組み立て直すと枠が読み直されて、書いている途中のものが消えるので、ここでは変化を追わない。
  */
-const srcdoc = ((): string => {
-	if (definition.value?.html == null || $i == null) return '';
-	return buildTileDocument(definition.value.html, {
-		shared: embeddedShared,
-		mine: readMine(),
-		me: toTileUser($i),
-		members: session.members.map(member => toTileUser(member.user)),
-		isHost: session.space?.hostId === $i.id,
-		isLeader: session.leaderId === $i.id,
-		origin: localUrl,
-		strings: definition.value.strings,
-	}, localUrl);
-})();
+function prepareFrame(html: string, strings: Record<string, string>): void {
+	if ($i == null) return;
+	embeddedShared = getSpaceShared(props.tile.id);
+	frameSource.value = {
+		html,
+		init: {
+			shared: embeddedShared,
+			mine: readMine(),
+			me: toTileUser($i),
+			members: session.members.map(member => toTileUser(member.user)),
+			isHost: session.space?.hostId === $i.id,
+			isLeader: session.leaderId === $i.id,
+			hostOnly: props.tile.hostOnly,
+			origin: localUrl,
+			strings,
+		},
+	};
+}
 
-function send(message: HostToTileMessage): void {
-	port?.postMessage(message);
+if (definition.value != null) {
+	if (definition.value.html != null) prepareFrame(definition.value.html, definition.value.strings);
+} else if (props.tile.def != null) {
+	// 自作タイル。コードは定義から取る。同じ版は取り直さない
+	loading.value = true;
+	fetchTileDef(props.tile.def.id, props.tile.def.updatedAt, props.tile.id).then(def => {
+		author.value = def.user.username;
+		if (def.code != null) prepareFrame(def.code, {});
+	}).catch(() => {
+		message.value = i18n.ts._spaces.tileLoadFailed;
+	}).finally(() => {
+		loading.value = false;
+	});
+} else if (props.tile.kind === 'custom') {
+	message.value = i18n.ts._spaces.deletedTile;
+}
+
+function send(msg: HostToTileMessage): void {
+	frame.value?.send(msg);
 }
 
 /** 枠から頼まれたことを、本体がやる。枠には結果だけを返す。 */
-async function handleCall(method: string, args: unknown): Promise<unknown> {
-	const params = (typeof args === 'object' && args != null ? args : {}) as Record<string, unknown>;
-	switch (method) {
-		case 'misskey': {
-			if (typeof params.endpoint !== 'string' || !PUBLIC_ENDPOINTS.includes(params.endpoint)) throw new Error('endpoint not allowed');
-			// 本人の立場では読まない。トークンを付けずに呼ぶ
-			const res = await window.fetch(`${apiUrl}/${params.endpoint}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(typeof params.params === 'object' && params.params != null ? params.params : {}),
-				credentials: 'omit',
-			});
-			if (!res.ok) throw new Error('request failed');
-			return await res.json();
-		}
-		case 'pickFile': {
-			const [file] = await chooseDriveFile({ multiple: false });
-			if (file == null) throw new Error('canceled');
-			return { id: file.id, name: file.name, type: file.type, url: file.url, thumbnailUrl: file.thumbnailUrl };
-		}
-		case 'preview': {
-			if (typeof params.url !== 'string' || !/^https?:\/\//.test(params.url)) throw new Error('invalid url');
-			const res = await window.fetch(`/url?url=${encodeURIComponent(params.url)}&lang=${versatileLang}`);
-			if (!res.ok) throw new Error('request failed');
-			const info = await res.json() as { title?: string | null; description?: string | null; sitename?: string | null };
-			return { title: info.title ?? null, description: info.description ?? null, sitename: info.sitename ?? null };
-		}
-		default:
-			throw new Error('unknown method');
+async function handleCall(method: string, params: Record<string, unknown>): Promise<unknown> {
+	if (method === 'fetch') {
+		if (typeof params.url !== 'string') throw new Error('invalid url');
+		// 読みに行くのはサーバー。許した先かどうかも、サーバーが確かめる
+		return await misskeyApi('spaces/tiles/fetch', { tileId: props.tile.id, url: params.url });
 	}
+	const result = await handleCommonTileCall(method, params);
+	if (result === undefined) throw new Error('unknown method');
+	return result;
 }
 
-async function onTileMessage(ev: MessageEvent): Promise<void> {
-	const message = ev.data as TileToHostMessage | null;
-	if (message == null || typeof message !== 'object') return;
-	switch (message.t) {
-		case 'setShared':
-			if (typeof message.key === 'string') setSpaceShared(props.tile.id, message.key, message.value ?? null);
-			break;
-		case 'setMine':
-			if (typeof message.key === 'string') writeMine(message.key, message.value ?? null);
-			break;
-		case 'signal':
-			if (typeof message.type === 'string') sendSpaceSignal(props.tile.id, message.type, message.body ?? null);
-			break;
-		case 'call': {
-			const id = message.id;
-			if (typeof id !== 'number' || typeof message.method !== 'string') break;
-			try {
-				send({ t: 'reply', id, ok: true, value: await handleCall(message.method, message.args) });
-			} catch (err) {
-				send({ t: 'reply', id, ok: false, value: err instanceof Error ? err.message : 'failed' });
-			}
-			break;
-		}
-		case 'resize':
-			if (typeof message.height === 'number' && Number.isFinite(message.height)) height.value = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.ceil(message.height)));
-			break;
-		case 'open': {
-			// 枠は自分ではリンクを開けない。本体が確かめてから開く
-			if (typeof message.url !== 'string' || !/^https?:\/\//.test(message.url)) break;
-			const { canceled } = await os.confirm({ type: 'question', title: i18n.ts._spaces.openLinkConfirm, text: message.url });
-			if (!canceled) window.open(message.url, '_blank', 'noopener');
-			break;
-		}
-	}
+/** 「ホストだけが操作できる」タイルで、自分がホストでないか */
+function isLocked(): boolean {
+	return props.tile.hostOnly && session.space?.hostId !== $i?.id;
 }
 
-function closePort(): void {
+function onSetShared(key: string, value: unknown): void {
+	if (isLocked()) {
+		// サーバーは受け取らない。枠は先に自分の値を変えているので、いまの値を送り返して元に戻す
+		send({ t: 'shared', key, value: getSpaceShared(props.tile.id)[key] ?? null, userId: '' });
+		return;
+	}
+	setSpaceShared(props.tile.id, key, value);
+}
+
+function onSignal(type: string, body: unknown): void {
+	if (!isLocked()) sendSpaceSignal(props.tile.id, type, body);
+}
+
+/** 枠が読み込まれて、通信路がつながった。ページを移って戻り、枠が読み直されたときもここを通る */
+function onReady(): void {
 	offTileEvent?.();
-	offTileEvent = null;
-	port?.close();
-	port = null;
-}
-
-/** 枠が読み込まれたら、通信路を渡す。枠は別の出どころなので、相手は絞れない。渡すのは通信路だけ */
-function onLoad(): void {
-	const target = frame.value?.contentWindow;
-	if (target == null) return;
-	closePort();
-	const channel = new MessageChannel();
-	port = channel.port1;
-	port.onmessage = onTileMessage;
-	target.postMessage({ type: TILE_PORT_MESSAGE }, '*', [channel.port2]);
 	offTileEvent = onSpaceTileEvent(props.tile.id, {
 		shared: (key, value, userId) => send({ t: 'shared', key, value, userId }),
 		signal: (type, body, userId) => send({ t: 'signal', type, body, userId }),
 	});
-	// 枠を組み立ててから読み込まれるまでの間に変わった値を伝える。ページを移って戻り、枠が読み直されたときもここを通る
+	// 枠を組み立ててから読み込まれるまでの間に変わった値を伝える
 	const current = getSpaceShared(props.tile.id);
 	for (const key of new Set([...Object.keys(embeddedShared), ...Object.keys(current)])) {
 		if (JSON.stringify(embeddedShared[key] ?? null) !== JSON.stringify(current[key] ?? null)) send({ t: 'shared', key, value: current[key] ?? null, userId: '' });
 	}
 	send({ t: 'members', members: session.members.map(member => toTileUser(member.user)) });
 	send({ t: 'leader', isLeader: session.leaderId === $i?.id });
+	send({ t: 'hostOnly', hostOnly: props.tile.hostOnly });
 }
 
 watch(() => session.leaderId, (leaderId) => {
 	send({ t: 'leader', isLeader: leaderId === $i?.id });
+});
+
+watch(() => props.tile.hostOnly, (hostOnly) => {
+	send({ t: 'hostOnly', hostOnly });
 });
 
 // ---- Play のタイル (本体が直接描く) ----
@@ -248,6 +252,7 @@ if (props.tile.kind === 'play') {
 
 /** 置く Play を決める。URL でも ID でも受ける。 */
 function setFlash(): void {
+	if (isLocked()) return;
 	const value = flashInput.value.trim();
 	const id = /\/play\/([a-zA-Z0-9]+)/.exec(value)?.[1] ?? value;
 	if (!/^[a-zA-Z0-9]{1,64}$/.test(id)) return;
@@ -260,7 +265,7 @@ watch(() => session.members, (members) => {
 });
 
 onBeforeUnmount(() => {
-	closePort();
+	offTileEvent?.();
 	offPlayEvent?.();
 });
 </script>
@@ -293,6 +298,31 @@ onBeforeUnmount(() => {
 	white-space: nowrap;
 }
 
+.author {
+	margin-left: 6px;
+	font-weight: normal;
+	opacity: 0.7;
+}
+
+.active {
+	color: var(--MI_THEME-accent);
+}
+
+.notice {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: solid 1px var(--MI_THEME-divider);
+	font-size: 0.85em;
+}
+
+.noticeText {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
 .remove {
 	flex-shrink: 0;
 	width: 28px;
@@ -302,12 +332,6 @@ onBeforeUnmount(() => {
 	&:hover {
 		background: var(--MI_THEME-buttonHoverBg);
 	}
-}
-
-.frame {
-	display: block;
-	width: 100%;
-	border: none;
 }
 
 .playForm {

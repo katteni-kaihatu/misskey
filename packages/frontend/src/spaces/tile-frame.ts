@@ -23,6 +23,8 @@ export type TileInit = {
 	isHost: boolean;
 	/** 自分が担当か */
 	isLeader: boolean;
+	/** ホストだけが操作できるタイルか */
+	hostOnly: boolean;
 	/** このサーバーの URL。ノートのページなどを開くのに使う */
 	origin: string;
 	/** タイルが出す文言。キー → 文言 */
@@ -42,6 +44,7 @@ export type TileToHostMessage =
 	| { t: 'setMine'; key: string; value: unknown }
 	| { t: 'signal'; type: string; body: unknown }
 	| { t: 'open'; url: string }
+	| { t: 'post'; text: string }
 	| { t: 'call'; id: number; method: string; args: unknown }
 	| { t: 'resize'; height: number };
 
@@ -51,6 +54,7 @@ export type HostToTileMessage =
 	| { t: 'signal'; type: string; body: unknown; userId: string }
 	| { t: 'members'; members: TileUser[] }
 	| { t: 'leader'; isLeader: boolean }
+	| { t: 'hostOnly'; hostOnly: boolean }
 	| { t: 'reply'; id: number; ok: boolean; value: unknown };
 
 /** 枠に窓口の通信路を渡すときの合図 */
@@ -138,6 +142,7 @@ const BOOTSTRAP = String.raw`
 		isHost: init.isHost,
 		isLeader: init.isLeader,
 		onLeader: function (fn) { leaderListeners.push(fn); },
+		hostOnly: !!init.hostOnly,
 		origin: init.origin,
 		keys: function (prefix) {
 			return Object.keys(init.shared).filter(function (key) { return !prefix || key.indexOf(prefix) === 0; });
@@ -147,6 +152,17 @@ const BOOTSTRAP = String.raw`
 		pickFile: function () { return call('pickFile', null); },
 		preview: function (url) { return call('preview', { url: String(url) }); },
 		open: function (url) { post({ t: 'open', url: String(url) }); },
+		// 外部の URL を読む。読みに行くのは本体のサーバーで、置いた人が許した先だけが読める
+		fetch: function (url, options) {
+			return call('fetch', { url: String(url) }).then(function (res) {
+				if (options && options.json) {
+					try { res.json = JSON.parse(res.text); } catch (err) { res.json = null; }
+				}
+				return res;
+			});
+		},
+		// 投稿フォームを、本文を入れた状態で開く。投稿するかどうかは本人が決める
+		post: function (text) { post({ t: 'post', text: String(text) }); },
 		t: function (key) { return Object.prototype.hasOwnProperty.call(init.strings, key) ? init.strings[key] : key; },
 	};
 
@@ -165,6 +181,8 @@ const BOOTSTRAP = String.raw`
 			leaderListeners.slice().forEach(function (fn) {
 				try { fn(window.space.isLeader); } catch (err) { console.error(err); }
 			});
+		} else if (message.t === 'hostOnly') {
+			window.space.hostOnly = !!message.hostOnly;
 		} else if (message.t === 'reply') {
 			var pending = calls[message.id];
 			if (!pending) return;

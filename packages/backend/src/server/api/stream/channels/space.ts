@@ -143,11 +143,11 @@ export class SpaceChannel extends Channel {
 				break;
 			case 'setShared':
 				if (!this.canWrite()) break;
-				if (isJsonObject(body)) void this.writeTile(this.space.id, this.user.id, () => this.spaceTileService.setShared(this.space!.id, this.user!.id, body.tileId, body.key, body.value));
+				if (isJsonObject(body)) void this.writeTile(this.space.id, this.user.id, () => this.spaceTileService.setShared(this.space!.id, this.user!.id, body.tileId, body.key, body.value, this.space!.hostId === this.user!.id));
 				break;
 			case 'signal':
 				if (!this.canWrite()) break;
-				if (isJsonObject(body)) void this.writeTile(this.space.id, this.user.id, () => this.spaceTileService.signal(this.space!.id, this.user!.id, body.tileId, body.type, body.body));
+				if (isJsonObject(body)) void this.writeTile(this.space.id, this.user.id, () => this.spaceTileService.signal(this.space!.id, this.user!.id, body.tileId, body.type, body.body, this.space!.hostId === this.user!.id));
 				break;
 			case 'say':
 				if (!this.canWrite()) break;

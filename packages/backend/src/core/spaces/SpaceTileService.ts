@@ -5,11 +5,12 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { IsNull } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import type { MiUser } from '@/models/User.js';
 import type { MiSpace } from '@/models/Space.js';
-import { MiSpaceTile, spaceTileKinds, type SpaceTileKind } from '@/models/SpaceTile.js';
-import type { SpacesRepository, SpaceTilesRepository } from '@/models/_.js';
+import { MiSpaceTile, SPACE_TILE_KIND_CUSTOM, spaceTileKinds, type SpaceTileKind } from '@/models/SpaceTile.js';
+import type { MiSpaceTileDef } from '@/models/SpaceTileDef.js';
+import type { SpacesRepository, SpaceTileDefsRepository, SpaceTilesRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import { DI } from '@/di-symbols.js';
@@ -61,6 +62,9 @@ export class SpaceTileService {
 
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
+
+		@Inject(DI.spaceTileDefsRepository)
+		private spaceTileDefsRepository: SpaceTileDefsRepository,
 	) {
 	}
 
@@ -68,19 +72,35 @@ export class SpaceTileService {
 		return `space:${spaceId}:tile:${tileId}:shared`;
 	}
 
-	private key(spaceId: MiSpace['id'], kind: 'tiles' | 'tilesLoaded' | 'tilesLoading' | 'rev' | 'dirty'): string {
+	private key(spaceId: MiSpace['id'], kind: 'tiles' | 'tilesLoaded' | 'tilesLoading' | 'rev' | 'dirty' | 'hostOnlyTiles'): string {
 		return `space:${spaceId}:${kind}`;
 	}
 
-	@bindThis
-	public pack(tile: MiSpaceTile): Packed<'SpaceTile'> {
+	private packWith(tile: MiSpaceTile, def: MiSpaceTileDef | null): Packed<'SpaceTile'> {
 		return {
 			id: tile.id,
 			spaceId: tile.spaceId,
 			kind: tile.kind,
 			creatorId: tile.creatorId,
 			position: tile.position,
+			// コードは載せない。画面は定義の ID と書き換えた時刻を見て、要るときだけ取りに行く
+			def: def == null ? null : { id: def.id, name: def.name, userId: def.userId, updatedAt: def.updatedAt.toISOString(), fetchHosts: def.fetchHosts },
+			allowedHosts: tile.allowedHosts,
+			hostOnly: tile.hostOnly,
 		};
+	}
+
+	@bindThis
+	public async packMany(tiles: MiSpaceTile[]): Promise<Packed<'SpaceTile'>[]> {
+		const defIds = [...new Set(tiles.map(tile => tile.defId).filter((defId): defId is string => defId != null))];
+		const defs = defIds.length === 0 ? [] : await this.spaceTileDefsRepository.findBy({ id: In(defIds) });
+		const byId = new Map(defs.map(def => [def.id, def]));
+		return tiles.map(tile => this.packWith(tile, tile.defId == null ? null : byId.get(tile.defId) ?? null));
+	}
+
+	@bindThis
+	public async pack(tile: MiSpaceTile): Promise<Packed<'SpaceTile'>> {
+		return (await this.packMany([tile]))[0];
 	}
 
 	/**
@@ -101,6 +121,7 @@ export class SpaceTileService {
 		const tiles = await this.spaceTilesRepository.findBy({ spaceId });
 		for (const tile of tiles) {
 			await this.redisClient.sadd(this.key(spaceId, 'tiles'), tile.id);
+			if (tile.hostOnly) await this.redisClient.sadd(this.key(spaceId, 'hostOnlyTiles'), tile.id);
 			for (const [key, value] of Object.entries(tile.shared)) {
 				// すでに Redis にある値 (より新しい) は上書きしない
 				await this.redisClient.hsetnx(this.sharedKey(spaceId, tile.id), key, JSON.stringify({ v: value, r: 0 } satisfies StoredValue));
@@ -129,7 +150,8 @@ export class SpaceTileService {
 	public async getTiles(spaceId: MiSpace['id']): Promise<SpaceTileWithShared[]> {
 		await this.ensureLoaded(spaceId);
 		const tiles = await this.spaceTilesRepository.find({ where: { spaceId }, order: { position: 'ASC', id: 'ASC' } });
-		return await Promise.all(tiles.map(async tile => ({ ...this.pack(tile), shared: await this.readShared(spaceId, tile.id) })));
+		const packed = await this.packMany(tiles);
+		return await Promise.all(packed.map(async tile => ({ ...tile, shared: await this.readShared(spaceId, tile.id) })));
 	}
 
 	/** タイルを置ける人か。スペースに入っているかは、呼ぶ側が先に確かめる。 */
@@ -146,8 +168,24 @@ export class SpaceTileService {
 		return tile.creatorId === me.id || space.hostId === me.id;
 	}
 
+	/** 読みに行く先を許し直せる人か。置いた本人とホスト。 */
 	@bindThis
-	public async add(space: MiSpace, creator: { id: MiUser['id'] }, kind: SpaceTileKind): Promise<MiSpaceTile> {
+	public canAllowHosts(me: { id: MiUser['id'] }, space: MiSpace, tile: MiSpaceTile): boolean {
+		return this.canRemove(me, space, tile);
+	}
+
+	/** 「ホストだけが操作できる」を切り替えられる人か。ホストだけ。 */
+	@bindThis
+	public canSetHostOnly(me: { id: MiUser['id'] }, space: MiSpace): boolean {
+		return space.endedAt == null && space.hostId === me.id;
+	}
+
+	/**
+	 * タイルを置く。自作タイルは `kind` を `custom` にして、`options.def` で定義を渡す。
+	 * 置ける人か、定義を使える人かは、呼ぶ側が先に確かめる。
+	 */
+	@bindThis
+	public async add(space: MiSpace, creator: { id: MiUser['id'] }, kind: SpaceTileKind | typeof SPACE_TILE_KIND_CUSTOM, options: { def?: MiSpaceTileDef | null; allowedHosts?: string[]; hostOnly?: boolean } = {}): Promise<MiSpaceTile> {
 		await this.ensureLoaded(space.id);
 		const last = await this.spaceTilesRepository.findOne({ where: { spaceId: space.id }, order: { position: 'DESC' } });
 		const tile = await this.spaceTilesRepository.insertOne({
@@ -155,12 +193,36 @@ export class SpaceTileService {
 			spaceId: space.id,
 			kind,
 			creatorId: creator.id,
+			defId: options.def?.id ?? null,
+			allowedHosts: options.allowedHosts ?? [],
+			hostOnly: options.hostOnly ?? false,
 			position: (last?.position ?? -1) + 1,
 			shared: {},
 		});
 		await this.redisClient.sadd(this.key(space.id, 'tiles'), tile.id);
-		this.globalEventService.publishSpaceStream(space.id, 'tileAdded', this.pack(tile));
+		if (tile.hostOnly) await this.redisClient.sadd(this.key(space.id, 'hostOnlyTiles'), tile.id);
+		this.globalEventService.publishSpaceStream(space.id, 'tileAdded', await this.pack(tile));
 		return tile;
+	}
+
+	/** 許したドメインと「ホストだけが操作できる」を変える。変えられる人かは、呼ぶ側が先に確かめる。 */
+	@bindThis
+	public async update(tile: MiSpaceTile, params: { allowedHosts?: string[]; hostOnly?: boolean }): Promise<MiSpaceTile> {
+		const set: Partial<Pick<MiSpaceTile, 'allowedHosts' | 'hostOnly'>> = {};
+		if (params.allowedHosts !== undefined) set.allowedHosts = params.allowedHosts;
+		if (params.hostOnly !== undefined) set.hostOnly = params.hostOnly;
+		if (Object.keys(set).length === 0) return tile;
+		await this.ensureLoaded(tile.spaceId);
+		await this.spaceTilesRepository.update(tile.id, set);
+		// 切り替えが重なっても Redis が DB とずれないよう、DB に入った値を読み直してから Redis に写す
+		const updated = await this.spaceTilesRepository.findOneBy({ id: tile.id }) ?? { ...tile, ...set };
+		if (updated.hostOnly) {
+			await this.redisClient.sadd(this.key(tile.spaceId, 'hostOnlyTiles'), tile.id);
+		} else {
+			await this.redisClient.srem(this.key(tile.spaceId, 'hostOnlyTiles'), tile.id);
+		}
+		this.globalEventService.publishSpaceStream(tile.spaceId, 'tileUpdated', await this.pack(updated));
+		return updated;
 	}
 
 	@bindThis
@@ -168,6 +230,7 @@ export class SpaceTileService {
 		await this.spaceTilesRepository.delete(tile.id);
 		await this.redisClient.srem(this.key(tile.spaceId, 'tiles'), tile.id);
 		await this.redisClient.srem(this.key(tile.spaceId, 'dirty'), tile.id);
+		await this.redisClient.srem(this.key(tile.spaceId, 'hostOnlyTiles'), tile.id);
 		await this.redisClient.del(this.sharedKey(tile.spaceId, tile.id));
 		this.globalEventService.publishSpaceStream(tile.spaceId, 'tileRemoved', { tileId: tile.id });
 	}
@@ -188,14 +251,16 @@ export class SpaceTileService {
 	 * 共有する値を書く。届いた順に通し番号を振るので、同じキーに同時に書いたら後から届いたほうが残る。
 	 * 値が null ならキーを消す。書けたら true。
 	 * スペースに入っているかは、呼ぶ側 (ストリーミングのチャンネル) が先に確かめる。
+	 * 「ホストだけが操作できる」タイルには、ホスト (`isHost`) しか書けない。
 	 */
 	@bindThis
-	public async setShared(spaceId: MiSpace['id'], userId: MiUser['id'], tileId: unknown, key: unknown, value: unknown): Promise<boolean> {
+	public async setShared(spaceId: MiSpace['id'], userId: MiUser['id'], tileId: unknown, key: unknown, value: unknown, isHost = false): Promise<boolean> {
 		if (typeof tileId !== 'string' || !isSpaceSharedKey(key) || value === undefined) return false;
 		const json = JSON.stringify(value);
 		if (Buffer.byteLength(json) > SPACE_SHARED_VALUE_MAX_BYTES) return false;
 		await this.ensureLoaded(spaceId);
 		if (await this.redisClient.sismember(this.key(spaceId, 'tiles'), tileId) !== 1) return false;
+		if (!isHost && await this.redisClient.sismember(this.key(spaceId, 'hostOnlyTiles'), tileId) === 1) return false;
 
 		const rev = await this.redisClient.incr(this.key(spaceId, 'rev'));
 		if (value === null) {
@@ -210,11 +275,12 @@ export class SpaceTileService {
 
 	/** 保存しない一時的な知らせを配る。配れたら true。 */
 	@bindThis
-	public async signal(spaceId: MiSpace['id'], userId: MiUser['id'], tileId: unknown, type: unknown, body: unknown): Promise<boolean> {
+	public async signal(spaceId: MiSpace['id'], userId: MiUser['id'], tileId: unknown, type: unknown, body: unknown, isHost = false): Promise<boolean> {
 		if (typeof tileId !== 'string' || typeof type !== 'string' || type.length < 1 || type.length > SPACE_SIGNAL_TYPE_MAX_LENGTH) return false;
 		if (Buffer.byteLength(JSON.stringify(body ?? null)) > SPACE_SHARED_VALUE_MAX_BYTES) return false;
 		await this.ensureLoaded(spaceId);
 		if (await this.redisClient.sismember(this.key(spaceId, 'tiles'), tileId) !== 1) return false;
+		if (!isHost && await this.redisClient.sismember(this.key(spaceId, 'hostOnlyTiles'), tileId) === 1) return false;
 		this.globalEventService.publishSpaceStream(spaceId, 'signal', { tileId, type, body: (body ?? null) as JsonValue, userId });
 		return true;
 	}
@@ -265,6 +331,9 @@ export class SpaceTileService {
 				spaceId: toSpaceId,
 				kind: tile.kind,
 				creatorId: tile.creatorId,
+				defId: tile.defId,
+				allowedHosts: tile.allowedHosts,
+				hostOnly: tile.hostOnly,
 				position: tile.position,
 				shared: tile.shared as never,
 			});
@@ -284,6 +353,7 @@ export class SpaceTileService {
 			this.key(spaceId, 'tilesLoading'),
 			this.key(spaceId, 'rev'),
 			this.key(spaceId, 'dirty'),
+			this.key(spaceId, 'hostOnlyTiles'),
 		];
 		await this.redisClient.del(...keys);
 	}

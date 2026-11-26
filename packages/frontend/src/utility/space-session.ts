@@ -112,6 +112,7 @@ export async function joinSpace(space: Misskey.entities.Space, mode: Misskey.Spa
 		spaceSession.leaderId = payload.userId;
 	});
 	connection.on('tileAdded', onTileAdded);
+	connection.on('tileUpdated', onTileUpdated);
 	connection.on('tileRemoved', onTileRemoved);
 	connection.on('tilesMoved', onTilesMoved);
 	connection.on('shared', onShared);
@@ -284,6 +285,11 @@ function emitShared(tileId: string, key: string, value: unknown, userId: string)
 function onTileAdded(tile: Misskey.entities.SpaceTile): void {
 	if (!sharedValues.has(tile.id)) sharedValues.set(tile.id, new Map());
 	spaceSession.tiles = [...spaceSession.tiles.filter(t => t.id !== tile.id), tile].sort((a, b) => a.position - b.position);
+}
+
+/** 許したドメインや「ホストだけが操作できる」が変わった。並びと値はそのまま。 */
+function onTileUpdated(tile: Misskey.entities.SpaceTile): void {
+	spaceSession.tiles = spaceSession.tiles.map(t => t.id === tile.id ? { ...tile, position: t.position } : t);
 }
 
 function onTileRemoved(payload: { tileId: string }): void {

@@ -1089,6 +1089,7 @@ export type Channels = {
                 userId: User['id'] | null;
             }) => void;
             tileAdded: (payload: SpaceTile) => void;
+            tileUpdated: (payload: SpaceTile) => void;
             tileRemoved: (payload: {
                 tileId: string;
             }) => void;
@@ -2490,10 +2491,25 @@ declare namespace entities {
         SpacesMuteRequest,
         SpacesShowRequest,
         SpacesShowResponse,
+        SpacesTileDefsCreateRequest,
+        SpacesTileDefsCreateResponse,
+        SpacesTileDefsDeleteRequest,
+        SpacesTileDefsListRequest,
+        SpacesTileDefsListResponse,
+        SpacesTileDefsMyRequest,
+        SpacesTileDefsMyResponse,
+        SpacesTileDefsShowRequest,
+        SpacesTileDefsShowResponse,
+        SpacesTileDefsUpdateRequest,
+        SpacesTileDefsUpdateResponse,
         SpacesTilesAddRequest,
         SpacesTilesAddResponse,
+        SpacesTilesFetchRequest,
+        SpacesTilesFetchResponse,
         SpacesTilesMoveRequest,
         SpacesTilesRemoveRequest,
+        SpacesTilesUpdateRequest,
+        SpacesTilesUpdateResponse,
         SpacesTokenRequest,
         SpacesTokenResponse,
         SpacesUpdateRequest,
@@ -2639,6 +2655,7 @@ declare namespace entities {
         ChatRoom,
         Space,
         SpaceTile,
+        SpaceTileDef,
         ChatRoomInvitation,
         ChatRoomMembership
     }
@@ -4196,16 +4213,61 @@ type SpacesShowRequest = operations['spaces___show']['requestBody']['content']['
 type SpacesShowResponse = operations['spaces___show']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type SpacesTileDefsCreateRequest = operations['spaces___tile-defs___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsCreateResponse = operations['spaces___tile-defs___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsDeleteRequest = operations['spaces___tile-defs___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsListRequest = operations['spaces___tile-defs___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsListResponse = operations['spaces___tile-defs___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsMyRequest = operations['spaces___tile-defs___my']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsMyResponse = operations['spaces___tile-defs___my']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsShowRequest = operations['spaces___tile-defs___show']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsShowResponse = operations['spaces___tile-defs___show']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsUpdateRequest = operations['spaces___tile-defs___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTileDefsUpdateResponse = operations['spaces___tile-defs___update']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type SpacesTilesAddRequest = operations['spaces___tiles___add']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type SpacesTilesAddResponse = operations['spaces___tiles___add']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type SpacesTilesFetchRequest = operations['spaces___tiles___fetch']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTilesFetchResponse = operations['spaces___tiles___fetch']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type SpacesTilesMoveRequest = operations['spaces___tiles___move']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type SpacesTilesRemoveRequest = operations['spaces___tiles___remove']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTilesUpdateRequest = operations['spaces___tiles___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTilesUpdateResponse = operations['spaces___tiles___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type SpacesTokenRequest = operations['spaces___token']['requestBody']['content']['application/json'];
@@ -4221,6 +4283,9 @@ type SpacesUpdateResponse = operations['spaces___update']['responses']['200']['c
 
 // @public (undocumented)
 type SpaceTile = components['schemas']['SpaceTile'];
+
+// @public (undocumented)
+type SpaceTileDef = components['schemas']['SpaceTileDef'];
 
 // @public (undocumented)
 export type SpaceTileWithShared = SpaceTile & {
