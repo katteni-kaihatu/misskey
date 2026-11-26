@@ -5,6 +5,7 @@
 
 import { describe, test, assert, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent, type RenderResult } from '@testing-library/vue';
+import { defineComponent, KeepAlive, nextTick, ref } from 'vue';
 import type { XriftPreview, ResonitePreview } from 'misskey-js';
 import type { SummalyResult } from '@misskey-dev/summaly';
 import { preferState } from '../setup.unit.js';
@@ -20,6 +21,7 @@ vi.mock('@/components/MkImageLightboxController', () => ({
 describe('MkUrlPreview', () => {
 	beforeEach(() => {
 		fetchMock.mockClear();
+		preferState.expandUrlPreviewAutomatically = false;
 	});
 
 	const renderPreviewBy = async (summary: Partial<SummalyResult> & { xrift?: XriftPreview; resonite?: ResonitePreview }): Promise<RenderResult> => {
@@ -72,6 +74,7 @@ describe('MkUrlPreview', () => {
 		fetchMock.resetMocks();
 		vi.clearAllMocks();
 		cleanup();
+		preferState.expandUrlPreviewAutomatically = false;
 	});
 
 	const catalystImageBase = 'https://citlali.natsuneko.com/r2/57dd6525-2f7d-4179-b01e-5265ec608e88/8f2c300f-cdf0-4ed8-9e67-bc54aa775007';
@@ -226,6 +229,53 @@ describe('MkUrlPreview', () => {
 		});
 		const buttons = mkUrlPreview.getAllByRole('button');
 		assert.strictEqual(buttons.length, 2, 'two buttons');
+	});
+
+	test.each([
+		{ expandAutomatically: false, sensitive: false, expanded: false },
+		{ expandAutomatically: true, sensitive: false, expanded: true },
+		{ expandAutomatically: true, sensitive: true, expanded: false },
+	])('player auto-expansion respects preference and sensitivity ($expandAutomatically, $sensitive)', async ({ expandAutomatically, sensitive, expanded }) => {
+		preferState.expandUrlPreviewAutomatically = expandAutomatically;
+		const view = await renderPreviewBy({
+			url: 'https://example.local',
+			title: 'Preview title',
+			sensitive,
+			player: { url: 'https://example.local/player', width: null, height: null, allow: [] },
+		});
+		await vi.waitFor(() => {
+			if (expanded) assert.isNotNull(view.container.querySelector('iframe'));
+			else {
+				assert.isNotNull(view.queryByRole('heading', { name: 'Preview title' }));
+				assert.isNull(view.container.querySelector('iframe'));
+			}
+		});
+	});
+
+	test('a metadata response received while deactivated does not auto-open its player on reactivation', async () => {
+		preferState.expandUrlPreviewAutomatically = true;
+		const response = Promise.withResolvers<{ status: number; body: string }>();
+		fetchMock.mockOnceIf(req => new URL(req.url).pathname === '/url', () => response.promise);
+		const showing = ref(true);
+		const Wrapper = defineComponent({
+			components: { MkUrlPreview, KeepAlive },
+			setup: () => ({ showing }),
+			template: '<KeepAlive><MkUrlPreview v-if="showing" url="https://example.local"/></KeepAlive>',
+		});
+		const view = render(Wrapper, { global: { directives, components } });
+		await vi.waitFor(() => assert.isTrue(fetchMock.mock.calls.some(([request]) => typeof request === 'string' && request.startsWith('/url?'))));
+		showing.value = false;
+		await nextTick();
+		response.resolve({ status: 200, body: JSON.stringify({
+			url: 'https://example.local', title: 'Deferred preview', sensitive: false,
+			player: { url: 'https://example.local/player', width: null, height: null, allow: [] },
+		}) });
+		await new Promise(resolve => setTimeout(resolve, 0));
+		await nextTick();
+		showing.value = true;
+		await nextTick();
+		await vi.waitFor(() => assert.isNotNull(view.queryByRole('heading', { name: 'Deferred preview' })));
+		assert.isNull(view.container.querySelector('iframe'));
 	});
 
 	test('Having a player should setup the iframe', async () => {
