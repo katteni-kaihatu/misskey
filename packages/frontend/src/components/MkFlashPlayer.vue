@@ -16,20 +16,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div v-if="flash.summary" :class="$style.summary">{{ flash.summary }}</div>
 			<MkButton primary rounded @click="start">{{ i18n.ts._spaces._tiles._play.start }}</MkButton>
 		</div>
-		<MkAsUi v-else-if="root" :component="root" :components="components"/>
+		<MkAsUi v-else-if="root" :component="root"/>
 	</template>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { onBeforeUnmount, ref, shallowRef, watch } from 'vue';
-import type { Ref } from 'vue';
+import { nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { utils } from '@syuilo/aiscript';
 import type { Interpreter } from '@syuilo/aiscript';
 import { compareVersions } from 'compare-versions';
 import { url } from '@@/js/config.js';
-import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
+import type { AsUiRoot } from '@/aiscript/ui.js';
 import MkAsUi from '@/components/MkAsUi.vue';
 import MkButton from '@/components/MkButton.vue';
 import * as os from '@/os.js';
@@ -52,7 +51,6 @@ const flash = ref<Misskey.entities.Flash | null>(null);
 const started = ref(false);
 const aiscript = shallowRef<Interpreter | null>(null);
 const root = ref<AsUiRoot>();
-const components = ref<Ref<AsUiComponent>[]>([]);
 /** 動かし直すたびに増やす。読み込みを待っている間に片づけられた・動かし直されたものを捨てるのに使う */
 let generation = 0;
 
@@ -89,20 +87,21 @@ async function run(): Promise<void> {
 	aiscript.value?.abort();
 	const target = flash.value;
 	if (target == null) return;
+	root.value = undefined;
+	await nextTick();
 
 	const version = utils.getLangVersion(target.script);
 	const { Interpreter, Parser, values } = (isLegacy(version) ? (await import('@syuilo/aiscript-0-19-0')) : await import('@syuilo/aiscript')) as typeof import('@syuilo/aiscript');
 	// 読み込みを待っている間に、タイルが片づけられたり動かし直されたりしていたら、動かさない
 	if (current !== generation) return;
 	const parser = new Parser();
-	components.value = [];
 
 	const interpreter = new Interpreter({
 		...createAiScriptEnv({
 			storageKey: 'flash:' + target.id,
 		}),
-		...registerAsUiLib(components.value, (_root) => {
-			root.value = _root.value;
+		...registerAsUiLib((_root) => {
+			root.value = _root;
 		}),
 		THIS_ID: values.STR(target.id),
 		THIS_URL: values.STR(`${url}/play/${target.id}`),
