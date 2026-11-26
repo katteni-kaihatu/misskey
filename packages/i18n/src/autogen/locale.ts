@@ -2137,6 +2137,22 @@ export interface Locale extends ILocale {
      */
     "showReactionsCount": string;
     /**
+     * リアクションの表示方法
+     */
+    "reactionUserDisplay": string;
+    /**
+     * リアクションした人のアイコン、または件数を表示します。
+     */
+    "reactionUserDisplayDescription": string;
+    /**
+     * アイコン
+     */
+    "reactionUserDisplayAvatars": string;
+    /**
+     * 数字
+     */
+    "reactionUserDisplayCount": string;
+    /**
      * 履歴はありません
      */
     "noHistory": string;

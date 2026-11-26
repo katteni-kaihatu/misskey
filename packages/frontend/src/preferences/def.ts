@@ -251,6 +251,10 @@ export const PREF_DEF = definePreferences({
 	showReactionsCount: {
 		default: false,
 	},
+	reactionUserDisplay: {
+		accountDependent: true,
+		default: 'avatars' as 'avatars' | 'count',
+	},
 	enableQuickAddMfmFunction: {
 		default: false,
 	},
