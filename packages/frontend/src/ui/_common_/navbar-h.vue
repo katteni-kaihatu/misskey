@@ -7,8 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="[$style.root, acrylic ? $style.acrylic : null]">
 	<div :class="$style.body">
 		<div>
-			<button v-click-anime :class="[$style.item, $style.instance]" class="_button" @click="openInstanceMenu">
-				<img :class="$style.instanceIcon" :src="instance.iconUrl ?? '/favicon.ico'" draggable="false"/>
+			<button v-click-anime :class="[$style.item, $style.instance]" class="_button" :aria-label="instance.name ?? i18n.ts.instance" @click="openInstanceMenu">
+				<img :class="$style.instanceIcon" :src="webClientIconUrl" alt="" draggable="false"/>
 			</button>
 			<MkA v-click-anime v-tooltip="i18n.ts.timeline" :class="$style.item" :activeClass="$style.active" to="/" exact>
 				<i :class="$style.itemIcon" class="ti ti-home ti-fw"></i>
@@ -53,6 +53,7 @@ import * as os from '@/os.js';
 import { navbarItemDef } from '@/navbar.js';
 import MkButton from '@/components/MkButton.vue';
 import { instance } from '@/instance.js';
+import { webClientIconUrl } from '@/utility/web-client-icon.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import { getAccountMenu } from '@/accounts.js';
