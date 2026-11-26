@@ -38,6 +38,12 @@ function fakeRedis() {
 		sadd: vi.fn(async (key: string, ...members: string[]) => { for (const member of members) set(key).add(member); return members.length; }),
 		srem: vi.fn(async (key: string, member: string) => set(key).delete(member) ? 1 : 0),
 		sismember: vi.fn(async (key: string, member: string) => set(key).has(member) ? 1 : 0),
+		sunion: vi.fn(async (...keys: string[]) => [...new Set(keys.flatMap(key => [...set(key)]))]),
+		smove: vi.fn(async (from: string, to: string, member: string) => {
+			if (!set(from).delete(member)) return 0;
+			set(to).add(member);
+			return 1;
+		}),
 		smembers: vi.fn(async (key: string) => [...set(key)]),
 		hset: vi.fn(async (key: string, field: string | Record<string, string>, value?: string) => {
 			if (typeof field === 'string') hash(key).set(field, value!);
@@ -75,6 +81,24 @@ function fixture(stored: MiSpaceTile[] = [tile()]) {
 		}),
 		delete: vi.fn(async (id: string) => { rows.delete(id); }),
 	};
+	let nextLock = Promise.resolve();
+	const createQueryRunner = vi.fn(() => {
+		let unlock: () => void;
+		return {
+			manager: { getRepository: () => tiles },
+			query: async (sql: string) => {
+				if (sql.includes('pg_advisory_lock(')) {
+					const previous = nextLock;
+					nextLock = new Promise<void>(resolve => { unlock = resolve; });
+					await previous;
+				} else if (sql.includes('pg_advisory_unlock(')) {
+					unlock();
+				}
+			},
+			release: async () => {},
+		};
+	});
+	Object.assign(tiles, { manager: { dataSource: { createQueryRunner } } });
 	const events = { publishSpaceStream: vi.fn() };
 	const defs = { findBy: vi.fn(async () => [] as unknown[]) };
 	let nextId = 2;
@@ -189,6 +213,27 @@ describe('shared values', () => {
 		await expect(f.service.flush('space')).rejects.toThrow('db down');
 		expect(await f.service.flush('space')).toBe(1);
 		expect(f.rows.get('t1')?.shared).toEqual({ text: 'hello' });
+	});
+
+	test('close waits for an in-flight save before clearing Redis, preserving the continued tile', async () => {
+		const f = fixture();
+		await f.service.setShared('space', 'alice', 't1', 'text', 'keep');
+		const snapshotStarted = Promise.withResolvers<void>();
+		const resumeSnapshot = Promise.withResolvers<void>();
+		f.redis.hgetall.mockImplementationOnce(async key => {
+			snapshotStarted.resolve();
+			await resumeSnapshot.promise;
+			return Object.fromEntries(f.redis.hashes.get(key) ?? []);
+		});
+		const background = f.service.flush('space');
+		await snapshotStarted.promise;
+		const close = f.service.closeSpace('space');
+		// Let close run while the periodic save has claimed its tile but has not read the hash.
+		await new Promise(resolve => setImmediate(resolve));
+		resumeSnapshot.resolve();
+		await Promise.all([background, close]);
+		await f.service.copyTiles('space', 'next');
+		expect(f.rows.get('t2')?.shared).toEqual({ text: 'keep' });
 	});
 
 	test('a flush that runs after the space was closed does not wipe the saved values', async () => {

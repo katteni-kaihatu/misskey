@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { In, IsNull } from 'typeorm';
+import { In, IsNull, type Repository } from 'typeorm';
 import type { MiUser } from '@/models/User.js';
 import type { MiSpace } from '@/models/Space.js';
 import { MiSpaceTile, SPACE_TILE_KIND_CUSTOM, spaceTileKinds, type SpaceTileKind } from '@/models/SpaceTile.js';
@@ -72,7 +72,7 @@ export class SpaceTileService {
 		return `space:${spaceId}:tile:${tileId}:shared`;
 	}
 
-	private key(spaceId: MiSpace['id'], kind: 'tiles' | 'tilesLoaded' | 'tilesLoading' | 'rev' | 'dirty' | 'hostOnlyTiles'): string {
+	private key(spaceId: MiSpace['id'], kind: 'tiles' | 'tilesLoaded' | 'tilesLoading' | 'rev' | 'dirty' | 'saving' | 'hostOnlyTiles'): string {
 		return `space:${spaceId}:${kind}`;
 	}
 
@@ -285,27 +285,41 @@ export class SpaceTileService {
 		return true;
 	}
 
-	/** まだ DB に写していない値を写す。写したタイルの数を返す。 */
+	/** Hold the same PostgreSQL session lock through SQL commits and final Redis cleanup. */
+	private async withSaveLock<T>(spaceId: string, action: (tiles: Repository<MiSpaceTile>) => Promise<T>): Promise<T> {
+		const runner = this.spaceTilesRepository.manager.dataSource.createQueryRunner('master');
+		const lock = ['space-tile-save:' + spaceId];
+		try {
+			await runner.query('SELECT pg_advisory_lock(hashtextextended($1, 0))', lock);
+			try {
+				return await action(runner.manager.getRepository(MiSpaceTile));
+			} finally {
+				await runner.query('SELECT pg_advisory_unlock(hashtextextended($1, 0))', lock);
+			}
+		} finally {
+			await runner.release();
+		}
+	}
+
 	@bindThis
 	public async flush(spaceId: MiSpace['id']): Promise<number> {
-		const dirty = await this.redisClient.smembers(this.key(spaceId, 'dirty'));
+		return this.withSaveLock(spaceId, tiles => this.flushLocked(spaceId, tiles));
+	}
+
+	private async flushLocked(spaceId: string, tiles: Repository<MiSpaceTile>): Promise<number> {
+		if (await this.redisClient.get(this.key(spaceId, 'tilesLoaded')) == null) return 0;
+		const dirty = this.key(spaceId, 'dirty');
+		const saving = this.key(spaceId, 'saving');
 		let flushed = 0;
-		for (const tileId of dirty) {
-			// 閉じる処理が先に Redis を片づけていたら、空の値で DB を上書きしないようにやめる
-			if (await this.redisClient.get(this.key(spaceId, 'tilesLoaded')) == null) break;
-			// 先に印を外す。写している間に書かれた値は、次の回にもう一度写る
-			await this.redisClient.srem(this.key(spaceId, 'dirty'), tileId);
-			try {
-				const shared = await this.readShared(spaceId, tileId);
-				const plain: Record<string, unknown> = {};
-				for (const [key, entry] of Object.entries(shared)) plain[key] = entry.value;
-				const result = await this.spaceTilesRepository.update({ id: tileId, spaceId }, { shared: plain } as never);
-				if (result.affected != null && result.affected > 0) flushed++;
-			} catch (err) {
-				// 写せなかったら印を戻して、次の回にやり直す
-				await this.redisClient.sadd(this.key(spaceId, 'dirty'), tileId);
-				throw err;
-			}
+		for (const tileId of await this.redisClient.sunion(dirty, saving)) {
+			// A crash leaves the claim retryable. Concurrent edits mark the tile dirty again.
+			await this.redisClient.smove(dirty, saving, tileId);
+			const shared = await this.readShared(spaceId, tileId);
+			const plain: Record<string, unknown> = {};
+			for (const [key, entry] of Object.entries(shared)) plain[key] = entry.value;
+			const result = await tiles.update({ id: tileId, spaceId }, { shared: plain } as never);
+			await this.redisClient.srem(saving, tileId);
+			if (result.affected != null && result.affected > 0) flushed++;
 		}
 		return flushed;
 	}
@@ -344,17 +358,20 @@ export class SpaceTileService {
 	/** 閉じるとき。値を DB に写してから、Redis の中身を片づける。タイルと値は「続きをひらく」のために DB に残る。 */
 	@bindThis
 	public async closeSpace(spaceId: MiSpace['id']): Promise<void> {
-		await this.flush(spaceId);
-		const tileIds = await this.redisClient.smembers(this.key(spaceId, 'tiles'));
-		const keys = [
-			...tileIds.map(tileId => this.sharedKey(spaceId, tileId)),
-			this.key(spaceId, 'tiles'),
-			this.key(spaceId, 'tilesLoaded'),
-			this.key(spaceId, 'tilesLoading'),
-			this.key(spaceId, 'rev'),
-			this.key(spaceId, 'dirty'),
-			this.key(spaceId, 'hostOnlyTiles'),
-		];
-		await this.redisClient.del(...keys);
+		await this.withSaveLock(spaceId, async tiles => {
+			await this.flushLocked(spaceId, tiles);
+			const tileIds = await this.redisClient.smembers(this.key(spaceId, 'tiles'));
+			const keys = [
+				...tileIds.map(tileId => this.sharedKey(spaceId, tileId)),
+				this.key(spaceId, 'tiles'),
+				this.key(spaceId, 'tilesLoaded'),
+				this.key(spaceId, 'tilesLoading'),
+				this.key(spaceId, 'rev'),
+				this.key(spaceId, 'dirty'),
+				this.key(spaceId, 'saving'),
+				this.key(spaceId, 'hostOnlyTiles'),
+			];
+			await this.redisClient.del(...keys);
+		});
 	}
 }

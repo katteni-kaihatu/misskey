@@ -63,6 +63,8 @@ let awaitingSnapshot = false;
 let room: Room | null = null;
 /** 通話の接続をやり直すたびに増やす。古い接続の結果を捨てるのに使う */
 let callGeneration = 0;
+let desiredMode: Misskey.SpaceMode = 'listen';
+let microphoneOperation: Promise<void> = Promise.resolve();
 const audioElements = new Set<HTMLMediaElement>();
 
 type TileListener = {
@@ -93,6 +95,7 @@ export async function joinSpace(space: Misskey.entities.Space, mode: Misskey.Spa
 	spaceSession.space = space;
 	spaceSession.members = [];
 	spaceSession.messages = [];
+	desiredMode = mode;
 	spaceSession.mode = mode;
 	spaceSession.speakerMuted = false;
 	spaceSession.lastEnd = null;
@@ -173,6 +176,7 @@ function close(reason: SpaceEndReason | null): void {
 	spaceSession.leaderId = null;
 	sharedValues.clear();
 	pendingWrites.clear();
+	desiredMode = 'listen';
 	spaceSession.mode = 'listen';
 	spaceSession.speakerMuted = false;
 	spaceSession.lastEnd = (reason != null && spaceId != null) ? { spaceId, reason } : null;
@@ -188,10 +192,13 @@ export function sayInSpace(text: string): boolean {
 /** 入り方 (話す / 聞くだけ) を変える。通話につないでいる途中なら、つながった時点の入り方でマイクが決まる。 */
 export async function setSpaceMode(mode: Misskey.SpaceMode): Promise<void> {
 	if (spaceSession.space == null || spaceSession.status !== 'joined') return;
-	if (mode === spaceSession.mode) return;
-	spaceSession.mode = mode;
-	connection?.send('setMode', { mode });
-	if (room != null) await setMicrophone(room, mode === 'voice');
+	if (mode === desiredMode) return;
+	desiredMode = mode;
+	if (room != null && spaceSession.callStatus === 'connected') {
+		await setMicrophone(room, mode === 'voice');
+	} else {
+		publishMode(mode);
+	}
 }
 
 /** スピーカーを切る、入れる。通話にはつないだまま、この画面で鳴らす音だけを止める。 */
@@ -201,7 +208,7 @@ export function toggleSpaceSpeaker(): void {
 }
 
 export async function toggleSpaceMicrophone(): Promise<void> {
-	await setSpaceMode(spaceSession.mode === 'voice' ? 'listen' : 'voice');
+	await setSpaceMode(desiredMode === 'voice' ? 'listen' : 'voice');
 }
 
 // ---- ストリーミング ----
@@ -249,7 +256,7 @@ function onUpdated(payload: Pick<Misskey.entities.Space, 'name' | 'access' | 'ti
 }
 
 function onMuted(): void {
-	if (spaceSession.mode !== 'voice') return;
+	if (desiredMode !== 'voice') return;
 	spaceSession.mutedByHost = true;
 	void setSpaceMode('listen');
 }
@@ -379,8 +386,9 @@ async function connectCall(spaceId: string): Promise<void> {
 		room = newRoom;
 
 		newRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+			if (room !== newRoom) return;
 			if (track.kind === Track.Kind.Video) {
-				if (room === newRoom && publication.source === Track.Source.ScreenShare) addScreenShare(publication.trackSid, participant.identity, track);
+				if (publication.source === Track.Source.ScreenShare) addScreenShare(publication.trackSid, participant.identity, track);
 				return;
 			}
 			if (track.kind !== Track.Kind.Audio) return;
@@ -415,6 +423,7 @@ async function connectCall(spaceId: string): Promise<void> {
 			if (room === newRoom) spaceSession.audioBlocked = !newRoom.canPlaybackAudio;
 		});
 		newRoom.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+			if (room !== newRoom) return;
 			spaceSession.speakingIds = speakers.map(speaker => speaker.identity);
 		});
 		for (const event of [
@@ -427,6 +436,7 @@ async function connectCall(spaceId: string): Promise<void> {
 			if (room !== newRoom) return;
 			// 追い出しや終了ではストリーミングの知らせが先に来て、ここには来ない。来たら通話だけ切れたものとして扱う
 			room = null;
+			microphoneOperation = Promise.resolve();
 			removeAudioElements();
 			clearScreenShares();
 			spaceSession.callStatus = 'failed';
@@ -446,7 +456,7 @@ async function connectCall(spaceId: string): Promise<void> {
 		spaceSession.audioBlocked = !newRoom.canPlaybackAudio;
 		spaceSession.callStatus = 'connected';
 		// つないでいる間に入り方が変わった (ホストにマイクを切られた、など) 場合があるので、いまの入り方で決める
-		if (spaceSession.mode === 'voice') await setMicrophone(newRoom, true);
+		if (desiredMode === 'voice') await setMicrophone(newRoom, true);
 		refreshMicrophones(newRoom);
 	} catch (err) {
 		if (generation !== callGeneration) return;
@@ -472,19 +482,58 @@ export async function resumeSpaceAudio(): Promise<void> {
 	if (room === target) spaceSession.audioBlocked = !target.canPlaybackAudio;
 }
 
-async function setMicrophone(target: Room, enabled: boolean): Promise<void> {
-	if (room !== target) return;
-	try {
-		await target.localParticipant.setMicrophoneEnabled(enabled);
-	} catch (err) {
-		// マイクの許可が下りなかった場合など。聞くだけに戻す
-		console.error('failed to switch the microphone', err);
-		if (room === target && enabled && spaceSession.mode === 'voice') {
-			spaceSession.mode = 'listen';
-			connection?.send('setMode', { mode: 'listen' });
+function publishMode(mode: Misskey.SpaceMode): void {
+	spaceSession.mode = mode;
+	connection?.send('setMode', { mode });
+}
+
+function setMicrophone(target: Room, enabled: boolean): Promise<void> {
+	const operation = microphoneOperation.then(async () => {
+		if (room !== target || enabled !== (desiredMode === 'voice')) return;
+		try {
+			await target.localParticipant.setMicrophoneEnabled(enabled);
+			// The old room no longer has a queue to apply later mute requests.
+			if (enabled && room !== target) {
+				await disableMicrophone(target);
+				return;
+			}
+			if (room === target && enabled === (desiredMode === 'voice')) publishMode(desiredMode);
+		} catch (err) {
+			console.error('failed to switch the microphone', err);
+			if (!enabled) stopFailedMicrophone(target);
+			else if (room !== target) await disableMicrophone(target);
+			else if (desiredMode === 'voice') {
+				desiredMode = 'listen';
+				await disableMicrophone(target);
+				if (room === target && desiredMode === 'listen') publishMode('listen');
+			}
 		}
+		refreshMicrophones(target);
+	});
+	microphoneOperation = operation;
+	return operation;
+}
+
+async function disableMicrophone(target: Room): Promise<void> {
+	try {
+		await target.localParticipant.setMicrophoneEnabled(false);
+	} catch {
+		stopFailedMicrophone(target);
 	}
-	refreshMicrophones(target);
+}
+
+function stopFailedMicrophone(target: Room): void {
+	for (const publication of target.localParticipant.audioTrackPublications.values()) {
+		if (publication.source === 'microphone') publication.track?.stop();
+	}
+	if (room !== target) {
+		void target.disconnect();
+		return;
+	}
+	disconnectCall();
+	spaceSession.callStatus = 'failed';
+	desiredMode = 'listen';
+	publishMode('listen');
 }
 
 function refreshMicrophones(target: Room): void {
@@ -546,6 +595,7 @@ function removeAudioElements(): void {
 
 function disconnectCall(): void {
 	callGeneration++;
+	microphoneOperation = Promise.resolve();
 	const current = room;
 	room = null;
 	if (current != null) void current.disconnect();

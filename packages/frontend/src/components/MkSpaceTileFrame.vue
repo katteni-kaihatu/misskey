@@ -67,7 +67,8 @@ function send(message: HostToTileMessage): void {
 	port?.postMessage(message);
 }
 
-async function onTileMessage(ev: MessageEvent): Promise<void> {
+async function onTileMessage(source: MessagePort, ev: MessageEvent): Promise<void> {
+	if (port !== source) return;
 	const message = ev.data as TileToHostMessage | null;
 	if (message == null || typeof message !== 'object') return;
 	switch (message.t) {
@@ -85,9 +86,10 @@ async function onTileMessage(ev: MessageEvent): Promise<void> {
 			if (typeof id !== 'number' || typeof message.method !== 'string') break;
 			try {
 				const params = (typeof message.args === 'object' && message.args != null ? message.args : {}) as Record<string, unknown>;
-				send({ t: 'reply', id, ok: true, value: await props.call(message.method, params) });
+				const value = await props.call(message.method, params);
+				if (source === port) source.postMessage({ t: 'reply', id, ok: true, value });
 			} catch (err) {
-				send({ t: 'reply', id, ok: false, value: err instanceof Error ? err.message : 'failed' });
+				if (source === port) source.postMessage({ t: 'reply', id, ok: false, value: err instanceof Error ? err.message : 'failed' });
 			}
 			break;
 		}
@@ -98,7 +100,7 @@ async function onTileMessage(ev: MessageEvent): Promise<void> {
 			// 枠は自分ではリンクを開けない。本体が確かめてから開く
 			if (typeof message.url !== 'string' || !/^https?:\/\//.test(message.url)) break;
 			const { canceled } = await os.confirm({ type: 'question', title: i18n.ts._spaces.openLinkConfirm, text: message.url });
-			if (!canceled) window.open(message.url, '_blank', 'noopener');
+			if (!canceled && port === source) window.open(message.url, '_blank', 'noopener');
 			break;
 		}
 		case 'post':
@@ -120,7 +122,7 @@ function onLoad(): void {
 	closePort();
 	const channel = new MessageChannel();
 	port = channel.port1;
-	port.onmessage = onTileMessage;
+	port.onmessage = ev => onTileMessage(channel.port1, ev);
 	target.postMessage({ type: TILE_PORT_MESSAGE }, '*', [channel.port2]);
 	emit('ready');
 }
