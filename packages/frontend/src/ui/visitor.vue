@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div :class="$style.main">
 		<div v-if="narrow && !isRoot" :class="$style.header">
-			<img :src="instance.iconUrl || '/favicon.ico'" alt="" :class="$style.headerIcon"/>
+			<img :src="webClientIconUrl" alt="" :class="$style.headerIcon"/>
 			<MkA to="/" :class="$style.headerTitle">{{ instanceName }}</MkA>
 			<MkButton primary rounded :class="$style.headerButton" @click="goHome">{{ i18n.ts.signup }}</MkButton>
 		</div>
@@ -34,6 +34,7 @@ import { instanceName } from '@@/js/config.js';
 import XCommon from './_common_/common.vue';
 import type { PageMetadata } from '@/page.js';
 import { instance } from '@/instance.js';
+import { webClientIconUrl } from '@/utility/web-client-icon.js';
 import { provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { mainRouter } from '@/router.js';

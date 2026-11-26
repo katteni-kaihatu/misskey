@@ -7,8 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="[$style.root, { [$style.iconOnly]: iconOnly }]">
 	<div :class="$style.body">
 		<div :class="$style.top">
-			<button v-tooltip.noDelay.right="instance.name ?? i18n.ts.instance" class="_button" :class="$style.instance" @click="openInstanceMenu">
-				<img :src="instance.iconUrl || '/favicon.ico'" alt="" :class="$style.instanceIcon" style="view-transition-name: navbar-serverIcon;"/>
+			<button v-tooltip.noDelay.right="instance.name ?? i18n.ts.instance" class="_button" :class="$style.instance" :aria-label="instance.name ?? i18n.ts.instance" @click="openInstanceMenu">
+				<img :src="webClientIconUrl" alt="" :class="$style.instanceIcon" style="view-transition-name: navbar-serverIcon;"/>
 			</button>
 			<button v-if="!iconOnly" v-tooltip.noDelay.right="i18n.ts.realtimeMode" class="_button" :class="[$style.realtimeMode, store.r.realtimeMode.value ? $style.on : null]" @click="toggleRealtimeMode">
 				<i v-if="store.r.realtimeMode.value" class="ti ti-bolt ti-fw"></i>
@@ -111,6 +111,7 @@ import { navbarItemDef } from '@/navbar.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
+import { webClientIconUrl } from '@/utility/web-client-icon.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import { useRouter } from '@/router.js';
 import { prefer } from '@/preferences.js';
