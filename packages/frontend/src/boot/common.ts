@@ -32,11 +32,11 @@ import { $i } from '@/i.js';
 import { launchPlugins } from '@/plugin.js';
 import { initTelemetry } from '@/telemetry.js';
 import { initializeAutoTranslationPreferences } from '@/utility/auto-translation-preferences.js';
-import { applyWebClientFavicon } from '@/utility/web-client-icon.js';
+import { startWebClientIconRotation } from '@/utility/web-client-icon.js';
 
 export async function common(createVue: () => Promise<App<Element>>) {
 	console.info(`Misskey v${version}`);
-	applyWebClientFavicon(window.document);
+	startWebClientIconRotation(window.document);
 
 	if (_DEV_) {
 		console.warn('Development mode!!!');
