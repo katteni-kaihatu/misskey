@@ -31,6 +31,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkInfo>
 			<MkInfo v-if="session.mutedByHost" warn closable @close="session.mutedByHost = false">{{ i18n.ts._spaces.mutedByHost }}</MkInfo>
 
+			<div v-if="selectedShare != null" :class="$style.stage" class="_panel">
+				<video ref="screenVideo" :class="$style.screen" autoplay playsinline muted :aria-label="shareLabel(selectedShare)"></video>
+				<div :class="$style.shareTabs">
+					<button
+						v-for="share in session.screenShares"
+						:key="share.id"
+						class="_button"
+						:class="[$style.shareTab, { [$style.shareTabActive]: share.id === selectedShare.id }]"
+						:aria-pressed="share.id === selectedShare.id"
+						@click="selectedShareId = share.id"
+					>
+						<i class="ti ti-screen-share"></i> {{ shareLabel(share) }}
+					</button>
+				</div>
+			</div>
+
 			<div :class="$style.members">
 				<component
 					:is="isHost && member.user.id !== $i?.id ? 'button' : 'div'"
@@ -59,6 +75,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkButton rounded :disabled="session.callStatus !== 'connected'" @click="toggleSpaceSpeaker()">
 					<i :class="session.speakerMuted ? 'ti ti-volume-off' : 'ti ti-volume'"></i>
 					{{ session.speakerMuted ? i18n.ts._spaces.speakerOn : i18n.ts._spaces.speakerOff }}
+				</MkButton>
+				<MkButton v-if="canShareSpaceScreen" rounded :primary="session.sharingScreen" :disabled="session.callStatus !== 'connected'" @click="toggleSpaceScreenShare()">
+					<i :class="session.sharingScreen ? 'ti ti-screen-share-off' : 'ti ti-screen-share'"></i>
+					{{ session.sharingScreen ? i18n.ts._spaces.stopShareScreen : i18n.ts._spaces.shareScreen }}
 				</MkButton>
 				<MkButton rounded danger @click="leaveSpace()"><i class="ti ti-door-exit"></i> {{ i18n.ts._spaces.leave }}</MkButton>
 			</div>
@@ -126,7 +146,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
 import MkButton from '@/components/MkButton.vue';
 import MkInfo from '@/components/MkInfo.vue';
@@ -137,7 +157,8 @@ import { $i } from '@/i.js';
 import { definePage } from '@/page.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import {
-	isInSpace, joinSpace, leaveSpace, resumeSpaceAudio, retrySpaceCall, sayInSpace, spaceSession as session, toggleSpaceMicrophone, toggleSpaceSpeaker,
+	attachSpaceScreen, canShareSpaceScreen, detachSpaceScreen, isInSpace, joinSpace, leaveSpace, resumeSpaceAudio, retrySpaceCall, sayInSpace,
+	spaceSession as session, toggleSpaceMicrophone, toggleSpaceScreenShare, toggleSpaceSpeaker,
 } from '@/utility/space-session.js';
 
 const props = defineProps<{
@@ -170,6 +191,41 @@ const endNotice = computed(() => {
 	}
 	return null;
 });
+
+const screenVideo = useTemplateRef('screenVideo');
+/** 大きく出す画面共有。選んでいなければ、いちばん新しいものを出す */
+const selectedShareId = ref<string | null>(null);
+const selectedShare = computed(() => {
+	if (!joined.value) return null;
+	return session.screenShares.find(share => share.id === selectedShareId.value) ?? session.screenShares.at(-1) ?? null;
+});
+
+function shareLabel(share: { userId: string }): string {
+	const member = session.members.find(m => m.user.id === share.userId);
+	return i18n.tsx._spaces.screenOf({ name: member?.user.name ?? member?.user.username ?? '?' });
+}
+
+/** ページが表に出ている間だけ true。裏に回っている間は映像をつながない */
+const pageActive = ref(true);
+/** いま映像をつないでいる共有と要素 */
+let attachedScreen: { id: string; element: HTMLVideoElement } | null = null;
+
+function syncScreen(): void {
+	const id = selectedShare.value?.id ?? null;
+	const element = screenVideo.value;
+	const wanted = (pageActive.value && id != null && element != null) ? { id, element } : null;
+	if (attachedScreen != null && (wanted == null || wanted.id !== attachedScreen.id || wanted.element !== attachedScreen.element)) {
+		detachSpaceScreen(attachedScreen.id, attachedScreen.element);
+		attachedScreen = null;
+	}
+	if (wanted != null && attachedScreen == null) {
+		attachSpaceScreen(wanted.id, wanted.element);
+		attachedScreen = wanted;
+	}
+}
+
+// 大きく出す共有が変わったとき、ページが表に戻ったときに、映像をつなぎ替える。要素ができてからつなぐので、描画のあとに動かす
+watch([() => selectedShare.value?.id ?? null, screenVideo, pageActive], syncScreen, { flush: 'post' });
 
 async function fetchSpace(): Promise<void> {
 	try {
@@ -276,6 +332,7 @@ watch(() => props.spaceId, () => {
 });
 
 function closePage(): void {
+	pageActive.value = false;
 	if (session.pageSpaceId === props.spaceId) session.pageSpaceId = null;
 }
 
@@ -285,6 +342,12 @@ onMounted(() => {
 });
 onActivated(() => {
 	session.pageSpaceId = props.spaceId;
+	pageActive.value = true;
+});
+// 要素が残っているうちに、映像を外す
+onBeforeUnmount(() => {
+	if (attachedScreen != null) detachSpaceScreen(attachedScreen.id, attachedScreen.element);
+	attachedScreen = null;
 });
 onDeactivated(closePage);
 onUnmounted(closePage);
@@ -343,6 +406,37 @@ definePage(() => ({
 	flex-shrink: 0;
 	width: 20px;
 	height: 20px;
+}
+
+.stage {
+	overflow: hidden;
+}
+
+.screen {
+	display: block;
+	width: 100%;
+	max-height: 70vh;
+	background: var(--MI_THEME-bg);
+	object-fit: contain;
+}
+
+.shareTabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 8px 12px;
+}
+
+.shareTab {
+	padding: 4px 12px;
+	border: solid 1px var(--MI_THEME-divider);
+	border-radius: 999px;
+	font-size: 0.85em;
+}
+
+.shareTabActive {
+	border-color: var(--MI_THEME-accent);
+	color: var(--MI_THEME-accent);
 }
 
 .members {

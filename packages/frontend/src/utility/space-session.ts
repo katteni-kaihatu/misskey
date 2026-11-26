@@ -5,7 +5,7 @@
 
 import { reactive } from 'vue';
 import type * as Misskey from 'misskey-js';
-import type { Room } from 'livekit-client';
+import type { Room, Track } from 'livekit-client';
 import { $i } from '@/i.js';
 import { useStream } from '@/stream.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -38,6 +38,10 @@ export const spaceSession = reactive({
 	mutedByHost: false,
 	/** 直前のスペースから出された理由と、そのスペース */
 	lastEnd: null as { spaceId: string; reason: SpaceEndReason } | null,
+	/** いま出ている画面共有。映像そのものは attachSpaceScreen で画面の要素につなぐ */
+	screenShares: [] as { id: string; userId: string }[],
+	/** 自分が画面を共有しているとき true */
+	sharingScreen: false,
 	/** ブラウザが音を鳴らすのを止めているとき true。画面が「音声を再生」のボタンを出す */
 	audioBlocked: false,
 	/** いま開いているスペースのページの ID。参加中のスペース自身のページでだけ、小さな操作バーを隠す */
@@ -53,6 +57,11 @@ let room: Room | null = null;
 /** 通話の接続をやり直すたびに増やす。古い接続の結果を捨てるのに使う */
 let callGeneration = 0;
 const audioElements = new Set<HTMLMediaElement>();
+/** 画面共有の映像。キーは spaceSession.screenShares の id */
+const screenTracks = new Map<string, Track>();
+
+/** 画面を共有できるブラウザか。スマホのブラウザは見る側だけになる。 */
+export const canShareSpaceScreen = typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
 export function isInSpace(spaceId: string): boolean {
 	return spaceSession.status !== 'idle' && spaceSession.space?.id === spaceId;
@@ -220,7 +229,11 @@ async function connectCall(spaceId: string): Promise<void> {
 		const newRoom = new Room({ adaptiveStream: true, dynacast: true });
 		room = newRoom;
 
-		newRoom.on(RoomEvent.TrackSubscribed, (track) => {
+		newRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+			if (track.kind === Track.Kind.Video) {
+				if (room === newRoom && publication.source === Track.Source.ScreenShare) addScreenShare(publication.trackSid, participant.identity, track);
+				return;
+			}
 			if (track.kind !== Track.Kind.Audio) return;
 			const element = track.attach();
 			element.style.display = 'none';
@@ -228,11 +241,26 @@ async function connectCall(spaceId: string): Promise<void> {
 			window.document.body.appendChild(element);
 			audioElements.add(element);
 		});
-		newRoom.on(RoomEvent.TrackUnsubscribed, (track) => {
+		newRoom.on(RoomEvent.TrackUnsubscribed, (track, publication) => {
+			if (track.kind === Track.Kind.Video) {
+				if (room === newRoom) removeScreenShare(publication.trackSid);
+				return;
+			}
 			for (const element of track.detach()) {
 				element.remove();
 				audioElements.delete(element);
 			}
+		});
+		// 自分の画面共有。ブラウザの「共有を停止」で止めたときも、ここで片づく
+		newRoom.on(RoomEvent.LocalTrackPublished, (publication) => {
+			if (room !== newRoom || publication.source !== Track.Source.ScreenShare || publication.track == null) return;
+			addScreenShare(publication.trackSid, newRoom.localParticipant.identity, publication.track);
+			spaceSession.sharingScreen = true;
+		});
+		newRoom.on(RoomEvent.LocalTrackUnpublished, (publication) => {
+			if (room !== newRoom || publication.source !== Track.Source.ScreenShare) return;
+			removeScreenShare(publication.trackSid);
+			spaceSession.sharingScreen = false;
 		});
 		newRoom.on(RoomEvent.AudioPlaybackStatusChanged, () => {
 			if (room === newRoom) spaceSession.audioBlocked = !newRoom.canPlaybackAudio;
@@ -251,6 +279,7 @@ async function connectCall(spaceId: string): Promise<void> {
 			// 追い出しや終了ではストリーミングの知らせが先に来て、ここには来ない。来たら通話だけ切れたものとして扱う
 			room = null;
 			removeAudioElements();
+			clearScreenShares();
 			spaceSession.callStatus = 'failed';
 			spaceSession.speakingIds = [];
 			spaceSession.micOnIds = [];
@@ -319,6 +348,48 @@ function refreshMicrophones(target: Room): void {
 	spaceSession.micOnIds = ids;
 }
 
+function addScreenShare(id: string, userId: string, track: Track): void {
+	screenTracks.set(id, track);
+	spaceSession.screenShares = [...spaceSession.screenShares.filter(share => share.id !== id), { id, userId }];
+}
+
+function removeScreenShare(id: string): void {
+	screenTracks.get(id)?.detach();
+	screenTracks.delete(id);
+	spaceSession.screenShares = spaceSession.screenShares.filter(share => share.id !== id);
+}
+
+function clearScreenShares(): void {
+	for (const track of screenTracks.values()) track.detach();
+	screenTracks.clear();
+	spaceSession.screenShares = [];
+	spaceSession.sharingScreen = false;
+}
+
+/** 画面共有の映像を、画面の video 要素につなぐ。 */
+export function attachSpaceScreen(id: string, element: HTMLVideoElement): void {
+	screenTracks.get(id)?.attach(element);
+}
+
+export function detachSpaceScreen(id: string, element: HTMLVideoElement): void {
+	screenTracks.get(id)?.detach(element);
+}
+
+/** 画面の共有を始める、止める。PC の音も一緒に流せる (ブラウザが対応していれば、共有を選ぶ画面で選べる)。 */
+export async function toggleSpaceScreenShare(): Promise<void> {
+	const target = room;
+	if (target == null || spaceSession.callStatus !== 'connected') return;
+	try {
+		const enable = !spaceSession.sharingScreen;
+		await target.localParticipant.setScreenShareEnabled(enable, { audio: true });
+		// 共有する画面を選んでいる間にスペースから出ていたら、取った画面をすぐ止める
+		if (enable && room !== target) await target.localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+	} catch (err) {
+		// 共有する画面を選ばずに閉じた場合もここに来る
+		console.warn('failed to switch the screen share', err);
+	}
+}
+
 function removeAudioElements(): void {
 	for (const element of audioElements) element.remove();
 	audioElements.clear();
@@ -330,6 +401,7 @@ function disconnectCall(): void {
 	room = null;
 	if (current != null) void current.disconnect();
 	removeAudioElements();
+	clearScreenShares();
 	spaceSession.callStatus = 'off';
 	spaceSession.speakingIds = [];
 	spaceSession.micOnIds = [];

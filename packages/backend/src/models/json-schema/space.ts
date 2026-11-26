@@ -50,6 +50,11 @@ export const packedSpaceSchema = {
 			optional: false, nullable: true,
 			format: 'id',
 		},
+		summaryNoteId: {
+			type: 'string',
+			optional: false, nullable: true,
+			format: 'id',
+		},
 		memberCount: {
 			type: 'integer',
 			optional: false, nullable: false,

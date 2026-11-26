@@ -9,7 +9,7 @@ import { IsNull } from 'typeorm';
 import { AccessToken, RoomServiceClient, TrackSource } from 'livekit-server-sdk';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { MiSpace } from '@/models/Space.js';
-import type { FollowingsRepository, SpacesRepository, UsersRepository } from '@/models/_.js';
+import type { FollowingsRepository, NotesRepository, SpacesRepository, UsersRepository } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
@@ -63,6 +63,13 @@ redis.call('ZREM', KEYS[2], ARGV[1])
 return 1
 `;
 
+/** まとめノートの本文。開いていた時間は分で、1分に満たなくても1分と書く。 */
+export function buildSpaceSummaryText(params: { name: string; startedAt: Date; endedAt: Date; participantCount: number; url: string }): string {
+	const minutes = Math.max(1, Math.round((params.endedAt.getTime() - params.startedAt.getTime()) / 60000));
+	const duration = minutes >= 60 ? `${Math.floor(minutes / 60)}時間${minutes % 60}分` : `${minutes}分`;
+	return `${params.name} は終わりました\n開いていた時間 ${duration} ・ 参加した人 ${params.participantCount}人\n${params.url}`;
+}
+
 export function isSpaceMode(value: unknown): value is SpaceMode {
 	return typeof value === 'string' && (spaceModes as readonly string[]).includes(value);
 }
@@ -95,6 +102,9 @@ export class SpaceService {
 		private noteCreateService: NoteCreateService,
 		private globalEventService: GlobalEventService,
 		private loggerService: LoggerService,
+
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
 	) {
 		this.logger = this.loggerService.getLogger('spaces');
 		this.spacesConfig = resolveSpacesConfig(this.config.spaces, process.env);
@@ -185,6 +195,7 @@ export class SpaceService {
 			}
 		}
 
+		// Redis の片づけに失敗しても、まとめノートは出す
 		await this.redisClient.del(
 			this.key(space.id, 'members'),
 			this.key(space.id, 'active'),
@@ -193,7 +204,44 @@ export class SpaceService {
 			this.key(space.id, 'kicked'),
 			this.key(space.id, 'reconcileLock'),
 			this.key(space.id, 'reconcileSuspects'),
-		);
+		).catch(err => {
+			this.logger.warn(`failed to clean up Redis for space ${space.id}`, { err });
+		});
+
+		await this.postSummaryNote(space.id);
+	}
+
+	/**
+	 * 閉じたスペースのまとめノートを出す。お知らせノートと同じ範囲で出し、お知らせを出さなかったスペースでは出さない。
+	 * 範囲は、実際に出たお知らせノートのものを使う。ひらいたあとで「入れる人」を広げても、まとめがお知らせより広く出ないようにする。
+	 * 参加した人の名前は載せない。
+	 */
+	private async postSummaryNote(spaceId: MiSpace['id']): Promise<void> {
+		try {
+			// 参加した人数は入るたびに DB で増えているので、読み直す
+			const space = await this.spacesRepository.findOne({ where: { id: spaceId }, relations: { host: true } });
+			if (space == null || space.host == null || space.endedAt == null) return;
+			if (space.noteScope === 'none' || space.summaryNoteId != null || space.announceNoteId == null) return;
+			const announce = await this.notesRepository.findOneBy({ id: space.announceNoteId });
+			// お知らせノートが消されていたら、まとめも出さない
+			if (announce == null) return;
+
+			const note = await this.noteCreateService.create(space.host, {
+				text: buildSpaceSummaryText({
+					name: space.name,
+					startedAt: this.idService.parse(space.id).date,
+					endedAt: space.endedAt,
+					participantCount: space.participantIds.length,
+					url: this.url(space.id),
+				}),
+				localOnly: announce.localOnly,
+				visibility: announce.visibility === 'followers' ? 'followers' : 'public',
+			});
+			await this.spacesRepository.update(space.id, { summaryNoteId: note.id });
+		} catch (err) {
+			// まとめが出せなくても、閉じる処理は終わったものとして扱う
+			this.logger.warn(`failed to create the summary note for space ${spaceId}`, { err });
+		}
 	}
 
 	// ---- 入れるかの判定 ----
@@ -224,6 +272,7 @@ export class SpaceService {
 			access: space.access,
 			noteScope: space.noteScope,
 			announceNoteId: space.announceNoteId,
+			summaryNoteId: space.summaryNoteId,
 			memberCount: space.endedAt == null ? await this.countMembers(space.id) : 0,
 			participantCount: space.participantIds.length,
 			peakCount: space.peakCount,

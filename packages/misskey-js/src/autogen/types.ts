@@ -6430,6 +6430,8 @@ export type components = {
             noteScope: 'local' | 'public' | 'none';
             /** Format: id */
             announceNoteId: string | null;
+            /** Format: id */
+            summaryNoteId: string | null;
             memberCount: number;
             participantCount: number;
             peakCount: number;

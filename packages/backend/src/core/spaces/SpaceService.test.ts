@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
 import type { MiSpace } from '@/models/Space.js';
-import { SPACE_EMPTY_CLOSE_MS, SpaceService } from './SpaceService.js';
+import { buildSpaceSummaryText, SPACE_EMPTY_CLOSE_MS, SpaceService } from './SpaceService.js';
 
 type Args = ConstructorParameters<typeof SpaceService>;
 
@@ -28,25 +28,30 @@ function fixture() {
 	const spaces = {
 		findBy: vi.fn(async () => [] as MiSpace[]),
 		update: vi.fn(async () => ({ affected: 1 })),
+		findOne: vi.fn(async () => null as MiSpace | null),
 	};
 	const followings = { exists: vi.fn(async () => false) };
 	const blocking = { checkBlocked: vi.fn(async (_blocker: string, _blockee: string) => false) };
 	const events = { publishSpaceStream: vi.fn() };
 	const logger = { warn: vi.fn(), debug: vi.fn() };
+	const notes = { create: vi.fn(async () => ({ id: 'summary' })) };
+	const announces = { findOneBy: vi.fn(async () => ({ id: 'announce', localOnly: true, visibility: 'followers' }) as { id: string; localOnly: boolean; visibility: string } | null) };
+	const ids = { parse: () => ({ date: new Date(1_800_000_000_000 - 90 * 60000) }) };
 	const service = new SpaceService(
 		{ url: 'https://g.example', spaces: undefined } as Config,
 		redis as unknown as Args[1],
 		spaces as unknown as Args[2],
 		followings as unknown as Args[3],
 		{} as Args[4],
-		{} as Args[5],
+		ids as unknown as Args[5],
 		{} as Args[6],
 		blocking as unknown as Args[7],
-		{} as Args[8],
+		notes as unknown as Args[8],
 		events as unknown as Args[9],
 		{ getLogger: () => logger } as unknown as Args[10],
+		announces as unknown as Args[11],
 	);
-	return { service, kicked, strings, redis, spaces, followings, blocking, events };
+	return { service, kicked, strings, redis, spaces, followings, blocking, events, notes, announces };
 }
 
 describe('SpaceService.canJoin', () => {
@@ -118,6 +123,38 @@ describe('SpaceService.closeAbandoned', () => {
 		expect(f.spaces.update).toHaveBeenCalledTimes(1);
 		expect(f.events.publishSpaceStream).toHaveBeenCalledWith('space', 'ended', null);
 		expect(f.redis.del).toHaveBeenCalled();
+	});
+});
+
+describe('summary note', () => {
+	const host = { id: 'host', username: 'host', host: null };
+
+	test('writes the name, the time open, the head count and the link, without names', () => {
+		const text = buildSpaceSummaryText({ name: 'もくもく', startedAt: new Date(0), endedAt: new Date(95 * 60000), participantCount: 7, url: 'https://g.example/spaces/space' });
+		expect(text).toBe('もくもく は終わりました\n開いていた時間 1時間35分 ・ 参加した人 7人\nhttps://g.example/spaces/space');
+		expect(buildSpaceSummaryText({ name: 'n', startedAt: new Date(0), endedAt: new Date(5000), participantCount: 1, url: 'u' })).toContain('1分');
+	});
+
+	test('is posted on close with the scope of the announcement', async () => {
+		const f = fixture();
+		// ひらいたあとで「入れる人」を広げていても、範囲は実際に出たお知らせノートに合わせる
+		const ended = space({ endedAt: new Date(1_800_000_000_000), participantIds: ['a', 'b', 'c'], access: 'local', noteScope: 'public', announceNoteId: 'announce', host: host as MiSpace['host'] });
+		f.spaces.findOne.mockResolvedValue(ended);
+		await f.service.end(space());
+		expect(f.notes.create).toHaveBeenCalledWith(host, expect.objectContaining({ localOnly: true, visibility: 'followers', text: expect.stringContaining('参加した人 3人') }));
+		expect(f.spaces.update).toHaveBeenLastCalledWith('space', { summaryNoteId: 'summary' });
+	});
+
+	test('is not posted when the host chose no notes, twice, or after the announcement was deleted', async () => {
+		const f = fixture();
+		f.spaces.findOne.mockResolvedValue(space({ endedAt: new Date(), noteScope: 'none', host: host as MiSpace['host'] }));
+		await f.service.end(space());
+		f.spaces.findOne.mockResolvedValue(space({ endedAt: new Date(), announceNoteId: 'announce', summaryNoteId: 'already', host: host as MiSpace['host'] }));
+		await f.service.end(space());
+		f.announces.findOneBy.mockResolvedValue(null);
+		f.spaces.findOne.mockResolvedValue(space({ endedAt: new Date(), announceNoteId: 'announce', host: host as MiSpace['host'] }));
+		await f.service.end(space());
+		expect(f.notes.create).not.toHaveBeenCalled();
 	});
 });
 

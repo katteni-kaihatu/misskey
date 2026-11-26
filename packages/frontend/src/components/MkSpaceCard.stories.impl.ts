@@ -35,6 +35,7 @@ export const Default = {
 			access: 'local',
 			noteScope: 'local',
 			announceNoteId: null,
+			summaryNoteId: null,
 			memberCount: 4,
 			participantCount: 6,
 			peakCount: 5,

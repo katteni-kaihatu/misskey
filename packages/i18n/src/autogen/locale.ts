@@ -6728,6 +6728,18 @@ export interface Locale extends ILocale {
          */
         "speakerOff": string;
         /**
+         * 画面を共有
+         */
+        "shareScreen": string;
+        /**
+         * 共有を止める
+         */
+        "stopShareScreen": string;
+        /**
+         * {name}の画面
+         */
+        "screenOf": ParameterizedString<"name">;
+        /**
          * チャット
          */
         "chat": string;
