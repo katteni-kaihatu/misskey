@@ -28,6 +28,9 @@ import type { Config } from '@/config.js';
 import { bindThis } from '@/decorators.js';
 import { Serialized } from '@/types.js';
 import type { AvatarWalkMovement, AvatarWalkPlayer, AvatarWalkSharedAtlas } from '@/core/AvatarWalkService.js';
+import type { SpaceMember, SpaceMessage, SpaceMode } from '@/core/spaces/SpaceService.js';
+import type { MiSpace } from '@/models/Space.js';
+import type { JsonValue } from '@/misc/json-value.js';
 import type Emitter from 'strict-event-emitter-types';
 import type { EventEmitter } from 'events';
 
@@ -215,6 +218,29 @@ export interface ReversiGameEventTypes {
 	};
 }
 
+export interface SpaceEventTypes {
+	joined: SpaceMember;
+	left: { userId: MiUser['id']; };
+	memberUpdated: { userId: MiUser['id']; mode: SpaceMode; };
+	message: SpaceMessage;
+	updated: Pick<MiSpace, 'name' | 'access' | 'tilePlacement'>;
+	ended: null;
+	/** 同じ人が別の接続で入った。sessionId は置き換えられた側の接続 */
+	replaced: { userId: MiUser['id']; sessionId: string; };
+	muted: { userId: MiUser['id']; };
+	kicked: { userId: MiUser['id']; };
+	/** 担当が替わった。だれもいなければ null */
+	leader: { userId: MiUser['id'] | null; };
+	tileAdded: Packed<'SpaceTile'>;
+	tileUpdated: Packed<'SpaceTile'>;
+	tileRemoved: { tileId: string; };
+	tilesMoved: { tileIds: string[]; };
+	/** 共有する値が書かれた。value が null ならキーが消えた */
+	shared: { tileId: string; key: string; value: JsonValue; rev: number; userId: MiUser['id']; };
+	/** 保存しない一時的な知らせ */
+	signal: { tileId: string; type: string; body: JsonValue; userId: MiUser['id']; };
+}
+
 export interface AvatarWalkRoomEventTypes {
 	joined: AvatarWalkPlayer;
 	moved: AvatarWalkMovement;
@@ -355,6 +381,10 @@ export type GlobalEvents = {
 	avatarWalkRoom: {
 		name: `avatarWalkRoomStream:${string}`;
 		payload: EventTypesToEventPayload<AvatarWalkRoomEventTypes>;
+	};
+	space: {
+		name: `spaceStream:${MiSpace['id']}`;
+		payload: EventTypesToEventPayload<SpaceEventTypes>;
 	};
 };
 
@@ -498,5 +528,10 @@ export class GlobalEventService {
 	@bindThis
 	public publishAvatarWalkRoomStream<K extends keyof AvatarWalkRoomEventTypes>(roomId: string, type: K, value: AvatarWalkRoomEventTypes[K]): void {
 		this.publish(`avatarWalkRoomStream:${roomId}`, type, value);
+	}
+
+	@bindThis
+	public publishSpaceStream<K extends keyof SpaceEventTypes>(spaceId: MiSpace['id'], type: K, value: SpaceEventTypes[K]): void {
+		this.publish(`spaceStream:${spaceId}`, type, value);
 	}
 }

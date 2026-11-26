@@ -703,6 +703,37 @@ import type {
 	RolesUsersRequest,
 	RolesUsersResponse,
 	ServerInfoResponse,
+	SpacesCreateRequest,
+	SpacesCreateResponse,
+	SpacesEndRequest,
+	SpacesKickRequest,
+	SpacesListResponse,
+	SpacesMuteRequest,
+	SpacesShowRequest,
+	SpacesShowResponse,
+	SpacesTileDefsCreateRequest,
+	SpacesTileDefsCreateResponse,
+	SpacesTileDefsDeleteRequest,
+	SpacesTileDefsListRequest,
+	SpacesTileDefsListResponse,
+	SpacesTileDefsMyRequest,
+	SpacesTileDefsMyResponse,
+	SpacesTileDefsShowRequest,
+	SpacesTileDefsShowResponse,
+	SpacesTileDefsUpdateRequest,
+	SpacesTileDefsUpdateResponse,
+	SpacesTilesAddRequest,
+	SpacesTilesAddResponse,
+	SpacesTilesFetchRequest,
+	SpacesTilesFetchResponse,
+	SpacesTilesMoveRequest,
+	SpacesTilesRemoveRequest,
+	SpacesTilesUpdateRequest,
+	SpacesTilesUpdateResponse,
+	SpacesTokenRequest,
+	SpacesTokenResponse,
+	SpacesUpdateRequest,
+	SpacesUpdateResponse,
 	StatsResponse,
 	SwRegisterRequest,
 	SwRegisterResponse,
@@ -1235,6 +1266,25 @@ export type Endpoints = {
 	'roles/show': { req: RolesShowRequest; res: RolesShowResponse };
 	'roles/users': { req: RolesUsersRequest; res: RolesUsersResponse };
 	'server-info': { req: EmptyRequest; res: ServerInfoResponse };
+	'spaces/create': { req: SpacesCreateRequest; res: SpacesCreateResponse };
+	'spaces/end': { req: SpacesEndRequest; res: EmptyResponse };
+	'spaces/kick': { req: SpacesKickRequest; res: EmptyResponse };
+	'spaces/list': { req: EmptyRequest; res: SpacesListResponse };
+	'spaces/mute': { req: SpacesMuteRequest; res: EmptyResponse };
+	'spaces/show': { req: SpacesShowRequest; res: SpacesShowResponse };
+	'spaces/tile-defs/create': { req: SpacesTileDefsCreateRequest; res: SpacesTileDefsCreateResponse };
+	'spaces/tile-defs/delete': { req: SpacesTileDefsDeleteRequest; res: EmptyResponse };
+	'spaces/tile-defs/list': { req: SpacesTileDefsListRequest; res: SpacesTileDefsListResponse };
+	'spaces/tile-defs/my': { req: SpacesTileDefsMyRequest; res: SpacesTileDefsMyResponse };
+	'spaces/tile-defs/show': { req: SpacesTileDefsShowRequest; res: SpacesTileDefsShowResponse };
+	'spaces/tile-defs/update': { req: SpacesTileDefsUpdateRequest; res: SpacesTileDefsUpdateResponse };
+	'spaces/tiles/add': { req: SpacesTilesAddRequest; res: SpacesTilesAddResponse };
+	'spaces/tiles/fetch': { req: SpacesTilesFetchRequest; res: SpacesTilesFetchResponse };
+	'spaces/tiles/move': { req: SpacesTilesMoveRequest; res: EmptyResponse };
+	'spaces/tiles/remove': { req: SpacesTilesRemoveRequest; res: EmptyResponse };
+	'spaces/tiles/update': { req: SpacesTilesUpdateRequest; res: SpacesTilesUpdateResponse };
+	'spaces/token': { req: SpacesTokenRequest; res: SpacesTokenResponse };
+	'spaces/update': { req: SpacesUpdateRequest; res: SpacesUpdateResponse };
 	'stats': { req: EmptyRequest; res: StatsResponse };
 	'sw/register': { req: SwRegisterRequest; res: SwRegisterResponse };
 	'sw/show-registration': { req: SwShowRegistrationRequest; res: SwShowRegistrationResponse };

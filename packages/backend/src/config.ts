@@ -14,6 +14,7 @@ import type { RedisOptions as IoRedisRedisOptions } from 'ioredis';
 import type { RedisOptions as BullMqRedisOptions } from 'bullmq';
 import type { AccessLogConfiguration, LogFormat, LogLevelSetting } from './logging/types.js';
 import type { GridspaceConfigSource } from './core/gridspace/peer-protocol.js';
+import type { SpacesConfigSource } from './core/spaces/spaces-config.js';
 
 type RedisOptionsRequiredFields = {
 	host: string;
@@ -38,6 +39,7 @@ type SentryBackendConfig = {
 type Source = {
 	multiNote?: { enabled?: boolean };
 	gridspace?: GridspaceConfigSource;
+	spaces?: SpacesConfigSource;
 	url?: string;
 	port?: number;
 	socket?: string;
@@ -138,6 +140,7 @@ type Source = {
 export type Config = {
 	multiNote?: { enabled?: boolean };
 	gridspace?: GridspaceConfigSource;
+	spaces?: SpacesConfigSource;
 	url: string;
 	port: number;
 	socket: string | undefined;
@@ -297,6 +300,7 @@ export function loadConfig(): Config {
 		version,
 		multiNote: config.multiNote,
 		gridspace: config.gridspace,
+		spaces: config.spaces,
 		publishTarballInsteadOfProvideRepositoryUrl: !!config.publishTarballInsteadOfProvideRepositoryUrl,
 		setupPassword: config.setupPassword,
 		url: url.origin,

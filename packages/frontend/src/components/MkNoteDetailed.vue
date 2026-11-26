@@ -93,7 +93,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 						:class="$style.poll"
 					/>
 					<div v-if="isEnabledUrlPreview">
-						<MkUrlPreview v-for="url in urls" :key="url" :url="url" :compact="true" :detail="true" style="margin-top: 6px;"/>
+						<template v-for="url in urls" :key="url">
+							<MkSpaceCard v-if="parseSpaceUrl(url) != null" :spaceId="parseSpaceUrl(url)!" style="margin-top: 6px;"/>
+							<MkUrlPreview v-else :url="url" :compact="true" :detail="true" style="margin-top: 6px;"/>
+						</template>
 					</div>
 					<div v-if="appearNote.renoteId" :class="$style.quote"><MkNoteSimple :note="appearNote?.renote ?? null" :class="$style.quoteNote"/></div>
 					<div v-if="appearNote.gridspaceQuote" :class="$style.quote"><div :class="$style.quoteNote"><MkGridspaceNoteLinkPreview :url="appearNote.gridspaceQuote" quote/></div></div>
@@ -233,6 +236,8 @@ import MkNoteCw from '@/components/MkNoteCw.vue';
 import MkMediaList from '@/components/MkMediaList.vue';
 import MkPoll from '@/components/MkPoll.vue';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
+import MkSpaceCard from '@/components/MkSpaceCard.vue';
+import { parseSpaceUrl } from '@/utility/space.js';
 import MkInstanceTicker from '@/components/MkInstanceTicker.vue';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
 import MkPagination from '@/components/MkPagination.vue';

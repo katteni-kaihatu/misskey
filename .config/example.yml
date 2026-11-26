@@ -95,6 +95,21 @@ url: https://example.tld/
 #  keyId: first
 #  secretEnv: GRIDSPACE_PEER_KEY
 
+# Optional Spaces (voice rooms). Disabled unless explicitly enabled.
+# Requires a LiveKit server. Misskey signs access tokens locally with the
+# API key and secret, so both sides must hold the same pair.
+# Put the secret in the named environment variable, never in this file.
+# For local development, start LiveKit with compose.spaces-dev.yml and use
+# url: ws://localhost:7880, apiKey: devkey, and SPACES_LIVEKIT_SECRET=secret.
+#spaces:
+#  enabled: true
+#  livekit:
+#    # Where browsers connect (ws:// or wss://, origin only). Misskey calls
+#    # the same host over HTTP(S) to delete rooms and remove participants.
+#    url: wss://livekit.example.tld
+#    apiKey: your-livekit-api-key
+#    apiSecretEnv: SPACES_LIVEKIT_SECRET
+
 # ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
 # URL SETTINGS AFTER THAT!
 

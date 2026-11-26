@@ -32,7 +32,7 @@ export type { ResonitePreview, ResoniteTextPart } from './resonite.js';
 //#region standalone types
 import type { Endpoints } from './api.types.js';
 import type { StreamEvents, IStream, IChannelConnection } from './streaming.js';
-import type { AvatarWalkAction, AvatarWalkActionType, AvatarWalkMovement, AvatarWalkPlayer, AvatarWalkSharedAtlas, AvatarWalkSharedAtlasInput, Channels } from './streaming.types.js';
+import type { AvatarWalkAction, AvatarWalkActionType, AvatarWalkMovement, AvatarWalkPlayer, AvatarWalkSharedAtlas, AvatarWalkSharedAtlasInput, Channels, SpaceMember, SpaceMessage, SpaceMode, SpaceSharedValues, SpaceTileWithShared } from './streaming.types.js';
 import type { Acct } from './acct.js';
 
 export type {
@@ -46,6 +46,11 @@ export type {
 	AvatarWalkActionType,
 	AvatarWalkMovement,
 	AvatarWalkPlayer,
+	SpaceMember,
+	SpaceMessage,
+	SpaceMode,
+	SpaceSharedValues,
+	SpaceTileWithShared,
 	AvatarWalkSharedAtlas,
 	AvatarWalkSharedAtlasInput,
 };

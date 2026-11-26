@@ -6602,6 +6602,603 @@ export interface Locale extends ILocale {
             "section3": string;
         };
     };
+    "_spaces": {
+        /**
+         * スペース
+         */
+        "title": string;
+        /**
+         * スペースをひらく
+         */
+        "open": string;
+        /**
+         * なまえ
+         */
+        "name": string;
+        /**
+         * {name}のスペース
+         */
+        "defaultName": ParameterizedString<"name">;
+        /**
+         * 入れる人
+         */
+        "access": string;
+        /**
+         * このサーバーの全員
+         */
+        "accessLocal": string;
+        /**
+         * フォロワーだけ
+         */
+        "accessFollowers": string;
+        /**
+         * お知らせノート
+         */
+        "noteScope": string;
+        /**
+         * このサーバーだけ
+         */
+        "noteScopeLocal": string;
+        /**
+         * ふつうのノート
+         */
+        "noteScopePublic": string;
+        /**
+         * 出さない
+         */
+        "noteScopeNone": string;
+        /**
+         * すでに開いているスペースがあります。
+         */
+        "alreadyOpen": string;
+        /**
+         * 開いているスペース
+         */
+        "nowOpen": string;
+        /**
+         * いま開いているスペースはありません。
+         */
+        "noOpenSpaces": string;
+        /**
+         * {n}人
+         */
+        "memberCount": ParameterizedString<"n">;
+        /**
+         * ホスト
+         */
+        "host": string;
+        /**
+         * しゃべる
+         */
+        "joinVoice": string;
+        /**
+         * マイクを入れて入ります。
+         */
+        "joinVoiceDescription": string;
+        /**
+         * 聞くだけ
+         */
+        "joinListen": string;
+        /**
+         * マイクを切って入ります。あとからしゃべることもできます。
+         */
+        "joinListenDescription": string;
+        /**
+         * このスペースには入れません。
+         */
+        "cannotJoin": string;
+        /**
+         * スペースが見つかりません。
+         */
+        "notFound": string;
+        /**
+         * 出る
+         */
+        "leave": string;
+        /**
+         * スペースを閉じる
+         */
+        "end": string;
+        /**
+         * スペースを閉じますか？ 全員が出ることになります。
+         */
+        "endConfirm": string;
+        /**
+         * なまえを変える
+         */
+        "rename": string;
+        /**
+         * 入れる人を変える
+         */
+        "changeAccess": string;
+        /**
+         * マイクを入れる
+         */
+        "micOn": string;
+        /**
+         * マイクを切る
+         */
+        "micOff": string;
+        /**
+         * スピーカーを入れる
+         */
+        "speakerOn": string;
+        /**
+         * スピーカーを切る
+         */
+        "speakerOff": string;
+        /**
+         * 画面を共有
+         */
+        "shareScreen": string;
+        /**
+         * 共有を止める
+         */
+        "stopShareScreen": string;
+        /**
+         * {name}の画面
+         */
+        "screenOf": ParameterizedString<"name">;
+        /**
+         * チャット
+         */
+        "chat": string;
+        /**
+         * メッセージを書く
+         */
+        "chatPlaceholder": string;
+        /**
+         * まだメッセージはありません。
+         */
+        "noMessages": string;
+        /**
+         * 通話につないでいます…
+         */
+        "callConnecting": string;
+        /**
+         * 通話につながりません。チャットはそのまま使えます。
+         */
+        "callFailed": string;
+        /**
+         * マイクを切らせる
+         */
+        "muteMember": string;
+        /**
+         * 追い出す
+         */
+        "kickMember": string;
+        /**
+         * {name}を追い出しますか？ このスペースには入り直せなくなります。
+         */
+        "kickConfirm": ParameterizedString<"name">;
+        /**
+         * ホストがあなたのマイクを切りました。
+         */
+        "mutedByHost": string;
+        /**
+         * ブラウザが音声の再生を止めています。
+         */
+        "audioBlocked": string;
+        /**
+         * 音声を再生
+         */
+        "resumeAudio": string;
+        /**
+         * メッセージは{max}文字までです。
+         */
+        "messageTooLong": ParameterizedString<"max">;
+        /**
+         * 別の画面で入ったため、こちらの画面は出ました。
+         */
+        "leftBecauseReplaced": string;
+        /**
+         * ホストによってスペースから出されました。
+         */
+        "leftBecauseKicked": string;
+        /**
+         * スペースに入れませんでした。
+         */
+        "leftBecauseFailed": string;
+        /**
+         * このスペースは終わりました。
+         */
+        "ended": string;
+        /**
+         * 参加した人
+         */
+        "summaryParticipants": string;
+        /**
+         * いちばん多かったとき
+         */
+        "summaryPeak": string;
+        /**
+         * 開いていた時間
+         */
+        "summaryDuration": string;
+        /**
+         * {n}分
+         */
+        "minutes": ParameterizedString<"n">;
+        /**
+         * 参加中
+         */
+        "inSpace": string;
+        /**
+         * スペースに戻る
+         */
+        "backToSpace": string;
+        /**
+         * タイル
+         */
+        "tiles": string;
+        /**
+         * タイルを置く
+         */
+        "placeTile": string;
+        /**
+         * 片づける
+         */
+        "removeTile": string;
+        /**
+         * このタイルを片づけますか？ 中身も消えます。
+         */
+        "removeTileConfirm": string;
+        /**
+         * このタイルは表示できません。
+         */
+        "unknownTile": string;
+        /**
+         * このリンクを開きますか？
+         */
+        "openLinkConfirm": string;
+        /**
+         * まだタイルはありません。
+         */
+        "noTiles": string;
+        /**
+         * 大きく出す
+         */
+        "expandTile": string;
+        /**
+         * 元に戻す
+         */
+        "shrinkTile": string;
+        /**
+         * 続きをひらく
+         */
+        "continueSpace": string;
+        /**
+         * みんなのタイル
+         */
+        "customTiles": string;
+        /**
+         * 自分のタイル
+         */
+        "myTiles": string;
+        /**
+         * タイルの一覧
+         */
+        "browseTiles": string;
+        /**
+         * タイルをつくる
+         */
+        "createTile": string;
+        /**
+         * タイルを書き換える
+         */
+        "editTile": string;
+        /**
+         * まだタイルはありません。
+         */
+        "noCustomTiles": string;
+        /**
+         * 自分だけのタイル
+         */
+        "privateTile": string;
+        /**
+         * このタイルは消されました。
+         */
+        "deletedTile": string;
+        /**
+         * タイルを読み込めませんでした。
+         */
+        "tileLoadFailed": string;
+        /**
+         * ホストだけが操作できます
+         */
+        "tileHostOnly": string;
+        /**
+         * ホストだけが操作できるようにする
+         */
+        "tileHostOnlyOn": string;
+        /**
+         * 全員が操作できるようにする
+         */
+        "tileHostOnlyOff": string;
+        /**
+         * このタイルは、次の場所からデータを読みます。許しますか？
+         */
+        "tileFetchConfirm": string;
+        /**
+         * 許して置く
+         */
+        "tileFetchAllow": string;
+        /**
+         * 許さずに置く
+         */
+        "tileFetchDeny": string;
+        /**
+         * このタイルが読みに行く先に、まだ許していないものがあります。
+         */
+        "tileFetchPending": string;
+        /**
+         * 許す
+         */
+        "tileFetchAllowNow": string;
+        "_tileEditor": {
+            /**
+             * なまえ
+             */
+            "name": string;
+            /**
+             * 説明
+             */
+            "description": string;
+            /**
+             * コード (HTML と JavaScript)
+             */
+            "code": string;
+            /**
+             * 読みに行く先のドメイン
+             */
+            "fetchHosts": string;
+            /**
+             * space.fetch で読む先を、1行に1つ書きます。例: api.example.com
+             */
+            "fetchHostsCaption": string;
+            /**
+             * みんなのタイルに出す
+             */
+            "visibilityPublic": string;
+            /**
+             * 切ると、一覧には出ません。自分で置くことはできます。
+             */
+            "visibilityPublicCaption": string;
+            /**
+             * 動かす
+             */
+            "run": string;
+            /**
+             * ためす
+             */
+            "preview": string;
+            /**
+             * 2人でためす
+             */
+            "twoPeople": string;
+            /**
+             * スペースにはつながりません。ここでの値は保存されません。
+             */
+            "previewCaption": string;
+            /**
+             * space.fetch は、保存してからためせます。
+             */
+            "fetchNeedsSave": string;
+            /**
+             * このタイルを消しますか？ 置いてあるスペースでも動かなくなります。
+             */
+            "deleteConfirm": string;
+            /**
+             * ゲスト
+             */
+            "guest": string;
+            /**
+             * 作者
+             */
+            "by": string;
+            /**
+             * タイルから使えるもの
+             */
+            "apiReference": string;
+            /**
+             * space.shared(key, 最初の値) … 全員で同じになる値。get() / set(値) / on(fn)
+             * space.mine(key, 最初の値) … 自分のブラウザにだけ残る値
+             * space.keys(prefix) … 共有する値のキーの一覧
+             * space.onShared(fn) … どのキーが変わっても呼ばれる
+             * space.send(type, body) / space.on(type, fn) … 保存しない知らせ
+             * space.me / space.members / space.onMembers(fn) … 自分と、いる人
+             * space.isHost / space.hostOnly … ホストか、ホストだけが操作できるタイルか
+             * space.isLeader / space.onLeader(fn) … 自分が担当か (1人だけにさせたい処理に使う)
+             * space.fetch(url, { json: true }) … 外部の URL を読む。上に書いたドメインだけ
+             * space.misskey(endpoint, params) … notes/show、users/show、flash/show
+             * space.pickFile() … ドライブからファイルを選んでもらう
+             * space.open(url) … リンクを開く (確かめてから)
+             * space.post(text) … 投稿フォームを開く
+             * space.origin … このサーバーの URL
+             */
+            "apiReferenceBody": string;
+        };
+        "_tiles": {
+            "_memo": {
+                /**
+                 * メモ
+                 */
+                "name": string;
+                /**
+                 * みんなで書けるメモ
+                 */
+                "placeholder": string;
+            };
+            "_poll": {
+                /**
+                 * 投票
+                 */
+                "name": string;
+                /**
+                 * 聞きたいこと
+                 */
+                "question": string;
+                /**
+                 * 選択肢を1行に1つずつ(2つ以上)
+                 */
+                "choices": string;
+                /**
+                 * はじめる
+                 */
+                "start": string;
+                /**
+                 * 作り直す
+                 */
+                "reset": string;
+                /**
+                 * {n}票
+                 */
+                "total": ParameterizedString<"n">;
+            };
+            "_todo": {
+                /**
+                 * やること
+                 */
+                "name": string;
+                /**
+                 * やることを書く
+                 */
+                "placeholder": string;
+                /**
+                 * 足す
+                 */
+                "add": string;
+                /**
+                 * まだ何もありません。
+                 */
+                "empty": string;
+                /**
+                 * 消す
+                 */
+                "remove": string;
+            };
+            "_timer": {
+                /**
+                 * タイマー
+                 */
+                "name": string;
+                /**
+                 * 分
+                 */
+                "minutes": string;
+                /**
+                 * はじめる
+                 */
+                "start": string;
+                /**
+                 * 止める
+                 */
+                "stop": string;
+                /**
+                 * 時間です
+                 */
+                "finished": string;
+            };
+            "_draw": {
+                /**
+                 * らくがき
+                 */
+                "name": string;
+                /**
+                 * 全部消す
+                 */
+                "clear": string;
+            };
+            "_image": {
+                /**
+                 * 画像
+                 */
+                "name": string;
+                /**
+                 * ドライブから選ぶ
+                 */
+                "pick": string;
+                /**
+                 * 変える
+                 */
+                "change": string;
+            };
+            "_link": {
+                /**
+                 * リンク
+                 */
+                "name": string;
+                /**
+                 * URL
+                 */
+                "url": string;
+                /**
+                 * 置く
+                 */
+                "set": string;
+                /**
+                 * 変える
+                 */
+                "change": string;
+            };
+            "_note": {
+                /**
+                 * ノート
+                 */
+                "name": string;
+                /**
+                 * ノートの URL か ID
+                 */
+                "placeholder": string;
+                /**
+                 * 置く
+                 */
+                "set": string;
+                /**
+                 * ノートを開く
+                 */
+                "open": string;
+                /**
+                 * 変える
+                 */
+                "change": string;
+                /**
+                 * 読み込んでいます…
+                 */
+                "loading": string;
+                /**
+                 * このノートは出せません。公開されていないか、消されています。
+                 */
+                "notFound": string;
+                /**
+                 * (内容は隠されています)
+                 */
+                "hidden": string;
+            };
+            "_play": {
+                /**
+                 * Play
+                 */
+                "name": string;
+                /**
+                 * Play の URL か ID
+                 */
+                "placeholder": string;
+                /**
+                 * 置く
+                 */
+                "set": string;
+                /**
+                 * あそぶ
+                 */
+                "start": string;
+                /**
+                 * この Play は見つかりません。
+                 */
+                "notFound": string;
+            };
+        };
+    };
     "_avatarWalk": {
         /**
          * VRMをぽいっと入れる
@@ -10031,6 +10628,14 @@ export interface Locale extends ILocale {
          * ダイレクトメッセージを閲覧する
          */
         "read:chat": string;
+        /**
+         * スペースを操作する
+         */
+        "write:spaces": string;
+        /**
+         * スペースを閲覧する
+         */
+        "read:spaces": string;
     };
     "_auth": {
         /**

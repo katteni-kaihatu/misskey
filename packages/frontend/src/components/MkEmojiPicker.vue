@@ -568,6 +568,8 @@ function onMegamojiIframeLoad() {
 
 // グローバルなメッセージイベントハンドラ
 const messageHandler = async (response: MessageEvent) => {
+	// 絵文字を作る枠から来たものだけを受ける。ほかの枠 (スペースのタイルなど) が同じ形のメッセージを送っても受けない
+	if (megamojiIframe.value?.contentWindow == null || response.source !== megamojiIframe.value.contentWindow) return;
 	if (response.data) {
 		try {
 			// 文字列の場合のみJSONパース（MEGAMOJIからのメッセージはJSON文字列）
