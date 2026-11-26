@@ -40,6 +40,10 @@ The fixed choice and five-minute random mode remain available. Twenty-six target
 
 Changelog candidate: Prevent browser stuttering caused by preference synchronization between incompatible client tabs.
 
+G `.106`, source `2a2ad6221f4c954d16b046f1af05764c7be0f0d0`, is deployed and healthy. The 26 tests, changed-source/test lint, SPDX, locale safety and full Linux image build pass. Frontend typechecking has the same 101 diagnostics as `.105` with no primary-message changes after line-number normalization. An independent review confirmed the need to isolate still-running v2 tabs and retain unknown records/revisions.
+
+A fresh 81,550,023-byte database backup completed at 19:47:09 JST; SHA-256 `1e4acf4774f61d07d6c058ff1e9a6780e48eb5f52f2b01a2e4b0e9da48a58260`. All archive blocks/checksums were verified together with globals, config/TLS, runtime and local uploads. Recovery files are at `/home/neo/misskey/backups/20261126-preference-loop`, retaining the previous `.105` image as `preference-loop-rollback-g:20261126`. Only the unused `.31.52` image, verified to have no container references or other tags, was removed for image-load headroom. Candidate unpack/execution was verified before switching; config, Spaces and Multi Note checks remain unchanged. Private evidence is named `20261126-preference-loop` outside Git. Already-loaded clients still require refresh; server deployment cannot stop their running JavaScript.
+
 ## Release verification
 
 G `2026.11.0-grid-space.31.102`, runtime source `b27582dddf7dd0cf4531d3d97843b70a753a5dbb`, is deployed and healthy. Three DOM cases, changed-source/test lint, generator syntax, SPDX, locale safety, frontend build and full Linux/amd64 image build pass. Frontend typechecking reports the same 101 diagnostics on archived `origin/master` and the candidate, with no diagnostic differences; it is a pre-existing baseline, not a passing global typecheck.
