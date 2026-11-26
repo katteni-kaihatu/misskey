@@ -90,6 +90,7 @@ import { MiUserMemo } from '@/models/UserMemo.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiSpace } from '@/models/Space.js';
+import { MiSpaceTile } from '@/models/SpaceTile.js';
 import { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
 import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
 import { MiBubbleGameRecord } from '@/models/BubbleGameRecord.js';
@@ -276,6 +277,7 @@ export const entities = [
 	MiChatMessage,
 	MiChatRoom,
 	MiSpace,
+	MiSpaceTile,
 	MiChatRoomMembership,
 	MiChatRoomInvitation,
 	MiChatApproval,

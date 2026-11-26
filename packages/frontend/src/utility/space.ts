@@ -39,20 +39,20 @@ export function fetchSpaceCached(spaceId: string): Promise<Misskey.entities.Spac
 }
 
 /** 「スペースをひらく」の入力を出して、作る。作ったスペースを返す。やめたら null。 */
-export async function openSpaceCreateDialog(): Promise<Misskey.entities.Space | null> {
+export async function openSpaceCreateDialog(options: { continueFrom?: Misskey.entities.Space } = {}): Promise<Misskey.entities.Space | null> {
 	if ($i == null) return null;
 
-	const { canceled, result } = await os.form(i18n.ts._spaces.open, {
+	const { canceled, result } = await os.form(options.continueFrom != null ? i18n.ts._spaces.continueSpace : i18n.ts._spaces.open, {
 		name: {
 			type: 'string',
 			label: i18n.ts._spaces.name,
-			default: i18n.tsx._spaces.defaultName({ name: $i.name ?? $i.username }),
+			default: options.continueFrom?.name ?? i18n.tsx._spaces.defaultName({ name: $i.name ?? $i.username }),
 			required: true,
 		},
 		access: {
 			type: 'enum',
 			label: i18n.ts._spaces.access,
-			default: 'local',
+			default: options.continueFrom?.access ?? 'local',
 			enum: [
 				{ label: i18n.ts._spaces.accessLocal, value: 'local' },
 				{ label: i18n.ts._spaces.accessFollowers, value: 'followers' },
@@ -61,7 +61,7 @@ export async function openSpaceCreateDialog(): Promise<Misskey.entities.Space | 
 		noteScope: {
 			type: 'enum',
 			label: i18n.ts._spaces.noteScope,
-			default: 'local',
+			default: options.continueFrom?.noteScope ?? 'local',
 			enum: [
 				{ label: i18n.ts._spaces.noteScopeLocal, value: 'local' },
 				{ label: i18n.ts._spaces.noteScopePublic, value: 'public' },
@@ -79,6 +79,7 @@ export async function openSpaceCreateDialog(): Promise<Misskey.entities.Space | 
 			name,
 			access: result.access as Misskey.entities.Space['access'],
 			noteScope: result.noteScope as Misskey.entities.Space['noteScope'],
+			continueFromId: options.continueFrom?.id ?? null,
 		});
 	} catch (err) {
 		const code = (err as { code?: string }).code;

@@ -1730,6 +1730,66 @@ _spaces:
   minutes: "{n}分"
   inSpace: "参加中"
   backToSpace: "スペースに戻る"
+  tiles: "タイル"
+  placeTile: "タイルを置く"
+  removeTile: "片づける"
+  removeTileConfirm: "このタイルを片づけますか？ 中身も消えます。"
+  unknownTile: "このタイルは表示できません。"
+  openLinkConfirm: "このリンクを開きますか？"
+  noTiles: "まだタイルはありません。"
+  expandTile: "大きく出す"
+  shrinkTile: "元に戻す"
+  continueSpace: "続きをひらく"
+  _tiles:
+    _memo:
+      name: "メモ"
+      placeholder: "みんなで書けるメモ"
+    _poll:
+      name: "投票"
+      question: "聞きたいこと"
+      choices: "選択肢を1行に1つずつ(2つ以上)"
+      start: "はじめる"
+      reset: "作り直す"
+      total: "{n}票"
+    _todo:
+      name: "やること"
+      placeholder: "やることを書く"
+      add: "足す"
+      empty: "まだ何もありません。"
+      remove: "消す"
+    _timer:
+      name: "タイマー"
+      minutes: "分"
+      start: "はじめる"
+      stop: "止める"
+      finished: "時間です"
+    _draw:
+      name: "らくがき"
+      clear: "全部消す"
+    _image:
+      name: "画像"
+      pick: "ドライブから選ぶ"
+      change: "変える"
+    _link:
+      name: "リンク"
+      url: "URL"
+      set: "置く"
+      change: "変える"
+    _note:
+      name: "ノート"
+      placeholder: "ノートの URL か ID"
+      set: "置く"
+      open: "ノートを開く"
+      change: "変える"
+      loading: "読み込んでいます…"
+      notFound: "このノートは出せません。公開されていないか、消されています。"
+      hidden: "(内容は隠されています)"
+    _play:
+      name: "Play"
+      placeholder: "Play の URL か ID"
+      set: "置く"
+      start: "あそぶ"
+      notFound: "この Play は見つかりません。"
 
 _avatarWalk:
   dropVrm: "VRMをぽいっと入れる"

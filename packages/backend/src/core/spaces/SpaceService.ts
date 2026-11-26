@@ -22,6 +22,7 @@ import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type Logger from '@/logger.js';
 import { resolveSpacesConfig, type SpacesConfig } from './spaces-config.js';
+import { SpaceTileService } from './SpaceTileService.js';
 
 /** 入り方。voice はマイクを入れている、listen は聞くだけ。どちらも通話にはつないでいる */
 export const spaceModes = ['voice', 'listen'] as const;
@@ -70,6 +71,12 @@ export function buildSpaceSummaryText(params: { name: string; startedAt: Date; e
 	return `${params.name} は終わりました\n開いていた時間 ${duration} ・ 参加した人 ${params.participantCount}人\n${params.url}`;
 }
 
+/** 担当を選ぶ。`memberIds` は長くいる順。ホストがいればホスト、いなければ先頭の人。 */
+export function pickSpaceLeader(memberIds: string[], hostId: string | null): string | null {
+	if (hostId != null && memberIds.includes(hostId)) return hostId;
+	return memberIds[0] ?? null;
+}
+
 export function isSpaceMode(value: unknown): value is SpaceMode {
 	return typeof value === 'string' && (spaceModes as readonly string[]).includes(value);
 }
@@ -105,6 +112,8 @@ export class SpaceService {
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
+
+		private spaceTileService: SpaceTileService,
 	) {
 		this.logger = this.loggerService.getLogger('spaces');
 		this.spacesConfig = resolveSpacesConfig(this.config.spaces, process.env);
@@ -116,7 +125,7 @@ export class SpaceService {
 		return this.spacesConfig != null;
 	}
 
-	private key(spaceId: MiSpace['id'], kind: 'members' | 'active' | 'messages' | 'emptySince' | 'kicked' | 'reconcileLock' | 'reconcileSuspects'): string {
+	private key(spaceId: MiSpace['id'], kind: 'members' | 'active' | 'messages' | 'emptySince' | 'kicked' | 'reconcileLock' | 'reconcileSuspects' | 'leader'): string {
 		return `space:${spaceId}:${kind}`;
 	}
 
@@ -128,14 +137,19 @@ export class SpaceService {
 	}
 
 	@bindThis
-	public async create(host: MiLocalUser, params: Pick<MiSpace, 'name' | 'access' | 'noteScope'>): Promise<MiSpace> {
+	public async create(host: MiLocalUser, params: Pick<MiSpace, 'name' | 'access' | 'noteScope'> & { continuedFromId?: MiSpace['id'] | null; tilePlacement?: MiSpace['tilePlacement'] }): Promise<MiSpace> {
 		const space = await this.spacesRepository.insertOne({
 			id: this.idService.gen(),
 			hostId: host.id,
 			name: params.name,
 			access: params.access,
 			noteScope: params.noteScope,
+			continuedFromId: params.continuedFromId ?? null,
+			...(params.tilePlacement != null ? { tilePlacement: params.tilePlacement } : {}),
 		});
+
+		// 「続きをひらく」のときは、元のスペースのタイルと値を写す
+		if (space.continuedFromId != null) await this.spaceTileService.copyTiles(space.continuedFromId, space.id);
 
 		await this.redisClient.set(this.key(space.id, 'emptySince'), Date.now().toString());
 
@@ -163,15 +177,16 @@ export class SpaceService {
 	}
 
 	@bindThis
-	public async update(space: MiSpace, params: Partial<Pick<MiSpace, 'name' | 'access'>>): Promise<MiSpace> {
-		const set: Partial<Pick<MiSpace, 'name' | 'access'>> = {};
+	public async update(space: MiSpace, params: Partial<Pick<MiSpace, 'name' | 'access' | 'tilePlacement'>>): Promise<MiSpace> {
+		const set: Partial<Pick<MiSpace, 'name' | 'access' | 'tilePlacement'>> = {};
 		if (params.name !== undefined) set.name = params.name;
 		if (params.access !== undefined) set.access = params.access;
+		if (params.tilePlacement !== undefined) set.tilePlacement = params.tilePlacement;
 		// 何も変えない呼び出しでは、知らせも配らない
 		if (Object.keys(set).length === 0) return space;
 		await this.spacesRepository.update(space.id, set);
 		const updated = { ...space, ...set };
-		this.globalEventService.publishSpaceStream(space.id, 'updated', { name: updated.name, access: updated.access });
+		this.globalEventService.publishSpaceStream(space.id, 'updated', { name: updated.name, access: updated.access, tilePlacement: updated.tilePlacement });
 		return updated;
 	}
 
@@ -204,8 +219,14 @@ export class SpaceService {
 			this.key(space.id, 'kicked'),
 			this.key(space.id, 'reconcileLock'),
 			this.key(space.id, 'reconcileSuspects'),
+			this.key(space.id, 'leader'),
 		).catch(err => {
 			this.logger.warn(`failed to clean up Redis for space ${space.id}`, { err });
+		});
+
+		// タイルの値を DB に写して、Redis を片づける。失敗しても、まとめノートは出す
+		await this.spaceTileService.closeSpace(space.id).catch(err => {
+			this.logger.warn(`failed to save the tiles of space ${space.id}`, { err });
 		});
 
 		await this.postSummaryNote(space.id);
@@ -271,6 +292,7 @@ export class SpaceService {
 			name: space.name,
 			access: space.access,
 			noteScope: space.noteScope,
+			tilePlacement: space.tilePlacement,
 			announceNoteId: space.announceNoteId,
 			summaryNoteId: space.summaryNoteId,
 			memberCount: space.endedAt == null ? await this.countMembers(space.id) : 0,
@@ -310,10 +332,38 @@ export class SpaceService {
 	}
 
 	private async afterRemoved(spaceId: MiSpace['id'], userId: MiUser['id'], removed: boolean): Promise<void> {
-		if (removed) this.globalEventService.publishSpaceStream(spaceId, 'left', { userId });
+		if (removed) {
+			this.globalEventService.publishSpaceStream(spaceId, 'left', { userId });
+			await this.refreshLeader(spaceId);
+		}
 		if (await this.redisClient.hlen(this.key(spaceId, 'members')) === 0) {
 			await this.redisClient.set(this.key(spaceId, 'emptySince'), Date.now().toString(), 'NX');
 		}
+	}
+
+	/**
+	 * 担当を決め直す。担当は、全員の手元で同時に起きる出来事 (タイマーが切れた、など) を1人だけで実行するための役。
+	 * ホストがいればホスト、いなければいちばん長くいる人。替わったら全員に知らせる。
+	 */
+	@bindThis
+	public async refreshLeader(spaceId: MiSpace['id'], hostId?: MiUser['id']): Promise<MiUser['id'] | null> {
+		const host = hostId ?? (await this.spacesRepository.findOne({ where: { id: spaceId }, select: { id: true, hostId: true } }))?.hostId;
+		const members = (await this.redisClient.hvals(this.key(spaceId, 'members')))
+			.map(raw => this.parseMember(raw))
+			.filter(member => member != null)
+			.sort((a, b) => a.joinedAt - b.joinedAt || a.user.id.localeCompare(b.user.id));
+		const next = pickSpaceLeader(members.map(member => member.user.id), host ?? null);
+		const previous = await this.redisClient.get(this.key(spaceId, 'leader'));
+		if ((previous ?? null) === next) return next;
+		if (next == null) await this.redisClient.del(this.key(spaceId, 'leader'));
+		else await this.redisClient.set(this.key(spaceId, 'leader'), next);
+		this.globalEventService.publishSpaceStream(spaceId, 'leader', { userId: next });
+		return next;
+	}
+
+	@bindThis
+	public async getLeader(spaceId: MiSpace['id']): Promise<MiUser['id'] | null> {
+		return await this.redisClient.get(this.key(spaceId, 'leader'));
 	}
 
 	/** 生存確認が途絶えた人を外す。 */
@@ -394,6 +444,8 @@ export class SpaceService {
 			this.globalEventService.publishSpaceStream(space.id, 'memberUpdated', { userId: user.id, mode: member.mode });
 		}
 
+		await this.refreshLeader(space.id, space.hostId);
+
 		return { members, messages: await this.getMessages(space.id) };
 	}
 
@@ -471,6 +523,13 @@ export class SpaceService {
 		await this.redisClient.rpush(this.key(spaceId, 'messages'), JSON.stringify(message));
 		await this.redisClient.ltrim(this.key(spaceId, 'messages'), -MAX_MESSAGES, -1);
 		this.globalEventService.publishSpaceStream(spaceId, 'message', message);
+	}
+
+	/** その接続が、いまもスペースに入っているものか。生存確認が途絶えて外された接続や、置き換えられた接続では false。 */
+	@bindThis
+	public async isCurrentSession(spaceId: MiSpace['id'], sessionId: string, userId: MiUser['id']): Promise<boolean> {
+		const member = await this.getStoredMember(spaceId, userId);
+		return member != null && member.sessionId === sessionId;
 	}
 
 	// ---- ホストの操作 ----

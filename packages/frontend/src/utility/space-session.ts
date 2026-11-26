@@ -17,6 +17,9 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 
 const HEARTBEAT_INTERVAL_MS = 5000;
 const JOIN_TIMEOUT_MS = 10000;
+/** 共有する値の決まり。サーバーと同じ */
+const SHARED_KEY_MAX_LENGTH = 64;
+const SHARED_VALUE_MAX_BYTES = 256 * 1024;
 
 export type SpaceEndReason = 'ended' | 'replaced' | 'kicked' | 'failed';
 export type SpaceCallStatus = 'off' | 'connecting' | 'connected' | 'failed';
@@ -38,6 +41,10 @@ export const spaceSession = reactive({
 	mutedByHost: false,
 	/** 直前のスペースから出された理由と、そのスペース */
 	lastEnd: null as { spaceId: string; reason: SpaceEndReason } | null,
+	/** 担当のユーザー ID。全員の手元で同時に起きる出来事を、1人だけで実行するための役 */
+	leaderId: null as string | null,
+	/** 置いてあるタイル。並び順どおり。値は getSpaceShared で読む */
+	tiles: [] as Misskey.entities.SpaceTile[],
 	/** いま出ている画面共有。映像そのものは attachSpaceScreen で画面の要素につなぐ */
 	screenShares: [] as { id: string; userId: string }[],
 	/** 自分が画面を共有しているとき true */
@@ -57,6 +64,16 @@ let room: Room | null = null;
 /** 通話の接続をやり直すたびに増やす。古い接続の結果を捨てるのに使う */
 let callGeneration = 0;
 const audioElements = new Set<HTMLMediaElement>();
+
+type TileListener = {
+	shared: (key: string, value: unknown, userId: string) => void;
+	signal: (type: string, body: unknown, userId: string) => void;
+};
+/** タイルが共有する値。タイルの ID → キー → 値。画面は直接見ず、タイルの枠が読む */
+const sharedValues = new Map<string, Map<string, unknown>>();
+/** 自分が書いて、まだサーバーから戻ってきていない書き込みの数。キーは「タイルの ID + 改行 + キー」 */
+const pendingWrites = new Map<string, number>();
+const tileListeners = new Map<string, Set<TileListener>>();
 /** 画面共有の映像。キーは spaceSession.screenShares の id */
 const screenTracks = new Map<string, Track>();
 
@@ -83,6 +100,7 @@ export async function joinSpace(space: Misskey.entities.Space, mode: Misskey.Spa
 
 	const stream = useStream();
 	stream.on('_connected_', onStreamReconnected);
+	stream.on('_disconnected_', onStreamDisconnected);
 	connection = stream.useChannel('space', { spaceId: space.id, mode });
 	connection.on('snapshot', onSnapshot);
 	connection.on('joined', onJoined);
@@ -90,6 +108,14 @@ export async function joinSpace(space: Misskey.entities.Space, mode: Misskey.Spa
 	connection.on('memberUpdated', onMemberUpdated);
 	connection.on('message', onMessage);
 	connection.on('updated', onUpdated);
+	connection.on('leader', (payload) => {
+		spaceSession.leaderId = payload.userId;
+	});
+	connection.on('tileAdded', onTileAdded);
+	connection.on('tileRemoved', onTileRemoved);
+	connection.on('tilesMoved', onTilesMoved);
+	connection.on('shared', onShared);
+	connection.on('signal', onSignal);
 	connection.on('ended', () => close('ended'));
 	connection.on('replaced', () => close('replaced'));
 	connection.on('kicked', () => close('kicked'));
@@ -114,6 +140,11 @@ function startJoinTimer(): void {
 	}, JOIN_TIMEOUT_MS);
 }
 
+/** ストリーミングが切れたとき。つなぎ直して snapshot が来るまで、送っても届かないので送らない。 */
+function onStreamDisconnected(): void {
+	if (spaceSession.status !== 'idle') awaitingSnapshot = true;
+}
+
 /** ストリーミングがつなぎ直されたとき。チャンネルは入り直しになるので、snapshot が来るかを見張る。 */
 function onStreamReconnected(): void {
 	if (spaceSession.status === 'idle') return;
@@ -129,6 +160,7 @@ function close(reason: SpaceEndReason | null): void {
 	joinTimerId = null;
 	awaitingSnapshot = false;
 	useStream().off('_connected_', onStreamReconnected);
+	useStream().off('_disconnected_', onStreamDisconnected);
 	connection?.dispose();
 	connection = null;
 	disconnectCall();
@@ -136,6 +168,10 @@ function close(reason: SpaceEndReason | null): void {
 	spaceSession.space = null;
 	spaceSession.members = [];
 	spaceSession.messages = [];
+	spaceSession.tiles = [];
+	spaceSession.leaderId = null;
+	sharedValues.clear();
+	pendingWrites.clear();
 	spaceSession.mode = 'listen';
 	spaceSession.speakerMuted = false;
 	spaceSession.lastEnd = (reason != null && spaceId != null) ? { spaceId, reason } : null;
@@ -169,13 +205,15 @@ export async function toggleSpaceMicrophone(): Promise<void> {
 
 // ---- ストリーミング ----
 
-function onSnapshot(payload: { space: Misskey.entities.Space; members: Misskey.SpaceMember[]; messages: Misskey.SpaceMessage[] }): void {
+function onSnapshot(payload: { space: Misskey.entities.Space; members: Misskey.SpaceMember[]; messages: Misskey.SpaceMessage[]; tiles: Misskey.SpaceTileWithShared[]; leaderId: string | null }): void {
 	if (joinTimerId != null) window.clearTimeout(joinTimerId);
 	joinTimerId = null;
 	awaitingSnapshot = false;
 	spaceSession.space = payload.space;
 	spaceSession.members = payload.members;
 	spaceSession.messages = payload.messages;
+	spaceSession.leaderId = payload.leaderId;
+	applyTileSnapshot(payload.tiles);
 	const reconnected = spaceSession.status === 'joined';
 	spaceSession.status = 'joined';
 	if (reconnected) {
@@ -205,7 +243,7 @@ function onMessage(message: Misskey.SpaceMessage): void {
 	spaceSession.messages = [...spaceSession.messages, message].slice(-200);
 }
 
-function onUpdated(payload: Pick<Misskey.entities.Space, 'name' | 'access'>): void {
+function onUpdated(payload: Pick<Misskey.entities.Space, 'name' | 'access' | 'tilePlacement'>): void {
 	if (spaceSession.space != null) spaceSession.space = { ...spaceSession.space, ...payload };
 }
 
@@ -213,6 +251,111 @@ function onMuted(): void {
 	if (spaceSession.mode !== 'voice') return;
 	spaceSession.mutedByHost = true;
 	void setSpaceMode('listen');
+}
+
+// ---- タイル ----
+
+function sameValue(a: unknown, b: unknown): boolean {
+	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+function applyTileSnapshot(tiles: Misskey.SpaceTileWithShared[]): void {
+	pendingWrites.clear();
+	const presentIds = new Set(tiles.map(tile => tile.id));
+	for (const tileId of [...sharedValues.keys()]) {
+		if (!presentIds.has(tileId)) sharedValues.delete(tileId);
+	}
+	for (const tile of tiles) {
+		const previous = sharedValues.get(tile.id) ?? new Map<string, unknown>();
+		const next = new Map(Object.entries(tile.shared).map(([key, entry]) => [key, entry.value]));
+		sharedValues.set(tile.id, next);
+		// つなぎ直しのときは、切れている間に変わった値をタイルに伝える
+		for (const key of new Set([...previous.keys(), ...next.keys()])) {
+			if (!sameValue(previous.get(key), next.get(key))) emitShared(tile.id, key, next.get(key) ?? null, '');
+		}
+	}
+	spaceSession.tiles = tiles.map(({ shared: _, ...tile }) => tile);
+}
+
+function emitShared(tileId: string, key: string, value: unknown, userId: string): void {
+	for (const listener of tileListeners.get(tileId) ?? []) listener.shared(key, value, userId);
+}
+
+function onTileAdded(tile: Misskey.entities.SpaceTile): void {
+	if (!sharedValues.has(tile.id)) sharedValues.set(tile.id, new Map());
+	spaceSession.tiles = [...spaceSession.tiles.filter(t => t.id !== tile.id), tile].sort((a, b) => a.position - b.position);
+}
+
+function onTileRemoved(payload: { tileId: string }): void {
+	sharedValues.delete(payload.tileId);
+	for (const pendingKey of [...pendingWrites.keys()]) {
+		if (pendingKey.startsWith(`${payload.tileId}\n`)) pendingWrites.delete(pendingKey);
+	}
+	spaceSession.tiles = spaceSession.tiles.filter(tile => tile.id !== payload.tileId);
+}
+
+function onTilesMoved(payload: { tileIds: string[] }): void {
+	const order = new Map(payload.tileIds.map((tileId, index) => [tileId, index]));
+	spaceSession.tiles = spaceSession.tiles
+		.map(tile => ({ ...tile, position: order.get(tile.id) ?? tile.position }))
+		.sort((a, b) => a.position - b.position);
+}
+
+function onShared(payload: { tileId: string; key: string; value: unknown; userId: string }): void {
+	const values = sharedValues.get(payload.tileId);
+	if (values == null) return;
+	if (payload.userId === $i?.id) {
+		// 自分の書き込みが戻ってきた。あとから書いたものがまだ戻っていなければ、古い値で画面を巻き戻さない
+		const pendingKey = `${payload.tileId}\n${payload.key}`;
+		const pending = pendingWrites.get(pendingKey) ?? 0;
+		if (pending > 1) {
+			pendingWrites.set(pendingKey, pending - 1);
+			return;
+		}
+		pendingWrites.delete(pendingKey);
+	}
+	if (sameValue(values.get(payload.key), payload.value)) return;
+	if (payload.value == null) values.delete(payload.key); else values.set(payload.key, payload.value);
+	emitShared(payload.tileId, payload.key, payload.value ?? null, payload.userId);
+}
+
+function onSignal(payload: { tileId: string; type: string; body: unknown; userId: string }): void {
+	for (const listener of tileListeners.get(payload.tileId) ?? []) listener.signal(payload.type, payload.body, payload.userId);
+}
+
+/** タイルが共有する値の、いまの中身。 */
+export function getSpaceShared(tileId: string): Record<string, unknown> {
+	return Object.fromEntries(sharedValues.get(tileId) ?? []);
+}
+
+/** 共有する値を書く。手元にはすぐ反映し、サーバーへ送る。value が null ならキーを消す。 */
+export function setSpaceShared(tileId: string, key: string, value: unknown): void {
+	const values = sharedValues.get(tileId);
+	if (values == null || spaceSession.status !== 'joined' || awaitingSnapshot || connection == null) return;
+	// サーバーが受け付けない書き込みは、送らない。送ると、戻りを待つ数だけがずれて残る
+	if (key.length < 1 || key.length > SHARED_KEY_MAX_LENGTH || key === '__proto__') return;
+	if (new Blob([JSON.stringify(value ?? null)]).size > SHARED_VALUE_MAX_BYTES) return;
+	if (value == null) values.delete(key); else values.set(key, value);
+	const pendingKey = `${tileId}\n${key}`;
+	pendingWrites.set(pendingKey, (pendingWrites.get(pendingKey) ?? 0) + 1);
+	connection.send('setShared', { tileId, key, value: value ?? null });
+}
+
+/** 保存しない一時的な知らせを、その場にいる人に送る。 */
+export function sendSpaceSignal(tileId: string, type: string, body: unknown): void {
+	if (spaceSession.status !== 'joined' || awaitingSnapshot || connection == null) return;
+	connection.send('signal', { tileId, type, body: body ?? null });
+}
+
+/** タイルの値の変化と知らせを受け取る。返す関数を呼ぶと受け取りをやめる。 */
+export function onSpaceTileEvent(tileId: string, listener: TileListener): () => void {
+	const listeners = tileListeners.get(tileId) ?? new Set<TileListener>();
+	tileListeners.set(tileId, listeners);
+	listeners.add(listener);
+	return () => {
+		listeners.delete(listener);
+		if (listeners.size === 0) tileListeners.delete(tileId);
+	};
 }
 
 // ---- 通話 (LiveKit) ----

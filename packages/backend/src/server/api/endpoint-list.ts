@@ -524,3 +524,6 @@ export * as 'spaces/mute' from './endpoints/spaces/mute.js';
 export * as 'spaces/show' from './endpoints/spaces/show.js';
 export * as 'spaces/token' from './endpoints/spaces/token.js';
 export * as 'spaces/update' from './endpoints/spaces/update.js';
+export * as 'spaces/tiles/add' from './endpoints/spaces/tiles/add.js';
+export * as 'spaces/tiles/move' from './endpoints/spaces/tiles/move.js';
+export * as 'spaces/tiles/remove' from './endpoints/spaces/tiles/remove.js';

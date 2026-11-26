@@ -11,6 +11,7 @@ import type { MiSpace } from '@/models/Space.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { isSpaceMode, SpaceService } from '@/core/spaces/SpaceService.js';
+import { SpaceTileService } from '@/core/spaces/SpaceTileService.js';
 import type { GlobalEvents } from '@/core/GlobalEventService.js';
 import { isJsonObject } from '@/misc/json-value.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
@@ -42,6 +43,7 @@ export class SpaceChannel extends Channel {
 		private spacesRepository: SpacesRepository,
 
 		private spaceService: SpaceService,
+		private spaceTileService: SpaceTileService,
 	) {
 		super(request);
 	}
@@ -76,6 +78,8 @@ export class SpaceChannel extends Channel {
 			space: await this.spaceService.pack(space, this.user),
 			members,
 			messages,
+			tiles: await this.spaceTileService.getTiles(space.id),
+			leaderId: await this.spaceService.getLeader(space.id),
 		});
 		// snapshot を作っている間に届いた知らせを、順番どおりに流す。同じ知らせが snapshot と重なっても、受け取る側は上書きで扱う
 		const pending = this.pending ?? [];
@@ -137,14 +141,32 @@ export class SpaceChannel extends Channel {
 					void this.spaceService.setMode(this.space, this.sessionId, this.user.id, body.mode);
 				}
 				break;
+			case 'setShared':
+				if (!this.canWrite()) break;
+				if (isJsonObject(body)) void this.writeTile(this.space.id, this.user.id, () => this.spaceTileService.setShared(this.space!.id, this.user!.id, body.tileId, body.key, body.value));
+				break;
+			case 'signal':
+				if (!this.canWrite()) break;
+				if (isJsonObject(body)) void this.writeTile(this.space.id, this.user.id, () => this.spaceTileService.signal(this.space!.id, this.user!.id, body.tileId, body.type, body.body));
+				break;
 			case 'say':
-				// 見るだけの権限のアプリには書かせない
-				if (this.connection.token != null && !this.connection.token.permission.includes('write:spaces')) break;
+				if (!this.canWrite()) break;
 				if (isJsonObject(body) && typeof body.text === 'string') {
 					void this.spaceService.say(this.space.id, this.sessionId, this.user.id, body.text);
 				}
 				break;
 		}
+	}
+
+	/** タイルへの書き込み。生存確認が途絶えて外された接続からは書かせない。 */
+	private async writeTile(spaceId: MiSpace['id'], userId: string, write: () => Promise<boolean>): Promise<void> {
+		if (!(await this.spaceService.isCurrentSession(spaceId, this.sessionId, userId))) return;
+		await write();
+	}
+
+	/** 見るだけの権限のアプリには書かせない。 */
+	private canWrite(): boolean {
+		return this.connection.token == null || this.connection.token.permission.includes('write:spaces');
 	}
 
 	@bindThis

@@ -4260,6 +4260,33 @@ export type paths = {
          */
         post: operations['spaces___show'];
     };
+    '/spaces/tiles/add': {
+        /**
+         * spaces/tiles/add
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tiles___add'];
+    };
+    '/spaces/tiles/move': {
+        /**
+         * spaces/tiles/move
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tiles___move'];
+    };
+    '/spaces/tiles/remove': {
+        /**
+         * spaces/tiles/remove
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:spaces*
+         */
+        post: operations['spaces___tiles___remove'];
+    };
     '/spaces/token': {
         /**
          * spaces/token
@@ -6428,6 +6455,8 @@ export type components = {
             access: 'local' | 'followers';
             /** @enum {string} */
             noteScope: 'local' | 'public' | 'none';
+            /** @enum {string} */
+            tilePlacement: 'everyone' | 'host';
             /** Format: id */
             announceNoteId: string | null;
             /** Format: id */
@@ -6436,6 +6465,16 @@ export type components = {
             participantCount: number;
             peakCount: number;
             canJoin: boolean;
+        };
+        SpaceTile: {
+            /** Format: id */
+            id: string;
+            /** Format: id */
+            spaceId: string;
+            kind: string;
+            /** Format: id */
+            creatorId: string;
+            position: number;
         };
         ChatRoomInvitation: {
             id: string;
@@ -43227,6 +43266,8 @@ export interface operations {
                      * @enum {string}
                      */
                     noteScope?: 'local' | 'public' | 'none';
+                    /** Format: misskey:id */
+                    continueFromId?: string | null;
                 };
             };
         };
@@ -43613,6 +43654,201 @@ export interface operations {
             };
         };
     };
+    spaces___tiles___add: {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    spaceId: string;
+                    /** @enum {string} */
+                    kind: 'note' | 'image' | 'poll' | 'todo' | 'draw' | 'memo' | 'link' | 'play' | 'timer';
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['SpaceTile'];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    spaces___tiles___move: {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    spaceId: string;
+                    tileIds: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    spaces___tiles___remove: {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    tileId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     spaces___token: {
         requestBody: {
             content: {
@@ -43700,6 +43936,8 @@ export interface operations {
                     name?: string;
                     /** @enum {string} */
                     access?: 'local' | 'followers';
+                    /** @enum {string} */
+                    tilePlacement?: 'everyone' | 'host';
                 };
             };
         };

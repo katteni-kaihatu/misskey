@@ -6,12 +6,12 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
 import type { MiSpace } from '@/models/Space.js';
-import { buildSpaceSummaryText, SPACE_EMPTY_CLOSE_MS, SpaceService } from './SpaceService.js';
+import { buildSpaceSummaryText, pickSpaceLeader, SPACE_EMPTY_CLOSE_MS, SpaceService } from './SpaceService.js';
 
 type Args = ConstructorParameters<typeof SpaceService>;
 
 function space(patch: Partial<MiSpace> = {}): MiSpace {
-	return { id: 'space', hostId: 'host', host: null, name: 'name', access: 'local', noteScope: 'local', announceNoteId: null, summaryNoteId: null, participantIds: [], peakCount: 0, endedAt: null, ...patch };
+	return { id: 'space', hostId: 'host', host: null, name: 'name', access: 'local', noteScope: 'local', tilePlacement: 'everyone', continuedFromId: null, announceNoteId: null, summaryNoteId: null, participantIds: [], peakCount: 0, endedAt: null, ...patch };
 }
 
 function fixture() {
@@ -50,6 +50,7 @@ function fixture() {
 		events as unknown as Args[9],
 		{ getLogger: () => logger } as unknown as Args[10],
 		announces as unknown as Args[11],
+		{ closeSpace: vi.fn(async () => undefined) } as unknown as Args[12],
 	);
 	return { service, kicked, strings, redis, spaces, followings, blocking, events, notes, announces };
 }
@@ -123,6 +124,14 @@ describe('SpaceService.closeAbandoned', () => {
 		expect(f.spaces.update).toHaveBeenCalledTimes(1);
 		expect(f.events.publishSpaceStream).toHaveBeenCalledWith('space', 'ended', null);
 		expect(f.redis.del).toHaveBeenCalled();
+	});
+});
+
+describe('leader', () => {
+	test('is the host when the host is in the space, otherwise the one who has been in longest', () => {
+		expect(pickSpaceLeader(['a', 'host', 'b'], 'host')).toBe('host');
+		expect(pickSpaceLeader(['a', 'b'], 'host')).toBe('a');
+		expect(pickSpaceLeader([], 'host')).toBeNull();
 	});
 });
 

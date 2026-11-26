@@ -36,6 +36,7 @@ export type Keys = (
 	'hidePreferencesRestoreSuggestion' |
 	'isSafeMode' |
 	`miux:${string}` |
+	`spaceTileMine:${string}` |
 	`ui:folder:${string}` |
 	`themes:${string}` | // DEPRECATED
 	`aiscript:${string}` |

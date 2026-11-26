@@ -28,6 +28,7 @@ import { MiChatApproval } from '@/models/ChatApproval.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiSpace } from '@/models/Space.js';
+import { MiSpaceTile } from '@/models/SpaceTile.js';
 import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
 import { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
 import { MiClip } from '@/models/Clip.js';
@@ -174,6 +175,7 @@ export {
 	MiChatMessage,
 	MiChatRoom,
 	MiSpace,
+	MiSpaceTile,
 	MiChatRoomMembership,
 	MiChatRoomInvitation,
 	MiChatApproval,
@@ -257,6 +259,7 @@ export type UserMemoRepository = Repository<MiUserMemo> & MiRepository<MiUserMem
 export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;
 export type ChatRoomsRepository = Repository<MiChatRoom> & MiRepository<MiChatRoom>;
 export type SpacesRepository = Repository<MiSpace> & MiRepository<MiSpace>;
+export type SpaceTilesRepository = Repository<MiSpaceTile> & MiRepository<MiSpaceTile>;
 export type ChatRoomMembershipsRepository = Repository<MiChatRoomMembership> & MiRepository<MiChatRoomMembership>;
 export type ChatRoomInvitationsRepository = Repository<MiChatRoomInvitation> & MiRepository<MiChatRoomInvitation>;
 export type ChatApprovalsRepository = Repository<MiChatApproval> & MiRepository<MiChatApproval>;

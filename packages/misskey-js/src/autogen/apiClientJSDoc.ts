@@ -5194,6 +5194,39 @@ declare module '../api.js' {
      *
      * **Credential required**: *Yes* / **Permission**: *write:spaces*
      */
+    request<E extends 'spaces/tiles/add', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:spaces*
+     */
+    request<E extends 'spaces/tiles/move', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:spaces*
+     */
+    request<E extends 'spaces/tiles/remove', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:spaces*
+     */
     request<E extends 'spaces/token', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,

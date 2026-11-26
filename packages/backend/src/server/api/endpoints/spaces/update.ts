@@ -9,7 +9,7 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ApiError } from '@/server/api/error.js';
 import { DI } from '@/di-symbols.js';
 import { SpaceService } from '@/core/spaces/SpaceService.js';
-import { spaceAccesses } from '@/models/Space.js';
+import { spaceAccesses, spaceTilePlacements } from '@/models/Space.js';
 
 export const meta = {
 	tags: ['spaces'],
@@ -56,6 +56,7 @@ export const paramDef = {
 		spaceId: { type: 'string', format: 'misskey:id' },
 		name: { type: 'string', minLength: 1, maxLength: 128 },
 		access: { type: 'string', enum: spaceAccesses },
+		tilePlacement: { type: 'string', enum: spaceTilePlacements },
 	},
 	required: ['spaceId'],
 } as const;
@@ -76,7 +77,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (space.hostId !== me.id) throw new ApiError(meta.errors.accessDenied);
 			if (space.endedAt != null) throw new ApiError(meta.errors.ended);
 
-			const updated = await this.spaceService.update(space, { name: ps.name, access: ps.access });
+			const updated = await this.spaceService.update(space, { name: ps.name, access: ps.access, tilePlacement: ps.tilePlacement });
 			return await this.spaceService.pack(updated, me);
 		});
 	}

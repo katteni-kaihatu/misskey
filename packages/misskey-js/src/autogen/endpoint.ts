@@ -711,6 +711,10 @@ import type {
 	SpacesMuteRequest,
 	SpacesShowRequest,
 	SpacesShowResponse,
+	SpacesTilesAddRequest,
+	SpacesTilesAddResponse,
+	SpacesTilesMoveRequest,
+	SpacesTilesRemoveRequest,
 	SpacesTokenRequest,
 	SpacesTokenResponse,
 	SpacesUpdateRequest,
@@ -1253,6 +1257,9 @@ export type Endpoints = {
 	'spaces/list': { req: EmptyRequest; res: SpacesListResponse };
 	'spaces/mute': { req: SpacesMuteRequest; res: EmptyResponse };
 	'spaces/show': { req: SpacesShowRequest; res: SpacesShowResponse };
+	'spaces/tiles/add': { req: SpacesTilesAddRequest; res: SpacesTilesAddResponse };
+	'spaces/tiles/move': { req: SpacesTilesMoveRequest; res: EmptyResponse };
+	'spaces/tiles/remove': { req: SpacesTilesRemoveRequest; res: EmptyResponse };
 	'spaces/token': { req: SpacesTokenRequest; res: SpacesTokenResponse };
 	'spaces/update': { req: SpacesUpdateRequest; res: SpacesUpdateResponse };
 	'stats': { req: EmptyRequest; res: StatsResponse };

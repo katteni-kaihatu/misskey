@@ -5,12 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <PageWithHeader :actions="headerActions">
-	<div class="_spacer" style="--MI_SPACER-w: 800px;">
+	<div class="_spacer" style="--MI_SPACER-w: 1200px;">
 		<MkLoading v-if="loading"/>
 		<MkResult v-else-if="space == null" type="notFound" :text="i18n.ts._spaces.notFound"/>
 
 		<!-- 通話画面 -->
 		<div v-else-if="joined" class="_gaps">
+			<div :class="$style.columns">
+				<div :class="$style.main" class="_gaps">
 			<div :class="$style.head" class="_panel">
 				<div :class="$style.title">{{ session.space?.name }}</div>
 				<div :class="$style.sub">
@@ -47,58 +49,104 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 
-			<div :class="$style.members">
-				<component
-					:is="isHost && member.user.id !== $i?.id ? 'button' : 'div'"
-					v-for="member in session.members"
-					:key="member.user.id"
-					:class="[$style.member, { [$style.speaking]: session.speakingIds.includes(member.user.id), _button: isHost && member.user.id !== $i?.id }]"
-					@click="isHost && member.user.id !== $i?.id ? showMemberMenu(member, $event) : undefined"
-				>
-					<div :class="$style.memberAvatarWrap">
-						<MkAvatar :user="member.user" :class="$style.memberAvatar" :indicator="false"/>
-					</div>
-					<div :class="$style.memberName"><MkUserName :user="member.user" :nowrap="true"/></div>
-					<div :class="$style.memberState">
-						<span v-if="member.user.id === space.hostId" :class="$style.hostBadge">{{ i18n.ts._spaces.host }}</span>
-						<i v-if="session.micOnIds.includes(member.user.id)" class="ti ti-microphone" role="img" :title="i18n.ts._spaces.joinVoice" :aria-label="i18n.ts._spaces.joinVoice"></i>
-						<i v-else class="ti ti-microphone-off" role="img" :title="i18n.ts._spaces.joinListen" :aria-label="i18n.ts._spaces.joinListen"></i>
-					</div>
-				</component>
-			</div>
+					<MkSpaceTile
+						v-if="stageTile != null"
+						:key="stageTile.id"
+						:tile="stageTile"
+						:removable="isHost || stageTile.creatorId === $i?.id"
+						expandable
+						expanded
+						@remove="removeTile(stageTile)"
+						@expand="stageTileId = null"
+					/>
 
-			<div :class="$style.controls">
-				<MkButton rounded :primary="session.mode === 'voice'" :disabled="session.callStatus !== 'connected'" @click="toggleSpaceMicrophone()">
-					<i :class="session.mode === 'voice' ? 'ti ti-microphone' : 'ti ti-microphone-off'"></i>
-					{{ session.mode === 'voice' ? i18n.ts._spaces.micOff : i18n.ts._spaces.micOn }}
-				</MkButton>
-				<MkButton rounded :disabled="session.callStatus !== 'connected'" @click="toggleSpaceSpeaker()">
-					<i :class="session.speakerMuted ? 'ti ti-volume-off' : 'ti ti-volume'"></i>
-					{{ session.speakerMuted ? i18n.ts._spaces.speakerOn : i18n.ts._spaces.speakerOff }}
-				</MkButton>
-				<MkButton v-if="canShareSpaceScreen" rounded :primary="session.sharingScreen" :disabled="session.callStatus !== 'connected'" @click="toggleSpaceScreenShare()">
-					<i :class="session.sharingScreen ? 'ti ti-screen-share-off' : 'ti ti-screen-share'"></i>
-					{{ session.sharingScreen ? i18n.ts._spaces.stopShareScreen : i18n.ts._spaces.shareScreen }}
-				</MkButton>
-				<MkButton rounded danger @click="leaveSpace()"><i class="ti ti-door-exit"></i> {{ i18n.ts._spaces.leave }}</MkButton>
-			</div>
+					<div :class="$style.members">
+						<component
+							:is="isHost && member.user.id !== $i?.id ? 'button' : 'div'"
+							v-for="member in session.members"
+							:key="member.user.id"
+							:class="[$style.member, { [$style.speaking]: session.speakingIds.includes(member.user.id), _button: isHost && member.user.id !== $i?.id }]"
+							@click="isHost && member.user.id !== $i?.id ? showMemberMenu(member, $event) : undefined"
+						>
+							<div :class="$style.memberAvatarWrap">
+								<MkAvatar :user="member.user" :class="$style.memberAvatar" :indicator="false"/>
+							</div>
+							<div :class="$style.memberName"><MkUserName :user="member.user" :nowrap="true"/></div>
+							<div :class="$style.memberState">
+								<span v-if="member.user.id === space.hostId" :class="$style.hostBadge">{{ i18n.ts._spaces.host }}</span>
+								<i v-if="session.micOnIds.includes(member.user.id)" class="ti ti-microphone" role="img" :title="i18n.ts._spaces.joinVoice" :aria-label="i18n.ts._spaces.joinVoice"></i>
+								<i v-else class="ti ti-microphone-off" role="img" :title="i18n.ts._spaces.joinListen" :aria-label="i18n.ts._spaces.joinListen"></i>
+							</div>
+						</component>
+					</div>
 
-			<div :class="$style.chat" class="_panel">
-				<div :class="$style.chatTitle">{{ i18n.ts._spaces.chat }}</div>
-				<div ref="chatLog" :class="$style.chatLog" role="log" aria-live="polite" :aria-label="i18n.ts._spaces.chat">
-					<div v-if="session.messages.length === 0" :class="$style.chatEmpty">{{ i18n.ts._spaces.noMessages }}</div>
-					<div v-for="message in session.messages" :key="message.id" :class="$style.message">
-						<MkAvatar :user="message.user" :class="$style.messageAvatar" :indicator="false"/>
-						<div :class="$style.messageBody">
-							<div :class="$style.messageHead"><MkUserName :user="message.user" :nowrap="true"/> <MkTime :time="message.createdAt" :class="$style.messageTime"/></div>
-							<div :class="$style.messageText"><Mfm :text="message.text" :plain="true" :nowrap="false"/></div>
+					<div :class="$style.controls">
+						<MkButton rounded :primary="session.mode === 'voice'" :disabled="session.callStatus !== 'connected'" @click="toggleSpaceMicrophone()">
+							<i :class="session.mode === 'voice' ? 'ti ti-microphone' : 'ti ti-microphone-off'"></i>
+							{{ session.mode === 'voice' ? i18n.ts._spaces.micOff : i18n.ts._spaces.micOn }}
+						</MkButton>
+						<MkButton rounded :disabled="session.callStatus !== 'connected'" @click="toggleSpaceSpeaker()">
+							<i :class="session.speakerMuted ? 'ti ti-volume-off' : 'ti ti-volume'"></i>
+							{{ session.speakerMuted ? i18n.ts._spaces.speakerOn : i18n.ts._spaces.speakerOff }}
+						</MkButton>
+						<MkButton v-if="canShareSpaceScreen" rounded :primary="session.sharingScreen" :disabled="session.callStatus !== 'connected'" @click="toggleSpaceScreenShare()">
+							<i :class="session.sharingScreen ? 'ti ti-screen-share-off' : 'ti ti-screen-share'"></i>
+							{{ session.sharingScreen ? i18n.ts._spaces.stopShareScreen : i18n.ts._spaces.shareScreen }}
+						</MkButton>
+						<MkButton rounded danger @click="leaveSpace()"><i class="ti ti-door-exit"></i> {{ i18n.ts._spaces.leave }}</MkButton>
+					</div>
+				</div>
+
+				<div :class="$style.side">
+					<div :class="$style.tabs" role="tablist">
+						<button v-for="t in tabs" :key="t.key" class="_button" role="tab" :aria-selected="tab === t.key" :class="[$style.tab, { [$style.tabActive]: tab === t.key }]" @click="tab = t.key">
+							<i :class="t.icon"></i> {{ t.label }}
+						</button>
+					</div>
+
+					<div v-show="tab === 'tiles'" class="_gaps_s" role="tabpanel">
+						<MkButton v-if="canPlaceTile" rounded style="margin: 0 auto;" @click="placeTile"><i class="ti ti-plus"></i> {{ i18n.ts._spaces.placeTile }}</MkButton>
+						<div v-if="sideTiles.length === 0 && stageTile == null" :class="$style.empty">{{ i18n.ts._spaces.noTiles }}</div>
+						<MkSpaceTile
+							v-for="tile in sideTiles"
+							:key="tile.id"
+							:tile="tile"
+							:removable="isHost || tile.creatorId === $i?.id"
+							:expandable="tile.kind !== 'play'"
+							@remove="removeTile(tile)"
+							@expand="stageTileId = tile.id"
+						/>
+					</div>
+
+					<div v-show="tab === 'chat'" role="tabpanel">
+						<div :class="$style.chat" class="_panel">
+							<div :class="$style.chatTitle">{{ i18n.ts._spaces.chat }}</div>
+							<div ref="chatLog" :class="$style.chatLog" role="log" aria-live="polite" :aria-label="i18n.ts._spaces.chat">
+								<div v-if="session.messages.length === 0" :class="$style.chatEmpty">{{ i18n.ts._spaces.noMessages }}</div>
+								<div v-for="message in session.messages" :key="message.id" :class="$style.message">
+									<MkAvatar :user="message.user" :class="$style.messageAvatar" :indicator="false"/>
+									<div :class="$style.messageBody">
+										<div :class="$style.messageHead"><MkUserName :user="message.user" :nowrap="true"/> <MkTime :time="message.createdAt" :class="$style.messageTime"/></div>
+										<div :class="$style.messageText"><Mfm :text="message.text" :plain="true" :nowrap="false"/></div>
+									</div>
+								</div>
+							</div>
+							<form :class="$style.chatForm" @submit.prevent="say">
+								<MkInput v-model="draft" :class="$style.chatInput" :placeholder="i18n.ts._spaces.chatPlaceholder" :aria-label="i18n.ts._spaces.chatPlaceholder"/>
+								<MkButton primary type="submit" :disabled="draft.trim() === ''" :aria-label="i18n.ts.send"><i class="ti ti-send"></i></MkButton>
+							</form>
+						</div>
+					</div>
+
+					<div v-show="tab === 'members'" class="_panel" :class="$style.memberList" role="tabpanel">
+						<div v-for="member in session.members" :key="member.user.id" :class="$style.memberRow">
+							<MkAvatar :user="member.user" :class="$style.messageAvatar" :indicator="false"/>
+							<div :class="$style.memberRowName"><MkUserName :user="member.user" :nowrap="true"/></div>
+							<span v-if="member.user.id === space.hostId" :class="$style.hostBadge">{{ i18n.ts._spaces.host }}</span>
+							<button v-if="isHost && member.user.id !== $i?.id" class="_button" :class="$style.memberMenu" :aria-label="i18n.ts.menu" @click="showMemberMenu(member, $event)"><i class="ti ti-dots"></i></button>
 						</div>
 					</div>
 				</div>
-				<form :class="$style.chatForm" @submit.prevent="say">
-					<MkInput v-model="draft" :class="$style.chatInput" :placeholder="i18n.ts._spaces.chatPlaceholder" :aria-label="i18n.ts._spaces.chatPlaceholder"/>
-					<MkButton primary type="submit" :disabled="draft.trim() === ''" :aria-label="i18n.ts.send"><i class="ti ti-send"></i></MkButton>
-				</form>
 			</div>
 		</div>
 
@@ -115,6 +163,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<dt>{{ i18n.ts._spaces.summaryPeak }}</dt><dd>{{ i18n.tsx._spaces.memberCount({ n: space.peakCount }) }}</dd>
 				<dt>{{ i18n.ts._spaces.summaryDuration }}</dt><dd>{{ i18n.tsx._spaces.minutes({ n: durationMinutes }) }}</dd>
 			</dl>
+			<MkButton v-if="isHost" primary rounded @click="continueSpace"><i class="ti ti-player-play"></i> {{ i18n.ts._spaces.continueSpace }}</MkButton>
 		</div>
 
 		<!-- 入り方を選ぶ -->
@@ -151,11 +200,15 @@ import type * as Misskey from 'misskey-js';
 import MkButton from '@/components/MkButton.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import MkInput from '@/components/MkInput.vue';
+import MkSpaceTile from '@/components/MkSpaceTile.vue';
+import { getBuiltinTiles } from '@/spaces/builtin-tiles.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { definePage } from '@/page.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { openSpaceCreateDialog } from '@/utility/space.js';
+import { useRouter } from '@/router.js';
 import {
 	attachSpaceScreen, canShareSpaceScreen, detachSpaceScreen, isInSpace, joinSpace, leaveSpace, resumeSpaceAudio, retrySpaceCall, sayInSpace,
 	spaceSession as session, toggleSpaceMicrophone, toggleSpaceScreenShare, toggleSpaceSpeaker,
@@ -166,6 +219,8 @@ const props = defineProps<{
 }>();
 
 const MESSAGE_MAX_LENGTH = 2000;
+
+const router = useRouter();
 
 const loading = ref(true);
 const fetched = ref<Misskey.entities.Space | null>(null);
@@ -226,6 +281,45 @@ function syncScreen(): void {
 
 // 大きく出す共有が変わったとき、ページが表に戻ったときに、映像をつなぎ替える。要素ができてからつなぐので、描画のあとに動かす
 watch([() => selectedShare.value?.id ?? null, screenVideo, pageActive], syncScreen, { flush: 'post' });
+
+type Tab = 'tiles' | 'chat' | 'members';
+const tab = ref<Tab>('tiles');
+const tabs = computed(() => [
+	{ key: 'tiles' as const, icon: 'ti ti-layout-grid', label: i18n.ts._spaces.tiles },
+	{ key: 'chat' as const, icon: 'ti ti-message', label: i18n.ts._spaces.chat },
+	{ key: 'members' as const, icon: 'ti ti-users', label: i18n.tsx._spaces.memberCount({ n: session.members.length }) },
+]);
+
+/** 大きく出しているタイル。人ごとに選ぶ */
+const stageTileId = ref<string | null>(null);
+const stageTile = computed(() => session.tiles.find(tile => tile.id === stageTileId.value) ?? null);
+const sideTiles = computed(() => session.tiles.filter(tile => tile.id !== stageTileId.value));
+
+const canPlaceTile = computed(() => space.value != null && (space.value.tilePlacement === 'everyone' || isHost.value));
+
+/** 置くタイルを選んで置く。 */
+async function placeTile(ev: MouseEvent): Promise<void> {
+	os.popupMenu(getBuiltinTiles().map(tile => ({
+		icon: tile.icon,
+		text: tile.name,
+		action: () => {
+			void os.apiWithDialog('spaces/tiles/add', { spaceId: props.spaceId, kind: tile.kind as Misskey.entities.SpacesTilesAddRequest['kind'] });
+		},
+	})), ev.currentTarget ?? ev.target);
+}
+
+async function removeTile(tile: Misskey.entities.SpaceTile): Promise<void> {
+	const { canceled } = await os.confirm({ type: 'warning', text: i18n.ts._spaces.removeTileConfirm });
+	if (canceled) return;
+	await os.apiWithDialog('spaces/tiles/remove', { tileId: tile.id });
+}
+
+/** 閉じたスペースのタイルと値を引き継いで、新しいスペースをひらく。 */
+async function continueSpace(): Promise<void> {
+	if (space.value == null) return;
+	const next = await openSpaceCreateDialog({ continueFrom: space.value });
+	if (next != null) router.push('/spaces/:spaceId', { params: { spaceId: next.id } });
+}
 
 async function fetchSpace(): Promise<void> {
 	try {
@@ -503,6 +597,90 @@ button.member:hover {
 	flex-wrap: wrap;
 	justify-content: center;
 	gap: 8px;
+}
+
+.columns {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--MI-margin);
+	align-items: start;
+
+	@container (min-width: 900px) {
+		grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+	}
+}
+
+.main,
+.side {
+	min-width: 0;
+}
+
+.side {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.tabs {
+	display: flex;
+	gap: 4px;
+	padding: 4px;
+	border-radius: 999px;
+	background: var(--MI_THEME-panel);
+}
+
+.tab {
+	flex: 1;
+	padding: 6px 8px;
+	border-radius: 999px;
+	font-size: 0.9em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tabActive {
+	background: var(--MI_THEME-accentedBg);
+	color: var(--MI_THEME-accent);
+	font-weight: bold;
+}
+
+.empty {
+	padding: 16px;
+	text-align: center;
+	opacity: 0.6;
+	font-size: 0.9em;
+}
+
+.memberList {
+	padding: 8px 12px;
+}
+
+.memberRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 0;
+	min-width: 0;
+}
+
+.memberRowName {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.memberMenu {
+	flex-shrink: 0;
+	width: 28px;
+	height: 28px;
+	border-radius: 100%;
+
+	&:hover {
+		background: var(--MI_THEME-buttonHoverBg);
+	}
 }
 
 .chat {

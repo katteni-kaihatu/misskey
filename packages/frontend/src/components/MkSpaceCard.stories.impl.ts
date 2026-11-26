@@ -34,6 +34,7 @@ export const Default = {
 			name: 'ざつだんスペース',
 			access: 'local',
 			noteScope: 'local',
+			tilePlacement: 'everyone',
 			announceNoteId: null,
 			summaryNoteId: null,
 			memberCount: 4,

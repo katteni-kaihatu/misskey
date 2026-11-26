@@ -6827,6 +6827,226 @@ export interface Locale extends ILocale {
          * スペースに戻る
          */
         "backToSpace": string;
+        /**
+         * タイル
+         */
+        "tiles": string;
+        /**
+         * タイルを置く
+         */
+        "placeTile": string;
+        /**
+         * 片づける
+         */
+        "removeTile": string;
+        /**
+         * このタイルを片づけますか？ 中身も消えます。
+         */
+        "removeTileConfirm": string;
+        /**
+         * このタイルは表示できません。
+         */
+        "unknownTile": string;
+        /**
+         * このリンクを開きますか？
+         */
+        "openLinkConfirm": string;
+        /**
+         * まだタイルはありません。
+         */
+        "noTiles": string;
+        /**
+         * 大きく出す
+         */
+        "expandTile": string;
+        /**
+         * 元に戻す
+         */
+        "shrinkTile": string;
+        /**
+         * 続きをひらく
+         */
+        "continueSpace": string;
+        "_tiles": {
+            "_memo": {
+                /**
+                 * メモ
+                 */
+                "name": string;
+                /**
+                 * みんなで書けるメモ
+                 */
+                "placeholder": string;
+            };
+            "_poll": {
+                /**
+                 * 投票
+                 */
+                "name": string;
+                /**
+                 * 聞きたいこと
+                 */
+                "question": string;
+                /**
+                 * 選択肢を1行に1つずつ(2つ以上)
+                 */
+                "choices": string;
+                /**
+                 * はじめる
+                 */
+                "start": string;
+                /**
+                 * 作り直す
+                 */
+                "reset": string;
+                /**
+                 * {n}票
+                 */
+                "total": ParameterizedString<"n">;
+            };
+            "_todo": {
+                /**
+                 * やること
+                 */
+                "name": string;
+                /**
+                 * やることを書く
+                 */
+                "placeholder": string;
+                /**
+                 * 足す
+                 */
+                "add": string;
+                /**
+                 * まだ何もありません。
+                 */
+                "empty": string;
+                /**
+                 * 消す
+                 */
+                "remove": string;
+            };
+            "_timer": {
+                /**
+                 * タイマー
+                 */
+                "name": string;
+                /**
+                 * 分
+                 */
+                "minutes": string;
+                /**
+                 * はじめる
+                 */
+                "start": string;
+                /**
+                 * 止める
+                 */
+                "stop": string;
+                /**
+                 * 時間です
+                 */
+                "finished": string;
+            };
+            "_draw": {
+                /**
+                 * らくがき
+                 */
+                "name": string;
+                /**
+                 * 全部消す
+                 */
+                "clear": string;
+            };
+            "_image": {
+                /**
+                 * 画像
+                 */
+                "name": string;
+                /**
+                 * ドライブから選ぶ
+                 */
+                "pick": string;
+                /**
+                 * 変える
+                 */
+                "change": string;
+            };
+            "_link": {
+                /**
+                 * リンク
+                 */
+                "name": string;
+                /**
+                 * URL
+                 */
+                "url": string;
+                /**
+                 * 置く
+                 */
+                "set": string;
+                /**
+                 * 変える
+                 */
+                "change": string;
+            };
+            "_note": {
+                /**
+                 * ノート
+                 */
+                "name": string;
+                /**
+                 * ノートの URL か ID
+                 */
+                "placeholder": string;
+                /**
+                 * 置く
+                 */
+                "set": string;
+                /**
+                 * ノートを開く
+                 */
+                "open": string;
+                /**
+                 * 変える
+                 */
+                "change": string;
+                /**
+                 * 読み込んでいます…
+                 */
+                "loading": string;
+                /**
+                 * このノートは出せません。公開されていないか、消されています。
+                 */
+                "notFound": string;
+                /**
+                 * (内容は隠されています)
+                 */
+                "hidden": string;
+            };
+            "_play": {
+                /**
+                 * Play
+                 */
+                "name": string;
+                /**
+                 * Play の URL か ID
+                 */
+                "placeholder": string;
+                /**
+                 * 置く
+                 */
+                "set": string;
+                /**
+                 * あそぶ
+                 */
+                "start": string;
+                /**
+                 * この Play は見つかりません。
+                 */
+                "notFound": string;
+            };
+        };
     };
     "_avatarWalk": {
         /**

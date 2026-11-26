@@ -1072,6 +1072,8 @@ export type Channels = {
                 space: Space;
                 members: SpaceMember[];
                 messages: SpaceMessage[];
+                tiles: SpaceTileWithShared[];
+                leaderId: User['id'] | null;
             }) => void;
             joined: (payload: SpaceMember) => void;
             left: (payload: {
@@ -1082,7 +1084,30 @@ export type Channels = {
                 mode: SpaceMode;
             }) => void;
             message: (payload: SpaceMessage) => void;
-            updated: (payload: Pick<Space, 'name' | 'access'>) => void;
+            updated: (payload: Pick<Space, 'name' | 'access' | 'tilePlacement'>) => void;
+            leader: (payload: {
+                userId: User['id'] | null;
+            }) => void;
+            tileAdded: (payload: SpaceTile) => void;
+            tileRemoved: (payload: {
+                tileId: string;
+            }) => void;
+            tilesMoved: (payload: {
+                tileIds: string[];
+            }) => void;
+            shared: (payload: {
+                tileId: string;
+                key: string;
+                value: unknown;
+                rev: number;
+                userId: User['id'];
+            }) => void;
+            signal: (payload: {
+                tileId: string;
+                type: string;
+                body: unknown;
+                userId: User['id'];
+            }) => void;
             ended: () => void;
             replaced: () => void;
             muted: () => void;
@@ -1095,6 +1120,16 @@ export type Channels = {
             };
             say: {
                 text: string;
+            };
+            setShared: {
+                tileId: string;
+                key: string;
+                value: unknown;
+            };
+            signal: {
+                tileId: string;
+                type: string;
+                body: unknown;
             };
         };
     };
@@ -2455,6 +2490,10 @@ declare namespace entities {
         SpacesMuteRequest,
         SpacesShowRequest,
         SpacesShowResponse,
+        SpacesTilesAddRequest,
+        SpacesTilesAddResponse,
+        SpacesTilesMoveRequest,
+        SpacesTilesRemoveRequest,
         SpacesTokenRequest,
         SpacesTokenResponse,
         SpacesUpdateRequest,
@@ -2599,6 +2638,7 @@ declare namespace entities {
         ChatMessageLiteForRoom,
         ChatRoom,
         Space,
+        SpaceTile,
         ChatRoomInvitation,
         ChatRoomMembership
     }
@@ -4135,6 +4175,12 @@ type SpacesCreateResponse = operations['spaces___create']['responses']['200']['c
 type SpacesEndRequest = operations['spaces___end']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+export type SpaceSharedValues = Record<string, {
+    value: unknown;
+    rev: number;
+}>;
+
+// @public (undocumented)
 type SpacesKickRequest = operations['spaces___kick']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -4150,6 +4196,18 @@ type SpacesShowRequest = operations['spaces___show']['requestBody']['content']['
 type SpacesShowResponse = operations['spaces___show']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type SpacesTilesAddRequest = operations['spaces___tiles___add']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTilesAddResponse = operations['spaces___tiles___add']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTilesMoveRequest = operations['spaces___tiles___move']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTilesRemoveRequest = operations['spaces___tiles___remove']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
 type SpacesTokenRequest = operations['spaces___token']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -4160,6 +4218,14 @@ type SpacesUpdateRequest = operations['spaces___update']['requestBody']['content
 
 // @public (undocumented)
 type SpacesUpdateResponse = operations['spaces___update']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpaceTile = components['schemas']['SpaceTile'];
+
+// @public (undocumented)
+export type SpaceTileWithShared = SpaceTile & {
+    shared: SpaceSharedValues;
+};
 
 // @public (undocumented)
 type StatsResponse = operations['stats']['responses']['200']['content']['application/json'];
@@ -4473,8 +4539,8 @@ export type XriftPreview = {
 // Warnings were encountered during analysis:
 //
 // src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:275:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:290:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:276:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:291:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

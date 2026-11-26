@@ -45,6 +45,11 @@ export const packedSpaceSchema = {
 			optional: false, nullable: false,
 			enum: ['local', 'public', 'none'],
 		},
+		tilePlacement: {
+			type: 'string',
+			optional: false, nullable: false,
+			enum: ['everyone', 'host'],
+		},
 		announceNoteId: {
 			type: 'string',
 			optional: false, nullable: true,

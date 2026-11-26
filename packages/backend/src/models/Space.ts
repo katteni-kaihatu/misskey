@@ -10,6 +10,7 @@ import type { MiNote } from './Note.js';
 
 export const spaceAccesses = ['local', 'followers'] as const;
 export const spaceNoteScopes = ['local', 'public', 'none'] as const;
+export const spaceTilePlacements = ['everyone', 'host'] as const;
 
 @Entity('space')
 // 1人が同時に開けるスペースは1つ。同時に作ろうとしたときも DB で止める
@@ -44,6 +45,20 @@ export class MiSpace {
 		default: 'local',
 	})
 	public noteScope: typeof spaceNoteScopes[number];
+
+	@Column('enum', {
+		enum: spaceTilePlacements,
+		default: 'everyone',
+		comment: 'タイルを置ける人',
+	})
+	public tilePlacement: typeof spaceTilePlacements[number];
+
+	@Column({
+		...id(),
+		nullable: true,
+		comment: '「続きをひらく」の元のスペース',
+	})
+	public continuedFromId: MiSpace['id'] | null;
 
 	@Column({
 		...id(),
