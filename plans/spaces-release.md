@@ -14,6 +14,18 @@ Both migrations are additive: `AddSpace1795667694109` and `AddSpaceTileDef179567
 
 A fresh consistent production database dump, globals, configuration/TLS, runtime inventory and local uploads were archived privately before any settings changed. Every archive data block was decoded and checksums verified. The previous `.103` application image and configuration are retained in the private recovery inventory. Production database access is limited to the backup and migration tooling; functional checks use the normal application UI/API.
 
-Final image build, PR integration and production smoke results will be appended after completion. Physical microphone conversations, real screen sharing, mobile browsers and non-Chromium browsers require user verification. Previously documented custom tile author/network/CPU limitations remain in scope as accepted design limitations.
+## Completed rollout
+
+[PR #7](https://github.com/katteni-kaihatu/misskey/pull/7) merged into `master` as `347239a5823a6f9a40923c1f97d862749501f872`. Production is healthy on `.104`, image source `cd4dc99e64e2b5b50b53590dc7a2e12da48a9052`. All PR checks passed, including SDK generation comparison, locale verification and diagnostic inspection.
+
+PASS: shipping checks; 56 backend Spaces tests; 10 frontend tests covering media/frame cleanup and existing icon rotation; backend source typecheck; API/SDK regeneration; full Linux/amd64 image build. Frontend typecheck remains at 101 pre-existing diagnostics, with no new diagnostics after accounting for shifted source lines and expanded API union descriptions. The isolated HTTP/streaming smoke passed room creation, announcements, listen membership, configured token URL, shared updates, summary creation and continued tile state.
+
+The production database backup completed at 17:52:20 JST: 81,240,389 bytes, SHA-256 `c736be0b6babfef2c496d0826ec872ca92f070c562d30b4e053cb363cfcaa354`. Application recovery material is under `/home/neo/misskey/backups/20261126-spaces`, with the prior image tagged `spaces-rollback-g:20261126`. Private logs, scripts and screenshots are retained outside Git. The two expected migrations were applied to production and `check-migrations` reports zero pending DDL.
+
+The first configuration probe failed before migration because replacement of the config file did not retain its application-readable group. The previous application stayed healthy. Configuration was restored, original ownership/mode were verified against the tar backup, and the rollout helper was corrected to preserve them and extended attributes. The candidate then successfully loaded its configuration and named environment variable before migration or application switching. Secrets moved only through captured process memory and encrypted SSH into the private environment file; neither the secret nor API key is in this repository or PR. LiveKit's server configuration and service were not modified or restarted.
+
+Production PASS: `meta.features.spaces`, existing Multi Note feature flags, application health, matching source/image/version, client assets, ordinary timeline, `/spaces`, room creation, announcement card and token URL pointing at the configured production LiveKit. Chrome joined in listen-only mode; the microphone stayed off. The short-lived smoke room was closed through the UI and showed its ended state. The synthetic server and its two labeled database/Redis containers were stopped; no test volumes or private evidence were deleted.
+
+Known limitation: image tiles still do not display images stored in the production object store. Physical microphone conversations, real screen sharing, mobile browsers and non-Chromium browsers were SKIPPED and require user verification. Previously documented custom tile author/network/CPU limitations remain in scope as accepted design limitations.
 
 Changelog candidate: Add Spaces voice rooms, chat, screen sharing and shared/custom tiles backed by LiveKit.
