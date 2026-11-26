@@ -211,6 +211,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 									</MkPreferenceContainer>
 								</SearchMarker>
 
+								<SearchMarker :keywords="['reaction', 'avatar', 'icon', 'count', 'number']">
+									<MkPreferenceContainer k="reactionUserDisplay">
+										<MkSelect v-model="reactionUserDisplay" :items="[{ label: i18n.ts.reactionUserDisplayAvatars, value: 'avatars' }, { label: i18n.ts.reactionUserDisplayCount, value: 'count' }]">
+											<template #label><SearchLabel>{{ i18n.ts.reactionUserDisplay }}</SearchLabel></template>
+											<template #caption>{{ i18n.ts.reactionUserDisplayDescription }}</template>
+										</MkSelect>
+									</MkPreferenceContainer>
+								</SearchMarker>
+
 								<SearchMarker :keywords="['reaction', 'count', 'show']">
 									<MkPreferenceContainer k="showReactionsCount">
 										<MkSwitch v-model="showReactionsCount">
@@ -930,6 +939,7 @@ const showClipButtonInNoteFooter = prefer.model('showClipButtonInNoteFooter');
 const collapseRenotes = prefer.model('collapseRenotes');
 const advancedMfm = prefer.model('advancedMfm');
 const showReactionsCount = prefer.model('showReactionsCount');
+const reactionUserDisplay = prefer.model('reactionUserDisplay');
 const enableQuickAddMfmFunction = prefer.model('enableQuickAddMfmFunction');
 const forceShowAds = prefer.model('forceShowAds');
 const loadRawImages = prefer.model('loadRawImages');

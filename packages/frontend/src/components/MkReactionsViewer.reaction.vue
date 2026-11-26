@@ -15,8 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@contextmenu.prevent.stop="menu"
 >
 	<MkReactionIcon style="pointer-events: none;" :class="prefer.s.limitWidthOfReaction ? $style.limitWidth : ''" :reaction="reaction" :emojiUrl="reactionEmojis[emojiName]"/>
-	<span :class="$style.count">
-	</span>
+	<span :class="$style.count">{{ showAvatars ? '' : count }}</span>
 	<div v-for="u in users" :key="u.id" :class="$style.avatars" style="height: 42px; width: auto">
 		<MkAvatar :class="$style.avatar" :user="u"/>
 	</div>
@@ -99,6 +98,7 @@ const canToggle = computed(() => {
 
 const users = ref<Misskey.entities.UserLite[]>([]);
 const remoteUsers = ref<ReactionActor[]>([]);
+const showAvatars = computed(() => prefer.r.reactionUserDisplay.value !== 'count');
 const actorAvatar = (actor: ReactionActor) => prefer.s.disableShowingAnimatedImages || prefer.s.dataSaver.avatar ? getStaticImageUrl(actor.avatarUrl) : actor.avatarUrl;
 
 async function toggleReaction() {
@@ -298,6 +298,11 @@ let disposeRemoteDetails: (() => void) | undefined;
 async function refreshUsers() {
 	disposeRemoteDetails?.(); disposeRemoteDetails = undefined;
 	const request = ++usersRequest;
+	if (!showAvatars.value || !active) {
+		users.value = [];
+		remoteUsers.value = [];
+		return;
+	}
 	try {
 		if (props.transport) {
 			const actors = active && !window.document.hidden ? sources.value.flatMap(source => props.transport!.previews(source.reaction)) : [];
@@ -313,9 +318,10 @@ function visibility() { if (props.transport) { usersRequest++; remoteUsers.value
 
 window.document.addEventListener('visibilitychange', visibility);
 onBeforeUnmount(() => { active = false; usersRequest++; window.document.removeEventListener('visibilitychange', visibility); remoteUsers.value = []; disposeRemoteDetails?.(); });
-onDeactivated(() => { active = false; if (props.transport) { usersRequest++; remoteUsers.value = []; disposeRemoteDetails?.(); } });
-onActivated(() => { active = true; if (props.transport) void refreshUsers(); });
+onDeactivated(() => { active = false; usersRequest++; remoteUsers.value = []; disposeRemoteDetails?.(); });
+onActivated(() => { const wasInactive = !active; active = true; if (wasInactive) void refreshUsers(); });
 watch([() => props.noteId, () => props.transport], () => { usersRequest++; remoteUsers.value = []; void refreshUsers(); });
+watch(showAvatars, () => { void refreshUsers(); });
 
 watch([() => props.count, () => props.reactionVersion, sources], ([newCount], [oldCount]) => {
 	void refreshUsers();
