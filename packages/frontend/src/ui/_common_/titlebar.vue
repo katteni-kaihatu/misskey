@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<div :class="$style.title">
-		<img :src="instance.iconUrl || '/favicon.ico'" alt="" :class="$style.instanceIcon"/>
+		<img :src="webClientIconUrl" alt="" :class="$style.instanceIcon"/>
 		<span :class="$style.instanceTitle">{{ instance.name ?? host }}</span>
 	</div>
 	<div :class="$style.controls">
@@ -23,6 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { host } from '@@/js/config.js';
 import { ref } from 'vue';
 import { instance } from '@/instance.js';
+import { webClientIconUrl } from '@/utility/web-client-icon.js';
 import { prefer } from '@/preferences.js';
 
 const canBack = ref(true);
