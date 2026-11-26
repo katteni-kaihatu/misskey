@@ -1569,6 +1569,12 @@ type DriveFilesMoveBulkRequest = operations['drive___files___move-bulk']['reques
 type DriveFilesRequest = operations['drive___files']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+type DriveFilesResonitePackageRequest = operations['drive___files___resonite-package']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type DriveFilesResonitePackageResponse = operations['drive___files___resonite-package']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type DriveFilesResponse = operations['drive___files']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
@@ -2100,6 +2106,8 @@ declare namespace entities {
         DriveFilesFindByHashRequest,
         DriveFilesFindByHashResponse,
         DriveFilesMoveBulkRequest,
+        DriveFilesResonitePackageRequest,
+        DriveFilesResonitePackageResponse,
         DriveFilesShowRequest,
         DriveFilesShowResponse,
         DriveFilesUpdateRequest,
