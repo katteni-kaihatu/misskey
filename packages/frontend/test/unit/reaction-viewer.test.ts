@@ -9,7 +9,7 @@ import { shallowRef } from 'vue';
 import Viewer from '@/components/MkReactionsViewer.vue';
 import { prefer } from '@/preferences.js';
 
-const mocks = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetch: vi.fn(), menu: vi.fn(), confirm: vi.fn(), tooltip: vi.fn(), popup: vi.fn(() => ({ dispose: vi.fn() })) }));
+const mocks = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetch: vi.fn(), menu: vi.fn(), confirm: vi.fn(), tooltip: vi.fn(), popup: vi.fn((_component: unknown, _props: Record<string, unknown>) => ({ dispose: vi.fn() })) }));
 vi.mock('@@/js/config.js', () => ({ host: 'g.test' }));
 vi.mock('@/utility/synced-reaction-aliases.js', () => ({ useSyncedReactionAliases: () => shallowRef({ ':cat@r.test:': ':cat@.:' }) }));
 vi.mock('@/utility/extended-reactions.js', () => ({ addExtendedReaction: mocks.add, deleteExtendedReaction: mocks.remove, fetchReactionUsers: mocks.fetch }));
