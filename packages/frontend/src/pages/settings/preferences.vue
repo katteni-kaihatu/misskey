@@ -30,6 +30,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</MkSelect>
 						</SearchMarker>
 
+						<SearchMarker :label="i18n.ts._webClientIcon.title" :keywords="['web', 'server', 'logo', 'icon', 'favicon', 'random', 'gridspace', i18n.ts.random, i18n.ts._webClientIcon.description]">
+							<MkPreferenceContainer k="webClientIcon">
+								<WebClientIconPicker v-model="webClientIcon"/>
+							</MkPreferenceContainer>
+						</SearchMarker>
+
 						<SearchMarker :keywords="['device', 'type', 'kind', 'smartphone', 'tablet', 'desktop']">
 							<MkRadios
 								v-model="overridedDeviceKind"
@@ -904,12 +910,14 @@ import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
 import { genId } from '@/utility/id.js';
 import { suggestReload } from '@/utility/reload-suggest.js';
+import WebClientIconPicker from '@/pages/settings/web-client-icon-picker.vue';
 
 const $i = ensureSignin();
 
 const lang = ref(miLocalStorage.getItem('lang'));
 const dataSaver = ref(prefer.s.dataSaver);
 const realtimeMode = store.model('realtimeMode');
+const webClientIcon = prefer.model('webClientIcon');
 
 const overridedDeviceKind = prefer.model('overridedDeviceKind');
 const pollingInterval = prefer.model('pollingInterval');

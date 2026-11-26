@@ -3861,6 +3861,11 @@ _autoTranslation:
   showOriginal: "原文を表示"
   showTranslation: "翻訳を表示"
   failed: "翻訳できなかったため、原文を表示しています。"
+_webClientIcon:
+  title: "Webアイコン"
+  description: "左上とタブのアイコンを選べます。ランダムは約5分ごとに切り替わります。この設定はあなたのWeb画面だけに反映されます。"
+  artworkBy: "{name}の作品"
+
 _gridspace:
   quoteInChannel: "この投稿は「{name}」チャンネル内で引用します。書きかけの内容もそのチャンネルに投稿されます。続けますか？"
   layoutPartial: "一部の列・ウィジェットは参照先を設定し直してください。"

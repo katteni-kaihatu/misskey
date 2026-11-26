@@ -4,8 +4,9 @@
  */
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { createApp, nextTick } from 'vue';
+import { createApp, nextTick, ref } from 'vue';
 import type { App } from 'vue';
+import type { WebClientIconPreference } from '@/utility/web-client-icon.js';
 
 let stopRotation: (() => void) | undefined;
 let app: App | undefined;
@@ -115,5 +116,58 @@ describe('web client icon', () => {
 		await vi.advanceTimersByTimeAsync(600_000);
 		expect([...document.head.children].slice(0, 4).map(element => element.outerHTML)).toEqual(existing);
 		expect(document.head.querySelectorAll('link[rel="icon"]')).toHaveLength(1);
+	});
+
+	test('a saved fixed icon applies at startup and never rotates', async () => {
+		vi.resetModules();
+		vi.useFakeTimers();
+		const icons = await import('@/utility/web-client-icon.js');
+		const preference = ref<WebClientIconPreference>('tekerets');
+		stopRotation = icons.startWebClientIconRotation(document, preference);
+		expect(icons.webClientIconUrl.value).toContain('/tekerets.png');
+		expect(document.querySelector('link[rel="icon"]')?.getAttribute('href')).toContain('/tekerets-favicon.png');
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(900_000);
+		expect(icons.webClientIconUrl.value).toContain('/tekerets.png');
+	});
+
+	test('preference changes immediately fix both icons and resume one fresh five-minute timer', async () => {
+		vi.resetModules();
+		vi.useFakeTimers();
+		const icons = await import('@/utility/web-client-icon.js');
+		const preference = ref<WebClientIconPreference>('random');
+		stopRotation = icons.startWebClientIconRotation(document, preference);
+		await vi.advanceTimersByTimeAsync(250_000);
+		for (const name of icons.webClientIconNames) {
+			preference.value = name;
+			expect(icons.webClientIconUrl.value).toContain(`/${name}.png`);
+			expect(document.querySelector('link[rel="icon"]')?.getAttribute('href')).toContain(`/${name}-favicon.png`);
+			expect(vi.getTimerCount()).toBe(0);
+		}
+		const fixed = icons.webClientIconUrl.value;
+		preference.value = 'random';
+		expect(icons.webClientIconUrl.value).not.toBe(fixed);
+		expect(vi.getTimerCount()).toBe(1);
+		const random = icons.webClientIconUrl.value;
+		await vi.advanceTimersByTimeAsync(299_999);
+		expect(icons.webClientIconUrl.value).toBe(random);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(icons.webClientIconUrl.value).not.toBe(random);
+		const stopped = icons.webClientIconUrl.value;
+		stopRotation();
+		preference.value = 'sakami';
+		expect(vi.getTimerCount()).toBe(0);
+		expect(icons.webClientIconUrl.value).toBe(stopped);
+	});
+
+	test('unknown imported values fall back to random without becoming image paths', async () => {
+		vi.resetModules();
+		vi.useFakeTimers();
+		const icons = await import('@/utility/web-client-icon.js');
+		const preference = ref('../../outside' as WebClientIconPreference);
+		stopRotation = icons.startWebClientIconRotation(document, preference);
+		expect(icons.normalizeWebClientIconPreference(null)).toBe('random');
+		expect(icons.webClientIconNames.some(name => icons.webClientIconUrl.value.endsWith(`/${name}.png`))).toBe(true);
+		expect(vi.getTimerCount()).toBe(1);
 	});
 });

@@ -2,7 +2,7 @@
 
 2026-11-26, Asia/Tokyo. The owner selected the five submissions listed in [artwork credits](../assets/gridspace/web-client-icons/README.md) and requested random icons in both the main web navigation and browser tab.
 
-The frontend chooses one of the five artists' icons on document load, then rotates to a different artwork every five minutes. Vertical/horizontal navigation, the title bar and visitor header/dashboard share that reactive module choice with the favicon. SPA navigation and layout changes do not reset the timer or choose another icon. Reloading or opening another document makes a new independent initial choice, which may repeat the previous icon. Background-tab timer throttling or device sleep may delay rotation. No preference or account data stores the selection.
+By default, the frontend chooses one of the five artists' icons on document load, then rotates to a different artwork every five minutes. Vertical/horizontal navigation, the title bar and visitor header/dashboard share that reactive module choice with the favicon. SPA navigation and layout changes do not reset the timer or choose another icon. Reloading or opening another document makes a new independent initial random choice, which may repeat the previous icon. Background-tab timer throttling or device sleep may delay rotation. The user can instead select a fixed artwork in Settings → Preferences → General → Web icon; fixed mode stops the interval.
 
 The tab uses the matching 64px PNG through `link rel="icon"`. The navigation uses a 128px PNG of the same complete artwork. These derivatives preserve transparency and aspect ratio, and the downloaded originals remain unchanged with source attribution. The PNG sizes follow the browser icon declaration mechanism described in [MDN's link reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/link).
 
@@ -10,7 +10,15 @@ Only the G frontend changes. Instance metadata, ActivityPub, the canonical `/fav
 
 Validation includes a DOM regression suite for a shared document choice, a new choice after reload, missing/multiple favicon declarations, five-minute rotations updating a mounted Vue template and favicon without replacing the page or input, idempotent timer startup/cleanup, and preservation of server metadata, touch icons, manifests and pinned-tab declarations across rotations. Generated PNG dimensions/signatures and original byte checksums are checked separately. The two icon-only navigation buttons have existing localized accessible names.
 
-Changelog candidate: Rotate the Gridspace web navigation and tab icon among five selected community artworks every five minutes.
+Changelog candidate: Let users choose a fixed Gridspace web icon or random rotation every five minutes.
+
+## User preference
+
+The owner requested a fixed/random choice on 2026-11-26. The six native radio cards include the five unchanged artwork previews and author credits. Selection immediately updates navigation and favicon without reloading. The `webClientIcon` preference is account-dependent, defaults to `random`, and uses existing preference persistence, profile backup and cross-tab synchronization. Device cloud sync remains the existing per-preference opt-in control. Guests and other accounts do not inherit a signed-in account's fixed choice. Imported unknown values safely display and behave as random; they never form asset URLs.
+
+The controller watches the preference ref supplied by main boot. Fixed mode has no interval; switching back to random immediately chooses another artwork and starts one fresh five-minute interval. Cleanup disposes both the preference watcher and interval. The preference menu disables removing a required account scope for account-dependent keys, while ordinary settings retain their account override control. Setting labels, description and random keywords are indexed by the parent settings search marker.
+
+This change starts from `master` `69e2b3e3bb`, preserving the `.104` Spaces release and its existing production configuration. No backend API, ActivityPub, schema, peer integration or canonical/PWA icon change is needed.
 
 ## Release verification
 

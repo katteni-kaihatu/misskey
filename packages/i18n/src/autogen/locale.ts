@@ -14462,6 +14462,20 @@ export interface Locale extends ILocale {
          */
         "failed": string;
     };
+    "_webClientIcon": {
+        /**
+         * Webアイコン
+         */
+        "title": string;
+        /**
+         * 左上とタブのアイコンを選べます。ランダムは約5分ごとに切り替わります。この設定はあなたのWeb画面だけに反映されます。
+         */
+        "description": string;
+        /**
+         * {name}の作品
+         */
+        "artworkBy": ParameterizedString<"name">;
+    };
     "_gridspace": {
         /**
          * この投稿は「{name}」チャンネル内で引用します。書きかけの内容もそのチャンネルに投稿されます。続けますか？
