@@ -20,6 +20,16 @@ The controller watches the preference ref supplied by main boot. Fixed mode has 
 
 This change starts from `master` `69e2b3e3bb`, preserving the `.104` Spaces release and its existing production configuration. No backend API, ActivityPub, schema, peer integration or canonical/PWA icon change is needed.
 
+### Preference release verification
+
+G `2026.11.0-grid-space.31.105`, source `4ce353cd54b58c44ce0bcd4e469009a9c6c22433`, is deployed and healthy. Twelve targeted tests, changed-source/test lint, SPDX, locale safety, Japanese locale interface generation, frontend production build and full Linux/amd64 image build pass. The frontend typecheck remains at 101 existing diagnostics, none in changed files; its existing paginator message includes the larger API union introduced by the already merged Spaces release.
+
+Chrome verified all five fixed choices with matching navigation/favicon, native arrow-key selection, persistence after reload and a new tab, and a fixed icon remaining unchanged for 303 seconds after reload. Changes to a fixed choice propagated to the second tab; returning to random propagated the mode and immediately chose another artwork in each document. The unit suite verifies the subsequent five-minute boundary. Searching settings for `ランダム` finds this picker. The production picker renders all six choices with all five previews loaded; verification did not change the real user's selected mode. Physical mobile and non-Chromium browser checks were not run.
+
+A fresh database dump completed at 19:05:51 JST, 81,414,893 bytes, SHA-256 `e0411fddc5551074cd2bbd4b34708cb0481d2c26f08bb1c75a3b61dd114c8715`. Checksums, archives and all database data blocks were verified with globals, config/TLS, runtime and local uploads. Recovery configuration is under `/home/neo/misskey/backups/20261126-web-icon-preference`; the previous `.104` image is retained as `web-icon-preference-rollback-g:20261126`. The configuration and named Spaces secret were preserved; Spaces and Multi Note feature gates remain enabled. Public metadata, canonical favicon, touch icon, manifest and all ten artwork PNG checksums match the pre-release values. R is unchanged.
+
+The application filesystem initially had 2.8 GB free. Only the old `.31.51` image, verified to have no container references or other tags, was removed normally to reach 5.2 GB before loading. All rollback-tagged images, databases and backups were retained. The candidate passed unpack/execution verification before compose switched. The isolated synthetic fixture was used only for settings tests; private release evidence is named `20261126-web-icon-preference` outside Git.
+
 ## Release verification
 
 G `2026.11.0-grid-space.31.102`, runtime source `b27582dddf7dd0cf4531d3d97843b70a753a5dbb`, is deployed and healthy. Three DOM cases, changed-source/test lint, generator syntax, SPDX, locale safety, frontend build and full Linux/amd64 image build pass. Frontend typechecking reports the same 101 diagnostics on archived `origin/master` and the candidate, with no diagnostic differences; it is a pre-existing baseline, not a passing global typecheck.
