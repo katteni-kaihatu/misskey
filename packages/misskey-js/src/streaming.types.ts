@@ -7,6 +7,7 @@ import {
 	Note,
 	Notification,
 	Signin,
+	Space,
 	User,
 	UserDetailed,
 	UserDetailedNotMe,
@@ -306,6 +307,29 @@ export type Channels = {
 			setAtlas: AvatarWalkSharedAtlasInput | null;
 		};
 	};
+	space: {
+		params: {
+			spaceId: string;
+			mode: SpaceMode;
+		};
+		events: {
+			snapshot: (payload: { space: Space; members: SpaceMember[]; messages: SpaceMessage[]; }) => void;
+			joined: (payload: SpaceMember) => void;
+			left: (payload: { userId: User['id']; }) => void;
+			memberUpdated: (payload: { userId: User['id']; mode: SpaceMode; }) => void;
+			message: (payload: SpaceMessage) => void;
+			updated: (payload: Pick<Space, 'name' | 'access'>) => void;
+			ended: () => void;
+			replaced: () => void;
+			muted: () => void;
+			kicked: () => void;
+		};
+		receives: {
+			heartbeat: Record<string, never>;
+			setMode: { mode: SpaceMode; };
+			say: { text: string; };
+		};
+	};
 	chatUser: {
 		params: {
 			otherId: string;
@@ -354,6 +378,21 @@ export type Channels = {
 			};
 		};
 	};
+};
+
+export type SpaceMode = 'voice' | 'listen';
+
+export type SpaceMember = {
+	user: UserLite;
+	mode: SpaceMode;
+	joinedAt: number;
+};
+
+export type SpaceMessage = {
+	id: string;
+	user: UserLite;
+	text: string;
+	createdAt: number;
 };
 
 export type AvatarWalkPlayer = {

@@ -322,6 +322,7 @@ export const packedMetaDetailedOnlySchema = {
 			properties: {
 				multiNote: { type: 'boolean', optional: false, nullable: false },
 				multiNotePeer: { type: 'boolean', optional: false, nullable: false },
+				spaces: { type: 'boolean', optional: false, nullable: false },
 				registration: {
 					type: 'boolean',
 					optional: false, nullable: false,

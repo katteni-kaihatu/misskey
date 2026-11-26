@@ -9,6 +9,7 @@ import { ui } from '@@/js/config.js';
 import { clearCache } from './utility/clear-cache.js';
 import type { ComputedRef } from 'vue';
 import { $i } from '@/i.js';
+import { instance } from '@/instance.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { openInstanceMenu, openToolsMenu } from '@/ui/_common_/common.js';
 import { lookup } from '@/utility/lookup.js';
@@ -126,6 +127,12 @@ export const navbarItemDef = reactive<{
 		to: '/chat',
 		show: computed(() => $i != null && $i.policies.chatAvailability !== 'unavailable'),
 		indicated: computed(() => $i != null && $i.hasUnreadChatMessages),
+	},
+	spaces: {
+		title: i18n.ts._spaces.title,
+		icon: 'ti ti-broadcast',
+		to: '/spaces',
+		show: computed(() => $i != null && instance.features?.spaces === true),
 	},
 	achievements: {
 		title: i18n.ts.achievements,

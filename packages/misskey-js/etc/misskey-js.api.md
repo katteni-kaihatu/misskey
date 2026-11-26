@@ -1062,6 +1062,42 @@ export type Channels = {
             setAtlas: AvatarWalkSharedAtlasInput | null;
         };
     };
+    space: {
+        params: {
+            spaceId: string;
+            mode: SpaceMode;
+        };
+        events: {
+            snapshot: (payload: {
+                space: Space;
+                members: SpaceMember[];
+                messages: SpaceMessage[];
+            }) => void;
+            joined: (payload: SpaceMember) => void;
+            left: (payload: {
+                userId: User['id'];
+            }) => void;
+            memberUpdated: (payload: {
+                userId: User['id'];
+                mode: SpaceMode;
+            }) => void;
+            message: (payload: SpaceMessage) => void;
+            updated: (payload: Pick<Space, 'name' | 'access'>) => void;
+            ended: () => void;
+            replaced: () => void;
+            muted: () => void;
+            kicked: () => void;
+        };
+        receives: {
+            heartbeat: Record<string, never>;
+            setMode: {
+                mode: SpaceMode;
+            };
+            say: {
+                text: string;
+            };
+        };
+    };
     chatUser: {
         params: {
             otherId: string;
@@ -2411,6 +2447,18 @@ declare namespace entities {
         RolesUsersRequest,
         RolesUsersResponse,
         ServerInfoResponse,
+        SpacesCreateRequest,
+        SpacesCreateResponse,
+        SpacesEndRequest,
+        SpacesKickRequest,
+        SpacesListResponse,
+        SpacesMuteRequest,
+        SpacesShowRequest,
+        SpacesShowResponse,
+        SpacesTokenRequest,
+        SpacesTokenResponse,
+        SpacesUpdateRequest,
+        SpacesUpdateResponse,
         StatsResponse,
         SwRegisterRequest,
         SwRegisterResponse,
@@ -2550,6 +2598,7 @@ declare namespace entities {
         ChatMessageLiteFor1on1,
         ChatMessageLiteForRoom,
         ChatRoom,
+        Space,
         ChatRoomInvitation,
         ChatRoomMembership
     }
@@ -3757,7 +3806,7 @@ type PartialRolePolicyOverride = Partial<{
 }>;
 
 // @public (undocumented)
-export const permissions: readonly ["read:account", "read:gridspace-palette", "read:gridspace-private", "read:gridspace-private-reciprocal", "write:gridspace-reply", "write:gridspace-channel", "write:gridspace-actions", "read:gridspace-notifications", "write:gridspace-notifications", "write:account", "read:blocks", "write:blocks", "read:drive", "write:drive", "read:favorites", "write:favorites", "read:following", "write:following", "read:messaging", "write:messaging", "read:mutes", "write:mutes", "write:notes", "read:notifications", "write:notifications", "read:reactions", "write:reactions", "write:votes", "read:pages", "write:pages", "write:page-likes", "read:page-likes", "read:user-groups", "write:user-groups", "read:channels", "write:channels", "read:gallery", "write:gallery", "read:gallery-likes", "write:gallery-likes", "read:flash", "write:flash", "read:flash-likes", "write:flash-likes", "read:admin:abuse-user-reports", "write:admin:delete-account", "write:admin:delete-all-files-of-a-user", "read:admin:index-stats", "read:admin:table-stats", "read:admin:user-ips", "read:admin:meta", "write:admin:reset-password", "write:admin:resolve-abuse-user-report", "write:admin:send-email", "read:admin:server-info", "read:admin:show-moderation-log", "read:admin:show-user", "write:admin:suspend-user", "write:admin:unset-mfa", "write:admin:unset-user-avatar", "write:admin:unset-user-banner", "write:admin:unsuspend-user", "write:admin:meta", "write:admin:user-note", "write:admin:roles", "read:admin:roles", "write:admin:relays", "read:admin:relays", "write:admin:invite-codes", "read:admin:invite-codes", "write:admin:announcements", "read:admin:announcements", "write:admin:avatar-decorations", "read:admin:avatar-decorations", "write:admin:federation", "write:admin:account", "read:admin:account", "write:admin:emoji", "read:admin:emoji", "write:admin:queue", "read:admin:queue", "write:admin:promo", "write:admin:drive", "read:admin:drive", "write:admin:ad", "read:admin:ad", "write:invite-codes", "read:invite-codes", "write:clip-favorite", "read:clip-favorite", "read:federation", "write:report-abuse", "write:chat", "read:chat"];
+export const permissions: readonly ["read:account", "read:gridspace-palette", "read:gridspace-private", "read:gridspace-private-reciprocal", "write:gridspace-reply", "write:gridspace-channel", "write:gridspace-actions", "read:gridspace-notifications", "write:gridspace-notifications", "write:account", "read:blocks", "write:blocks", "read:drive", "write:drive", "read:favorites", "write:favorites", "read:following", "write:following", "read:messaging", "write:messaging", "read:mutes", "write:mutes", "write:notes", "read:notifications", "write:notifications", "read:reactions", "write:reactions", "write:votes", "read:pages", "write:pages", "write:page-likes", "read:page-likes", "read:user-groups", "write:user-groups", "read:channels", "write:channels", "read:gallery", "write:gallery", "read:gallery-likes", "write:gallery-likes", "read:flash", "write:flash", "read:flash-likes", "write:flash-likes", "read:admin:abuse-user-reports", "write:admin:delete-account", "write:admin:delete-all-files-of-a-user", "read:admin:index-stats", "read:admin:table-stats", "read:admin:user-ips", "read:admin:meta", "write:admin:reset-password", "write:admin:resolve-abuse-user-report", "write:admin:send-email", "read:admin:server-info", "read:admin:show-moderation-log", "read:admin:show-user", "write:admin:suspend-user", "write:admin:unset-mfa", "write:admin:unset-user-avatar", "write:admin:unset-user-banner", "write:admin:unsuspend-user", "write:admin:meta", "write:admin:user-note", "write:admin:roles", "read:admin:roles", "write:admin:relays", "read:admin:relays", "write:admin:invite-codes", "read:admin:invite-codes", "write:admin:announcements", "read:admin:announcements", "write:admin:avatar-decorations", "read:admin:avatar-decorations", "write:admin:federation", "write:admin:account", "read:admin:account", "write:admin:emoji", "read:admin:emoji", "write:admin:queue", "read:admin:queue", "write:admin:promo", "write:admin:drive", "read:admin:drive", "write:admin:ad", "read:admin:ad", "write:invite-codes", "read:invite-codes", "write:clip-favorite", "read:clip-favorite", "read:federation", "write:report-abuse", "write:chat", "read:chat", "write:spaces", "read:spaces"];
 
 // @public (undocumented)
 type PingResponse = operations['ping']['responses']['200']['content']['application/json'];
@@ -4054,6 +4103,63 @@ type SignupRequest = {
 type SignupResponse = MeDetailed & {
     token: string;
 };
+
+// @public (undocumented)
+type Space = components['schemas']['Space'];
+
+// @public (undocumented)
+export type SpaceMember = {
+    user: UserLite;
+    mode: SpaceMode;
+    joinedAt: number;
+};
+
+// @public (undocumented)
+export type SpaceMessage = {
+    id: string;
+    user: UserLite;
+    text: string;
+    createdAt: number;
+};
+
+// @public (undocumented)
+export type SpaceMode = 'voice' | 'listen';
+
+// @public (undocumented)
+type SpacesCreateRequest = operations['spaces___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesCreateResponse = operations['spaces___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesEndRequest = operations['spaces___end']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesKickRequest = operations['spaces___kick']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesListResponse = operations['spaces___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesMuteRequest = operations['spaces___mute']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesShowRequest = operations['spaces___show']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesShowResponse = operations['spaces___show']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTokenRequest = operations['spaces___token']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesTokenResponse = operations['spaces___token']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesUpdateRequest = operations['spaces___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type SpacesUpdateResponse = operations['spaces___update']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type StatsResponse = operations['stats']['responses']['200']['content']['application/json'];
@@ -4367,8 +4473,8 @@ export type XriftPreview = {
 // Warnings were encountered during analysis:
 //
 // src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:274:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
-// src/streaming.types.ts:289:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:275:4 - (ae-forgotten-export) The symbol "ReversiUpdateKey" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:290:4 - (ae-forgotten-export) The symbol "ReversiUpdateSettings" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

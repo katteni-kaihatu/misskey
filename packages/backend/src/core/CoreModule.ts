@@ -124,6 +124,7 @@ import { AutoTranslationService } from './auto-translation/AutoTranslationServic
 import { ReversiService } from './ReversiService.js';
 import { PageService } from './PageService.js';
 import { AvatarWalkService } from './AvatarWalkService.js';
+import { SpaceService } from './spaces/SpaceService.js';
 
 import { ChartLoggerService } from './chart/ChartLoggerService.js';
 import FederationChart from './chart/charts/federation.js';
@@ -283,6 +284,7 @@ const $RegistryApiService: Provider = { provide: 'RegistryApiService', useExisti
 const $ReversiService: Provider = { provide: 'ReversiService', useExisting: ReversiService };
 const $PageService: Provider = { provide: 'PageService', useExisting: PageService };
 const $AvatarWalkService: Provider = { provide: 'AvatarWalkService', useExisting: AvatarWalkService };
+const $SpaceService: Provider = { provide: 'SpaceService', useExisting: SpaceService };
 
 const $ChartLoggerService: Provider = { provide: 'ChartLoggerService', useExisting: ChartLoggerService };
 const $FederationChart: Provider = { provide: 'FederationChart', useExisting: FederationChart };
@@ -483,6 +485,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ReversiService,
 		PageService,
 		AvatarWalkService,
+		SpaceService,
 
 		ChartLoggerService,
 		FederationChart,
@@ -639,6 +642,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ReversiService,
 		$PageService,
 		$AvatarWalkService,
+		$SpaceService,
 
 		$ChartLoggerService,
 		$FederationChart,
@@ -837,6 +841,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ReversiService,
 		PageService,
 		AvatarWalkService,
+		SpaceService,
 
 		FederationChart,
 		NotesChart,
@@ -991,6 +996,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ReversiService,
 		$PageService,
 		$AvatarWalkService,
+		$SpaceService,
 
 		$FederationChart,
 		$NotesChart,

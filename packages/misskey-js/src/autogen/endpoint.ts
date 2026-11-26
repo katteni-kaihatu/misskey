@@ -703,6 +703,18 @@ import type {
 	RolesUsersRequest,
 	RolesUsersResponse,
 	ServerInfoResponse,
+	SpacesCreateRequest,
+	SpacesCreateResponse,
+	SpacesEndRequest,
+	SpacesKickRequest,
+	SpacesListResponse,
+	SpacesMuteRequest,
+	SpacesShowRequest,
+	SpacesShowResponse,
+	SpacesTokenRequest,
+	SpacesTokenResponse,
+	SpacesUpdateRequest,
+	SpacesUpdateResponse,
 	StatsResponse,
 	SwRegisterRequest,
 	SwRegisterResponse,
@@ -1235,6 +1247,14 @@ export type Endpoints = {
 	'roles/show': { req: RolesShowRequest; res: RolesShowResponse };
 	'roles/users': { req: RolesUsersRequest; res: RolesUsersResponse };
 	'server-info': { req: EmptyRequest; res: ServerInfoResponse };
+	'spaces/create': { req: SpacesCreateRequest; res: SpacesCreateResponse };
+	'spaces/end': { req: SpacesEndRequest; res: EmptyResponse };
+	'spaces/kick': { req: SpacesKickRequest; res: EmptyResponse };
+	'spaces/list': { req: EmptyRequest; res: SpacesListResponse };
+	'spaces/mute': { req: SpacesMuteRequest; res: EmptyResponse };
+	'spaces/show': { req: SpacesShowRequest; res: SpacesShowResponse };
+	'spaces/token': { req: SpacesTokenRequest; res: SpacesTokenResponse };
+	'spaces/update': { req: SpacesUpdateRequest; res: SpacesUpdateResponse };
 	'stats': { req: EmptyRequest; res: StatsResponse };
 	'sw/register': { req: SwRegisterRequest; res: SwRegisterResponse };
 	'sw/show-registration': { req: SwShowRegistrationRequest; res: SwShowRegistrationResponse };

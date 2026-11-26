@@ -6602,6 +6602,220 @@ export interface Locale extends ILocale {
             "section3": string;
         };
     };
+    "_spaces": {
+        /**
+         * スペース
+         */
+        "title": string;
+        /**
+         * スペースをひらく
+         */
+        "open": string;
+        /**
+         * なまえ
+         */
+        "name": string;
+        /**
+         * {name}のスペース
+         */
+        "defaultName": ParameterizedString<"name">;
+        /**
+         * 入れる人
+         */
+        "access": string;
+        /**
+         * このサーバーの全員
+         */
+        "accessLocal": string;
+        /**
+         * フォロワーだけ
+         */
+        "accessFollowers": string;
+        /**
+         * お知らせノート
+         */
+        "noteScope": string;
+        /**
+         * このサーバーだけ
+         */
+        "noteScopeLocal": string;
+        /**
+         * ふつうのノート
+         */
+        "noteScopePublic": string;
+        /**
+         * 出さない
+         */
+        "noteScopeNone": string;
+        /**
+         * すでに開いているスペースがあります。
+         */
+        "alreadyOpen": string;
+        /**
+         * 開いているスペース
+         */
+        "nowOpen": string;
+        /**
+         * いま開いているスペースはありません。
+         */
+        "noOpenSpaces": string;
+        /**
+         * {n}人
+         */
+        "memberCount": ParameterizedString<"n">;
+        /**
+         * ホスト
+         */
+        "host": string;
+        /**
+         * しゃべる
+         */
+        "joinVoice": string;
+        /**
+         * マイクを入れて入ります。
+         */
+        "joinVoiceDescription": string;
+        /**
+         * 聞くだけ
+         */
+        "joinListen": string;
+        /**
+         * マイクを切って入ります。あとからしゃべることもできます。
+         */
+        "joinListenDescription": string;
+        /**
+         * このスペースには入れません。
+         */
+        "cannotJoin": string;
+        /**
+         * スペースが見つかりません。
+         */
+        "notFound": string;
+        /**
+         * 出る
+         */
+        "leave": string;
+        /**
+         * スペースを閉じる
+         */
+        "end": string;
+        /**
+         * スペースを閉じますか？ 全員が出ることになります。
+         */
+        "endConfirm": string;
+        /**
+         * なまえを変える
+         */
+        "rename": string;
+        /**
+         * 入れる人を変える
+         */
+        "changeAccess": string;
+        /**
+         * マイクを入れる
+         */
+        "micOn": string;
+        /**
+         * マイクを切る
+         */
+        "micOff": string;
+        /**
+         * スピーカーを入れる
+         */
+        "speakerOn": string;
+        /**
+         * スピーカーを切る
+         */
+        "speakerOff": string;
+        /**
+         * チャット
+         */
+        "chat": string;
+        /**
+         * メッセージを書く
+         */
+        "chatPlaceholder": string;
+        /**
+         * まだメッセージはありません。
+         */
+        "noMessages": string;
+        /**
+         * 通話につないでいます…
+         */
+        "callConnecting": string;
+        /**
+         * 通話につながりません。チャットはそのまま使えます。
+         */
+        "callFailed": string;
+        /**
+         * マイクを切らせる
+         */
+        "muteMember": string;
+        /**
+         * 追い出す
+         */
+        "kickMember": string;
+        /**
+         * {name}を追い出しますか？ このスペースには入り直せなくなります。
+         */
+        "kickConfirm": ParameterizedString<"name">;
+        /**
+         * ホストがあなたのマイクを切りました。
+         */
+        "mutedByHost": string;
+        /**
+         * ブラウザが音声の再生を止めています。
+         */
+        "audioBlocked": string;
+        /**
+         * 音声を再生
+         */
+        "resumeAudio": string;
+        /**
+         * メッセージは{max}文字までです。
+         */
+        "messageTooLong": ParameterizedString<"max">;
+        /**
+         * 別の画面で入ったため、こちらの画面は出ました。
+         */
+        "leftBecauseReplaced": string;
+        /**
+         * ホストによってスペースから出されました。
+         */
+        "leftBecauseKicked": string;
+        /**
+         * スペースに入れませんでした。
+         */
+        "leftBecauseFailed": string;
+        /**
+         * このスペースは終わりました。
+         */
+        "ended": string;
+        /**
+         * 参加した人
+         */
+        "summaryParticipants": string;
+        /**
+         * いちばん多かったとき
+         */
+        "summaryPeak": string;
+        /**
+         * 開いていた時間
+         */
+        "summaryDuration": string;
+        /**
+         * {n}分
+         */
+        "minutes": ParameterizedString<"n">;
+        /**
+         * 参加中
+         */
+        "inSpace": string;
+        /**
+         * スペースに戻る
+         */
+        "backToSpace": string;
+    };
     "_avatarWalk": {
         /**
          * VRMをぽいっと入れる
@@ -10031,6 +10245,14 @@ export interface Locale extends ILocale {
          * ダイレクトメッセージを閲覧する
          */
         "read:chat": string;
+        /**
+         * スペースを操作する
+         */
+        "write:spaces": string;
+        /**
+         * スペースを閲覧する
+         */
+        "read:spaces": string;
     };
     "_auth": {
         /**

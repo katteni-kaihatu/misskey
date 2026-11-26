@@ -53,6 +53,7 @@
 		"ios-haptics": "0.1.5",
 		"is-file-animated": "1.0.2",
 		"json5": "2.2.3",
+		"livekit-client": "2.24.1",
 		"matter-js": "0.20.0",
 		"mediabunny": "1.65.0",
 		"mfm-js": "0.28.0",

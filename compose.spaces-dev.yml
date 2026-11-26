@@ -1,0 +1,26 @@
+# スペースの開発用。手元で LiveKit だけを起動する。
+#
+#   docker compose -f compose.spaces-dev.yml up -d
+#
+# 開発モード(--dev)は、キー `devkey`、秘密 `secret` で立ち上がる。本番では使わない。
+# Misskey 側は .config/default.yml の spaces の節で次を指す(.config/example.yml を参照)。
+#
+#   url: ws://localhost:7880
+#   apiKey: devkey
+#   apiSecretEnv: SPACES_LIVEKIT_SECRET   # 環境変数 SPACES_LIVEKIT_SECRET=secret
+#
+# --node-ip はブラウザに伝える接続先。コンテナの中のアドレスを伝えると届かないので、127.0.0.1 に固定する。
+# 同じ LAN の別の端末から試すときは、次の3か所をこのマシンの LAN の IP に合わせる。
+#   - 下の --node-ip
+#   - 下の ports の 127.0.0.1 (外から届くようにする)
+#   - Misskey 側の url (ws://<LAN の IP>:7880)
+
+services:
+  livekit:
+    # 本番の VPS と同じバージョンにそろえる
+    image: livekit/livekit-server:v1.13.11
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    ports:
+      - "127.0.0.1:7880:7880/tcp"
+      - "127.0.0.1:7881:7881/tcp"
+      - "127.0.0.1:7882:7882/udp"

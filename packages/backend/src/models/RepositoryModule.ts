@@ -83,6 +83,7 @@ import {
 	MiWebhook,
 	MiChatMessage,
 	MiChatRoom,
+	MiSpace,
 	MiChatRoomMembership,
 	MiChatRoomInvitation,
 	MiChatApproval,
@@ -522,6 +523,12 @@ const $chatMessagesRepository: Provider = {
 	inject: [DI.db],
 };
 
+const $spacesRepository: Provider = {
+	provide: DI.spacesRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiSpace).extend(miRepository as MiRepository<MiSpace>),
+	inject: [DI.db],
+};
+
 const $chatRoomsRepository: Provider = {
 	provide: DI.chatRoomsRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiChatRoom).extend(miRepository as MiRepository<MiChatRoom>),
@@ -634,6 +641,7 @@ const $reversiGamesRepository: Provider = {
 		$userMemosRepository,
 		$chatMessagesRepository,
 		$chatRoomsRepository,
+		$spacesRepository,
 		$chatRoomMembershipsRepository,
 		$chatRoomInvitationsRepository,
 		$chatApprovalsRepository,
@@ -714,6 +722,7 @@ const $reversiGamesRepository: Provider = {
 		$userMemosRepository,
 		$chatMessagesRepository,
 		$chatRoomsRepository,
+		$spacesRepository,
 		$chatRoomMembershipsRepository,
 		$chatRoomInvitationsRepository,
 		$chatApprovalsRepository,

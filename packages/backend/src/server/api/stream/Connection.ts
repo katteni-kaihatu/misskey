@@ -41,6 +41,7 @@ import { ChatRoomChannel } from '@/server/api/stream/channels/chat-room.js';
 import { ReversiChannel } from '@/server/api/stream/channels/reversi.js';
 import { ReversiGameChannel } from '@/server/api/stream/channels/reversi-game.js';
 import { AvatarWalkRoomChannel } from '@/server/api/stream/channels/avatar-walk-room.js';
+import { SpaceChannel } from '@/server/api/stream/channels/space.js';
 import { VmimiRelayTimelineChannel } from '@/server/api/stream/channels/vmimi-relay-timeline.js';
 import { VmimiRelayHybridTimelineChannel } from '@/server/api/stream/channels/vmimi-relay-hybrid-timeline.js';
 import type { ChannelRequest } from './channel.js';
@@ -382,6 +383,7 @@ export default class Connection {
 			case 'reversi': return ReversiChannel;
 			case 'reversiGame': return ReversiGameChannel;
 			case 'avatarWalkRoom': return AvatarWalkRoomChannel;
+			case 'space': return SpaceChannel;
 			case 'vmimiRelayTimeline': return VmimiRelayTimelineChannel;
 			case 'vmimiRelayHybridTimeline': return VmimiRelayHybridTimelineChannel;
 

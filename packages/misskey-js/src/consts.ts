@@ -142,6 +142,8 @@ export const permissions = [
 	'write:report-abuse',
 	'write:chat',
 	'read:chat',
+	'write:spaces',
+	'read:spaces',
 ] as const;
 
 export const moderationLogTypes = [

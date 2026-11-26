@@ -17,9 +17,12 @@ import { SystemAccountService } from '@/core/SystemAccountService.js';
 import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { resolveSpacesConfig } from '@/core/spaces/spaces-config.js';
 
 @Injectable()
 export class MetaEntityService {
+	private spacesEnabled: boolean;
+
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
@@ -32,7 +35,10 @@ export class MetaEntityService {
 
 		private moduleRef: ModuleRef,
 		private systemAccountService: SystemAccountService,
-	) { }
+	) {
+		// 設定が有効なのに中身が足りないときは、起動の時点で止める
+		this.spacesEnabled = resolveSpacesConfig(this.config.spaces, process.env) != null;
+	}
 
 	@bindThis
 	public async pack(meta?: MiMeta): Promise<Packed<'MetaLite'>> {
@@ -164,6 +170,7 @@ export class MetaEntityService {
 			features: {
 				multiNote: this.config.multiNote?.enabled === true,
 				multiNotePeer: this.config.multiNote?.enabled === true && await this.moduleRef.get<GridspacePlacementService>('GridspacePlacementService', { strict: false }).peerEnabled(),
+				spaces: this.spacesEnabled,
 				localTimeline: instance.policies.ltlAvailable,
 				globalTimeline: instance.policies.gtlAvailable,
 				vmimiRelayTimeline: instance.policies.vrtlAvailable,
