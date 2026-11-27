@@ -59,7 +59,7 @@ export class ApiServerService {
 		// Prevent cache
 		fastify.addHook('onRequest', (request, reply, done) => {
 			reply.header('Cache-Control', 'private, max-age=0, must-revalidate');
-			if (/\/gridspace\/(?:private-(notes|file|grant|reply|action|upload)|notifications(?:\/(?:read|timeline))?|timeline(?:\/changes)?)(?:\?|$)/.test(request.url)) reply.header('Cache-Control', 'private, no-store');
+			if (/\/gridspace\/(?:client\/(?:status|timeline|notifications)|private-(notes|file|grant|reply|action|upload)|notifications(?:\/(?:read|timeline))?|timeline(?:\/changes)?)(?:\?|$)/.test(request.url)) reply.header('Cache-Control', 'private, no-store');
 			done();
 		});
 

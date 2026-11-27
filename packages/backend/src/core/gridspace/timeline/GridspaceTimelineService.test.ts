@@ -31,6 +31,27 @@ const ref = (source: 'local' | 'peer', value: number, uri?: string): TimelineRef
 });
 const options: TimelineOptions = { kind: 'home' };
 const viewer = { id: 'coordinator' } as MiLocalUser;
+
+test('external reader checkpoints reject reuse under another application context', async () => {
+	const f = fixture([ref('local', 3), ref('local', 2)]);
+	const first = await f.service.page(viewer, { kind: 'home', clientContext: 'app-one', clientLocalOnly: true }, 1, undefined, 'local-fallback');
+	expect(first.nextCursor).not.toBeNull();
+	await expect(f.service.page(viewer, { kind: 'home', clientContext: 'app-two', clientLocalOnly: true }, 1, first.nextCursor!, 'local-fallback')).rejects.toThrow('INVALID_CURSOR');
+	expect(f.delegated.timeline).not.toHaveBeenCalled();
+});
+
+test('external local-only readers never hydrate peer-owned channel placements', async () => {
+	const placements = mockDeep<TimelinePlacementSource>();
+	placements.supportHome.mockResolvedValue(true);
+	const privateRef = { ...ref('local', 4), placement: { noteOrigin: 'https://peer.example', channelOrigin: 'https://local.example', channelId: 'channel', includeDefault: false, legacy: false } };
+	placements.read.mockResolvedValue({ references: [privateRef], next: null, upper: null, sequence: '1' } as never);
+	placements.bodies.mockResolvedValue(new Map());
+	const f = fixture([], [], placements);
+	const page = await f.service.page(viewer, { kind: 'home', clientContext: 'reader', clientLocalOnly: true }, 20, undefined, 'local-fallback');
+	expect(page.items).toEqual([]);
+	expect(f.delegated.timeline).not.toHaveBeenCalled();
+	expect(placements.bodies).not.toHaveBeenCalled();
+});
 const prefix = `timeline-coordinator-test:${randomUUID()}:`;
 const secret = 'GRIDSPACE_COORDINATOR_TEST_SECRET';
 let previousSecret: string | undefined;

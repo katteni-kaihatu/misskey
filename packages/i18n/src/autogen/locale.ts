@@ -10277,6 +10277,18 @@ export interface Locale extends ILocale {
     };
     "_permissions": {
         /**
+         * アプリから自分のホームタイムラインを読む
+         */
+        "read:gridspace-client-timeline": string;
+        /**
+         * アプリから自分の通知を読む（既読にはしない）
+         */
+        "read:gridspace-client-notifications": string;
+        /**
+         * アプリから連携先のタイムライン・通知と、許可された限定投稿を読む
+         */
+        "read:gridspace-client-private": string;
+        /**
          * アカウントの情報を見る
          */
         "read:account": string;

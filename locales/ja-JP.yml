@@ -2698,6 +2698,9 @@ _2fa:
   moreDetailedGuideHere: "詳細なガイドはこちら"
 
 _permissions:
+  "read:gridspace-client-timeline": "アプリから自分のホームタイムラインを読む"
+  "read:gridspace-client-notifications": "アプリから自分の通知を読む（既読にはしない）"
+  "read:gridspace-client-private": "アプリから連携先のタイムライン・通知と、許可された限定投稿を読む"
   "read:account": "アカウントの情報を見る"
   "read:gridspace-palette": "連携先へ絵文字パレットと最近使った絵文字を引き継ぐ"
   "read:gridspace-private": "連携したアカウントの権限で限定投稿と添付ファイルを閲覧・検索する"

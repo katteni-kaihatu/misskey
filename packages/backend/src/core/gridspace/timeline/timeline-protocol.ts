@@ -16,6 +16,9 @@ export type TimelinePosition = { sortAt: string; pinRank?: number; canonicalUri:
 export type PlacementLocator = { channelId: string; channelOrigin: string; channelIds?: string[]; chips?: PackedChannelPlacement[]; noteOrigin: string; includeDefault: boolean; legacy: boolean };
 export type TimelineReference = TimelinePosition & { noteId: string; normalized: boolean; generation: number; source: 'local' | 'peer'; public?: boolean; placement?: PlacementLocator; routes?: { origin: string; channelIds: string[] }[] };
 export type TimelineOptions = {
+	/** Trusted external-reader context; never populated from public query fields. */
+	clientContext?: string;
+	clientLocalOnly?: boolean;
 	kind: 'home' | 'social' | 'relay-social' | 'profile' | 'search' | 'mentions' | 'direct' | 'channel' | 'favorites' | 'antenna' | 'clip'; withReplies?: boolean; withRenotes?: boolean; withFiles?: boolean;
 	withLocalOnly?: boolean;
 	includeMyRenotes?: boolean; includeRenotedMyNotes?: boolean; includeLocalRenotes?: boolean;

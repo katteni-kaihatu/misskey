@@ -422,6 +422,11 @@ import type {
 	GridspaceChannelUpdateResponse,
 	GridspaceChannelsRequest,
 	GridspaceChannelsResponse,
+	GridspaceClientNotificationsRequest,
+	GridspaceClientNotificationsResponse,
+	GridspaceClientStatusResponse,
+	GridspaceClientTimelineRequest,
+	GridspaceClientTimelineResponse,
 	GridspaceCollectionsRequest,
 	GridspaceCollectionsResponse,
 	GridspaceContentRequest,
@@ -1082,6 +1087,9 @@ export type Endpoints = {
 	'gridspace/channel-post': { req: GridspaceChannelPostRequest; res: GridspaceChannelPostResponse };
 	'gridspace/channel-update': { req: GridspaceChannelUpdateRequest; res: GridspaceChannelUpdateResponse };
 	'gridspace/channels': { req: GridspaceChannelsRequest; res: GridspaceChannelsResponse };
+	'gridspace/client/notifications': { req: GridspaceClientNotificationsRequest; res: GridspaceClientNotificationsResponse };
+	'gridspace/client/status': { req: EmptyRequest; res: GridspaceClientStatusResponse };
+	'gridspace/client/timeline': { req: GridspaceClientTimelineRequest; res: GridspaceClientTimelineResponse };
 	'gridspace/collections': { req: GridspaceCollectionsRequest; res: GridspaceCollectionsResponse };
 	'gridspace/content': { req: GridspaceContentRequest; res: GridspaceContentResponse };
 	'gridspace/delete-reply': { req: GridspaceDeleteReplyRequest; res: GridspaceDeleteReplyResponse };
