@@ -56,6 +56,23 @@ function fixture(db: DataSource) {
 }
 
 describe('listing authority and body authority', () => {
+	test.each([30, 50, 100])('loads %s modern placement notes in groups of twenty', async count => {
+		const { source, local, delegated } = fixture(mockDeep<DataSource>());
+		local.hydrateQuery.mockResolvedValue([]);
+		delegated.placementNotes.mockImplementation(async (_viewer, targets) => ({
+			notes: targets.filter(target => target.noteId !== 'note3').map(target => ({ id: target.noteId, origin: other, uri: target.conversationUri })), validForMs: 4000,
+		}) as never);
+		const refs = Array.from({ length: count }, (_, index): TimelineReference => ({ source: 'peer', noteId: `note${index}`, canonicalUri: `${other}/notes/note${index}`,
+			sortAt: String(count - index), generation: 2, normalized: true,
+			placement: { channelId: 'channel', channelOrigin: other, noteOrigin: other, includeDefault: false, legacy: false },
+		}));
+		const result = await source.bodies(viewer, refs, Date.now() + 5000);
+		expect(result.size).toBe(count - 1);
+		expect(delegated.placementNotes).toHaveBeenCalledTimes(Math.ceil(count / 20));
+		expect(delegated.notes).not.toHaveBeenCalled();
+		expect(Math.max(...[...result.values()].map(body => body.validForMs!))).toBeLessThanOrEqual(4000);
+	});
+
 	test.each([{ count: 30, revoked: false }, { count: 50, revoked: false }, { count: 100, revoked: false }, { count: 50, revoked: true }])(
 		'loads $count legacy channel notes through the signed peer API; revoked=$revoked', async ({ count, revoked }) => {
 			const { source, local, delegated } = fixture(mockDeep<DataSource>());
@@ -102,12 +119,13 @@ describe('listing authority and body authority', () => {
 			const ids = options.ids?.filter(id => id !== 'a2') ?? [options.noteId!];
 			return { notes: ids.map(id => ({ id, origin: other, uri: `${other}/notes/${id}` })) } as never;
 		});
+		delegated.placementNotes.mockResolvedValue({ notes: [{ id: 'modern', origin: other, uri: `${other}/notes/modern` }] } as never);
 		const result = await source.bodies(viewer, refs, Date.now() + 5000);
 		expect([...result.keys()].sort()).toEqual((revoked ? ['b1', 'modern'] : ['a1', 'b1', 'modern']).map(id => `${other}/notes/${id}`).sort());
-		expect(delegated.notes).toHaveBeenCalledTimes(3);
-		expect(delegated.notes).toHaveBeenCalledWith(viewer, { mode: 'validate', contextMode: 'channel', channelId: 'a', ids: ['a1', 'a2'] }, 2);
-		expect(delegated.notes).toHaveBeenCalledWith(viewer, { mode: 'validate', contextMode: 'channel', channelId: 'b', ids: ['b1'] }, 1);
-		expect(delegated.notes).toHaveBeenCalledWith(viewer, { mode: 'show', noteId: 'modern', conversationUri: `${other}/notes/modern` }, 1);
+		expect(delegated.notes).toHaveBeenCalledTimes(2);
+		expect(delegated.notes).toHaveBeenCalledWith(viewer, { mode: 'validate', contextMode: 'channel', channelId: 'a', ids: ['a1', 'a2'] }, 2, undefined, expect.any(Number));
+		expect(delegated.notes).toHaveBeenCalledWith(viewer, { mode: 'validate', contextMode: 'channel', channelId: 'b', ids: ['b1'] }, 1, undefined, expect.any(Number));
+		expect(delegated.placementNotes).toHaveBeenCalledWith(viewer, [{ noteId: 'modern', conversationUri: `${other}/notes/modern` }], expect.any(Number));
 	});
 
 	test('existing home placements remain readable after disabling new writes', async () => {
@@ -175,9 +193,9 @@ describe('listing authority and body authority', () => {
 		const uri = other + '/notes/original';
 		const ref: TimelineReference = { source: index, noteId: 'original', canonicalUri: uri, sortAt: '1', generation: 2, normalized: true,
 																																			placement: { channelId: 'chan', channelOrigin: index === 'local' ? origin : other, noteOrigin: other, includeDefault: false, legacy: false } };
-		delegated.notes.mockResolvedValue({ notes: [{ id: 'original', uri, origin: other }] } as never);
+		delegated.placementNotes.mockResolvedValue({ notes: [{ id: 'original', uri, origin: other }] } as never);
 		expect((await source.bodies(viewer, [ref], Date.now() + 1000)).get(uri)?.representation).toBe('delegated');
-		expect(delegated.notes).toHaveBeenCalledWith(viewer, { mode: 'show', noteId: 'original', conversationUri: uri }, 1);
+		expect(delegated.placementNotes).toHaveBeenCalledWith(viewer, [{ noteId: 'original', conversationUri: uri }], expect.any(Number));
 		expect(shared.historyNotes).not.toHaveBeenCalled();
 	});
 });
@@ -191,7 +209,7 @@ test.each(['failure', 'unavailable', 'imported'] as const)('normal remote origin
 	if (mode === 'failure') shared.historyNotes.mockRejectedValue(new Error('import unavailable'));
 	else shared.historyNotes.mockResolvedValue((mode === 'imported' ? new Map([['n', { id: 'mirror', uri }]]) : new Map()) as never);
 	local.hydrateQuery.mockImplementation(async (_viewer, _query, refs) => refs.map(reference => ({ reference, payload: { id: reference.noteId, myReaction: 'local' }, validForMs: null, nextPolicyCheckAt: null })) as never);
-	delegated.notes.mockResolvedValue({ notes: [{ id: 'n', uri, origin: other, myReaction: 'peer', channelPlacements: [
+	delegated.placementNotes.mockResolvedValue({ notes: [{ id: 'n', uri, origin: other, myReaction: 'peer', channelPlacements: [
 		{ channelId: 'originChannel', origin: other, canonicalUri: uri, state: 'active', name: 'Source channel', color: '#abc' },
 	] }] } as never);
 	const body = (await source.bodies(viewer, [ref], Date.now() + 5000)).get(uri);
@@ -252,7 +270,7 @@ describe('channel placement index and legacy projections', () => {
 		const fields = { id: 'plain', text: null as string | null, cw: null, files: [], poll: null, includeDefault: false, multiNoteKind: 'root',
 																			gridspaceQuote: origin + '/notes/target?gridspaceChannelOrigin=' + encodeURIComponent(other) + '&gridspaceChannelId=a' };
 		f.local.hydrateQuery.mockImplementation(async () => [{ reference: refs[0], payload: { ...fields, userId: viewer.id }, validForMs: null, nextPolicyCheckAt: null }] as never);
-		f.delegated.notes.mockImplementation(async () => ({ notes: [{ ...fields, origin: other, uri: peerUri, author: { uri: other + '/users/renoter' } }] }) as never);
+		f.delegated.placementNotes.mockImplementation(async () => ({ notes: [{ ...fields, origin: other, uri: peerUri, author: { uri: other + '/users/renoter' } }] }) as never);
 		const read = async (options = {}) => [...(await f.source.bodies(viewer, refs, Date.now() + 5000, options)).keys()];
 		expect(await read()).toEqual([localUri, peerUri]);
 		expect(await read({ withRenotes: false })).toEqual([]);

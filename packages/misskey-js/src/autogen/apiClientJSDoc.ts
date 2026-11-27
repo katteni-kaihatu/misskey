@@ -3019,6 +3019,39 @@ declare module '../api.js' {
     ): Promise<SwitchCaseResponseType<E, P>>;
 
     /**
+     * Read notifications without marking them read. Peer and channel sources require includePrivate and read:gridspace-client-private.
+     *
+     * **Credential required**: *Yes* / **Permission**: *read:gridspace-client-notifications*
+     */
+    request<E extends 'gridspace/client/notifications', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * Read GridSpace external-client capabilities using an application token.
+     *
+     * **Credential required**: *Yes* / **Permission**: *read:account*
+     */
+    request<E extends 'gridspace/client/status', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * Read the home timeline. Peer data requires includePrivate and read:gridspace-client-private. Cursors are bound to the application token and its current permissions.
+     *
+     * **Credential required**: *Yes* / **Permission**: *read:gridspace-client-timeline*
+     */
+    request<E extends 'gridspace/client/timeline', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
      * No description provided.
      *
      * **Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.

@@ -7,7 +7,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { mockDeep } from 'vitest-mock-extended';
 import type { MiNote } from '@/models/Note.js';
 import { GridspaceNoteService } from './GridspaceNoteService.js';
-import { GridspaceEndpointUnavailable, requestGridspacePeer } from './peer-client.js';
+import { GridspaceEndpointUnavailable, GridspaceNoteDeferred, requestGridspacePeer } from './peer-client.js';
 
 vi.mock('./peer-client.js', async importOriginal => ({ ...await importOriginal<object>(), requestGridspacePeer: vi.fn() }));
 vi.mock('@/misc/distributed-lock.js', () => ({ acquireApObjectLock: async () => async () => {} }));
@@ -26,7 +26,7 @@ function fixture() {
 	ap.fetchNote.mockImplementation(async uri => ({ id: uri.split('/').at(-1), gridspaceShared: true, visibility: 'public', channelId: null } as MiNote));
 	const service = new GridspaceNoteService({ url: 'https://g.example', gridspace: { enabled: true, peerUrl: 'https://r.example', communityId: 'test', keyId: 'test', secretEnv: 'NOTE_BATCH_TEST_KEY' } } as Args[0],
 		db, mockDeep<Args[2]>(), mockDeep<Args[3]>(), mockDeep<Args[4]>(), ap, resolver, create, remove, mockDeep<Args[9]>(), mockDeep<Args[10]>());
-	return { service, ap, create, remove, update, countBy, budget: { remaining: 64, deadline: Date.now() + 15000 } };
+	return { service, db, ap, create, remove, update, countBy, budget: { remaining: 64, deadline: Date.now() + 15000 } };
 }
 
 function bundle(id: string) {
@@ -34,6 +34,37 @@ function bundle(id: string) {
 		type: 'Note', id: `https://r.example/notes/${id}`, attributedTo: 'https://r.example/users/author', to: ['https://www.w3.org/ns/activitystreams#Public'], cc: [],
 	} }] };
 }
+
+test('a non-public reference defers import without importing an orphan and is rechecked later', async () => {
+	const f = fixture();
+	const root = bundle('root');
+	Object.assign(root.notes[0].object, { inReplyTo: 'https://r.example/notes/parent' });
+	f.ap.fetchNote.mockResolvedValue(null);
+	vi.mocked(requestGridspacePeer).mockImplementation(async (_peer, _path, input) => (input as { noteId: string }).noteId === 'root'
+		? root : { deleted: false, unavailable: true, notes: [] });
+	await expect(f.service.sync('root')).rejects.toMatchObject({ code: 'NOTE_REFERENCE_UNAVAILABLE' });
+	expect(f.ap.createNote).not.toHaveBeenCalled();
+	expect(f.create.pushToTl).not.toHaveBeenCalled();
+	// Policy decisions are not cached: a later explicit read can import the root.
+	f.ap.fetchNote.mockImplementation(async uri => uri.endsWith('/parent') ? { id: 'parent', visibility: 'public' } as MiNote : null);
+	await expect(f.service.sync('root')).resolves.toEqual({ ok: true });
+	expect(f.ap.createNote).toHaveBeenCalledOnce();
+});
+
+test.each([false, true])('delivery retains deferred references and real transport failures (%s)', async deferred => {
+	const f = fixture();
+	const item = { noteId: 'root', version: 'version', attempts: 0 };
+	const queue = { find: vi.fn().mockResolvedValue([item]), delete: vi.fn(), update: vi.fn() };
+	f.db.getRepository.mockReturnValue(queue as never);
+	vi.mocked(requestGridspacePeer).mockRejectedValue(deferred ? new GridspaceNoteDeferred() : new Error('network unavailable'));
+	const before = Date.now();
+	await f.service['work']();
+	expect(queue.delete).not.toHaveBeenCalled();
+	expect(queue.update).toHaveBeenCalledWith({ noteId: 'root', version: 'version' }, { attempts: 1, retryAt: expect.any(Date) });
+	const wait = queue.update.mock.calls[0][1].retryAt.getTime() - before;
+	expect(wait).toBeGreaterThanOrEqual(deferred ? 60000 : 3000);
+	expect(wait).toBeLessThan((deferred ? 60000 : 3000) + 1000);
+});
 
 test('reads a full page once, excludes unavailable posts and does not republish existing posts', async () => {
 	const f = fixture();

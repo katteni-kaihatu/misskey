@@ -130,7 +130,7 @@ export class GridspaceTimelineService {
 		const origins = channelOrigin ? [...new Set(selected.map(ref => ref.source === 'peer' ? this.peer!.peerOrigin : this.peer!.origin))] : [this.peer!.origin, ...(checkpoint.mode === 'unified' ? [this.peer!.peerOrigin] : [])];
 		const request = { channelId, pinnedOnly, followed: !channelOrigin, uris: selected.map(ref => ref.canonicalUri), limit: selected.length };
 		const read = async () => (await Promise.all(origins.map(origin => this.placements!.read(viewer, origin, channelOrigin && origin !== channelOrigin ? { ...request, replyChannelOrigin: channelOrigin } : request, deadline)))).flatMap(page => page.references);
-		const active = await read();
+		const active = (await read()).filter(ref => !checkpoint.options.clientLocalOnly || ref.placement?.noteOrigin === this.peer!.origin);
 		const unique = new Map(active.map(ref => [ref.canonicalUri, ref]));
 		const bodies = await this.placements!.bodies(viewer, [...unique.values()], deadline, checkpoint.options);
 		if (!bodies.size) return [];
@@ -481,7 +481,7 @@ export class GridspaceTimelineService {
 						followed: true, before: state.before ?? undefined, upper: state.upper ?? undefined, untilAt: working.untilAt, limit: 50,
 					}, deadline);
 					if (source === 'peer') working.placementSequence ??= page.sequence;
-					return { ...page, ended: !page.next };
+					return { ...page, references: options.clientLocalOnly ? page.references.filter(ref => ref.placement?.noteOrigin === this.peer!.origin) : page.references, ended: !page.next };
 				}, uris => this.sessions.getReferences(checkpoint.session, uris));
 				working.nextId = [working.merge.local, working.merge.peer, working.merge.localPlacement, working.merge.peerPlacement]
 					.some(lane => lane && (lane.pending.length || !lane.ended)) ? randomUUID() : null;

@@ -349,10 +349,10 @@ export class TimelinePlacementSource {
 		const remote = refs.filter(ref => ref.placement!.noteOrigin === this.peer!.peerOrigin);
 		const batches: TimelineReference[][] = [];
 		const legacyChannels = new Map<string, TimelineReference[]>();
+		const conversations = new Map<string, TimelineReference>();
 		for (const ref of remote) {
 			if (!ref.placement!.legacy) {
-				// A conversation has its own authorization scope; do not share it with other notes.
-				batches.push([ref]);
+				conversations.set(ref.noteId, ref);
 				continue;
 			}
 			const channelId = ref.placement!.channelId;
@@ -365,15 +365,17 @@ export class TimelinePlacementSource {
 			}
 			batch.push(ref);
 		}
+		const modern = [...conversations.values()];
+		for (let offset = 0; offset < modern.length; offset += 20) batches.push(modern.slice(offset, offset + 20));
 		for (let offset = 0; offset < batches.length; offset += 4) {
 			await Promise.all(batches.slice(offset, offset + 4).map(async batch => {
 				if (Date.now() >= deadline) throw new GridspaceLinkError('PEER_UNAVAILABLE');
 				const first = batch[0];
-				let page: Awaited<ReturnType<GridspacePrivateService['notes']>>;
+				let page: { notes: Awaited<ReturnType<GridspacePrivateService['notes']>>['notes']; validForMs?: number };
 				try {
-					page = await this.delegated.notes(viewer, first.placement!.legacy
-						? { mode: 'validate', contextMode: 'channel', channelId: first.placement!.channelId, ids: batch.map(ref => ref.noteId) }
-						: { mode: 'show', noteId: first.noteId, conversationUri: first.canonicalUri }, batch.length);
+					page = first.placement!.legacy
+						? await this.delegated.notes(viewer, { mode: 'validate', contextMode: 'channel', channelId: first.placement!.channelId, ids: batch.map(ref => ref.noteId) }, batch.length, undefined, deadline)
+						: await this.delegated.placementNotes(viewer, batch.map(ref => ({ noteId: ref.noteId, conversationUri: ref.canonicalUri })), deadline);
 				} catch (error) {
 					if (!(error instanceof GridspaceLinkError) || !['ACTION_REJECTED', 'AUTHORIZATION_REVOKED', 'LINK_REVOKED'].includes(error.code)) throw error;
 					for (const ref of batch) result.delete(ref.canonicalUri);
@@ -386,6 +388,7 @@ export class TimelinePlacementSource {
 						continue;
 					}
 					const mirror = result.get(ref.canonicalUri);
+					if (mirror) mirror.validForMs = Math.min(mirror.validForMs ?? TIMELINE_AUTHORIZATION_TTL_MS, page.validForMs ?? TIMELINE_AUTHORIZATION_TTL_MS);
 					if (mirror && note.channelPlacements?.length) {
 						const all = new Map(note.channelPlacements.map(chip => [JSON.stringify([chip.origin, chip.channelId]), chip]));
 						for (const chip of mirror.payload.channelPlacements ?? []) all.set(JSON.stringify([chip.origin, chip.channelId]), chip);
@@ -400,7 +403,7 @@ export class TimelinePlacementSource {
 							note.canDelete = false;
 							note.canSelfRenote = false;
 						}
-						result.set(ref.canonicalUri, { representation: 'delegated', payload: note, readOnly, validForMs: TIMELINE_AUTHORIZATION_TTL_MS, nextPolicyCheckAt: null });
+						result.set(ref.canonicalUri, { representation: 'delegated', payload: note, readOnly, validForMs: page.validForMs ?? TIMELINE_AUTHORIZATION_TTL_MS, nextPolicyCheckAt: null });
 					}
 				}
 			}));
